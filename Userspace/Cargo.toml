@@ -1,0 +1,6 @@
+[workspace]
+members = ["owlOS Flock/*","Libraries/*"]
+
+[profile.dev]
+opt-level = 3
+debug = 0

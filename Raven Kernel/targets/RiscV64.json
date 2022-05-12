@@ -1,0 +1,19 @@
+{
+    "llvm-target": "riscv64",
+    "data-layout": "e-m:e-p:64:64-i64:64-i128:128-n64-S128",
+    "linker-flavor": "ld.lld",
+    "target-pointer-width": "64",
+    "max-atomic-width": 64,
+    "arch": "riscv64",
+    "cpu": "generic-rv64",
+    "os": "none",
+    "executables": true,
+    "linker": "rust-lld",
+    "features": "+m,+a,+c",
+    "relocation-model": "static",
+    "abi-blacklist": [
+        "msp430-interrupt",
+        "x86-interrupt"
+    ],
+    "panic-strategy": "abort"
+}

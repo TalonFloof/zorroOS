@@ -1,0 +1,98 @@
+#[macro_use]
+pub mod UART;
+
+pub mod Memory;
+pub mod IDT;
+pub mod GDT;
+pub mod APIC;
+pub mod ACPI;
+pub mod HPET;
+pub mod Task;
+pub mod Syscall;
+
+extern crate stivale_boot;
+extern crate x86_64;
+
+use core::arch::asm;
+use core::sync::atomic::Ordering;
+use stivale_boot::v2::*;
+use crate::Memory::PageTable;
+use crate::print_startup_message;
+use crate::Scheduler::SCHEDULER_STARTED;
+use crate::print;
+
+pub const PHYSMEM_BEGIN: u64 = 0xFFFF_8000_0000_0000;
+
+#[macro_export]
+macro_rules! halt {
+	() => {
+		unsafe { core::arch::asm!("hlt"); }
+	}
+}
+
+#[inline(always)]
+pub fn CurrentHart() -> u32 {
+	crate::arch::APIC::Read(crate::arch::APIC::LOCAL_APIC_ID) >> 24
+}
+#[macro_export]
+macro_rules! halt_other_harts {
+	() => {
+		x86_64::instructions::interrupts::disable();
+		unsafe {crate::Console::WRITER.force_unlock();}
+		if crate::arch::APIC::LAPIC_READY.load(core::sync::atomic::Ordering::SeqCst) {
+			crate::arch::APIC::SendIPI(CurrentHart() as u8,crate::arch::APIC::ICR_DSH_OTHER,crate::arch::APIC::ICR_MESSAGE_TYPE_NMI,0);
+		}
+	}
+}
+
+#[no_mangle]
+extern "C" fn _start(pmr: &mut StivaleStruct) {
+    unsafe { asm!("cli"); };
+    UART::Setup();
+	print_startup_message!();
+	GDT::Setup();
+	unsafe { IDT::Setup(); }
+	Syscall::Initialize();
+	Task::SetupFPU();
+	Memory::AnalyzeMMAP(
+		pmr.memory_map().expect("The Raven Kernel requires that the Stivale2 compatible bootloader that you are using contains a memory map."));
+	if pmr.framebuffer().is_some() {
+		let fb_tag = pmr.framebuffer().unwrap();
+		crate::Framebuffer::Init(fb_tag.framebuffer_addr as *mut u32,fb_tag.framebuffer_width as usize,fb_tag.framebuffer_height as usize,fb_tag.framebuffer_pitch as usize,fb_tag.framebuffer_bpp as usize);
+	}
+	ACPI::AnalyzeRSDP(
+		pmr.rsdp().expect("The Raven Kernel requires that the Stivale2 compatible bootloader that you are using contains a pointer to the ACPI tables."));
+	APIC::EnableHarts(
+		pmr.smp_mut().expect("The Raven Kernel requires that the Stivale2 compatible bootloader that you are using is compatable with the SMP feature."));
+	print!("\x07");
+	let mod_tag = pmr.modules().expect("The Raven Kernel requires that the Stivale2 compatible bootloader that you are using supports modules.");
+	if mod_tag.module_len == 0 {
+		crate::main(None, 0);
+	}
+	let module = mod_tag.iter().next().unwrap();
+	let start = if module.start < PHYSMEM_BEGIN {module.start+PHYSMEM_BEGIN} else {module.start};
+	/*let mmap = pmr.memory_map().unwrap();
+	for i in mmap.iter() {
+		if i.entry_type == StivaleMemoryMapEntryType::BootloaderReclaimable {
+			crate::PageFrame::Free((i.base+PHYSMEM_BEGIN) as *mut u8,i.length);
+		}
+	}*/ // At the moment this is disabled because it also frees the kernel PDPT which we need...
+	let free = crate::PageFrame::FreeMem.load(core::sync::atomic::Ordering::SeqCst);
+	let total = crate::PageFrame::TotalMem.load(core::sync::atomic::Ordering::SeqCst);
+	print!("{} MiB Used out of {} MiB Total\n", (total-free)/1024/1024, total/1024/1024);
+	crate::main(Some(start as usize), (module.end-module.start) as usize);
+}
+
+extern "C" fn _Hart_start(smp: &'static StivaleSmpInfo) -> ! {
+	unsafe {GDT::HARTS[smp.lapic_id as usize].as_mut().unwrap().init()}
+	unsafe {IDT::Setup();}
+	Syscall::Initialize();
+	Task::SetupFPU();
+	unsafe {(*crate::PageFrame::KernelPageTable.lock()).Switch();}
+	// We can't use the smp tag past here since it's mapped in a region which doesn't exist anymore.
+	APIC::Enable();
+	APIC::EnableTimer();
+	APIC::LAPIC_HART_WAIT.store(false,Ordering::SeqCst);
+	while !SCHEDULER_STARTED.load(Ordering::SeqCst) {core::hint::spin_loop();};
+	crate::Scheduler::Scheduler::Start(CurrentHart());
+}

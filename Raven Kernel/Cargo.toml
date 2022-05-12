@@ -1,0 +1,27 @@
+[package]
+name = "ravenkernel"
+version = "0.0.2"
+authors = ["TalonTheRaven"]
+edition = "2021"
+description = "A UNIX-like Kernel"
+license = "MIT"
+
+[dependencies]
+spin = "0.9"
+slabmalloc = "0.10"
+xmas-elf = "0.8"
+tar-no-std = "0.1"
+
+[dependencies.lazy_static]
+version = "1.4"
+features = ["spin_no_std"]
+
+[profile.dev]
+opt-level = 3
+debug = 0
+
+[target.'cfg(target_arch = "x86_64")'.dependencies]
+x86_64 = {version="0.14",features=["nightly"]}
+stivale-boot = "0.2"
+acpi = "4.1"
+rsdp = "*"
