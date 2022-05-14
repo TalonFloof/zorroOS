@@ -7,6 +7,8 @@ use acpi::AcpiHandler;
 use acpi::hpet::HpetInfo;
 use acpi::madt::Madt;
 use crate::print;
+use spin::Mutex;
+use alloc::vec::Vec;
 
 extern crate acpi;
 
@@ -19,14 +21,25 @@ impl AcpiHandler for ACPIMapping {
     fn unmap_physical_region<T>(_region: &PhysicalMapping<Self, T>) {}
 }
 
+pub static AML_TABLES: Mutex<Vec<&[u8]>> = Mutex::new(Vec::new());
+
 pub fn AnalyzeRSDP(tag: &StivaleRsdpTag) {
     let tables: AcpiTables<ACPIMapping>;
     unsafe {
         tables = acpi::AcpiTables::from_rsdp(ACPIMapping {}, (tag.rsdp-PHYSMEM_BEGIN) as usize).expect("No XSDT From RSDP...");
     }
-    let hpet: HpetInfo = HpetInfo::new(&tables).expect("Your motherboard appears to use a PIIX-based chipset.\
-    \nThe Raven Kernel isn't compatible with this chipset.\
-    \nPlease use a motherboard with an ICH-based chipset.");
+    match tables.dsdt.as_ref() {
+        Some(dsdt) => {
+            unsafe {
+                AML_TABLES.lock().push(core::slice::from_raw_parts((dsdt.address+PHYSMEM_BEGIN as usize) as *const u8,dsdt.length as usize));
+            }
+        }
+        _ => {}
+    }
+    for i in tables.ssdts.iter() {
+        unsafe {AML_TABLES.lock().push(core::slice::from_raw_parts((i.address+PHYSMEM_BEGIN as usize) as *const u8,i.length as usize));}
+    }
+    let hpet: HpetInfo = HpetInfo::new(&tables).expect("Your motherboard doesn't have a HPET.");
     HPET::Setup(hpet);
     let madt = unsafe { tables.get_sdt::<Madt>(acpi::sdt::Signature::MADT).unwrap().unwrap() };
     let int_model = madt.parse_interrupt_model().unwrap();

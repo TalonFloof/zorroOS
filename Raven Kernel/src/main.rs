@@ -23,7 +23,6 @@ pub mod Syscall;
 pub mod FS;
 pub mod Drivers;
 
-use alloc::string::ToString;
 use core::panic::PanicInfo;
 use core::alloc::Layout;
 use crate::arch::CurrentHart;
@@ -31,12 +30,13 @@ use crate::arch::CurrentHart;
 #[macro_export]
 macro_rules! print_startup_message {
     () => {
+        crate::Console::Initalize();
         print!("Raven Kernel has awoken...\nLong live the Raven!\n");
         print!("Copyright (C) 2020-2022 TalonTheRaven\n");
     }
 }
 
-fn main(initrd_start: Option<usize>, initrd_length: usize) -> ! {
+fn main() -> ! {
     FS::Initalize();
     Drivers::Initalize();
     print!("Starting Init\n");
@@ -56,20 +56,12 @@ fn panic(info: &PanicInfo) -> ! {
     match msg {
         Some(m) => {
             print!("\x1b[31mpanic (hart 0x{}): Fatal Exception\n", CurrentHart());
-            print!("{}\n\x1b[0m", m);
-            //print!("{}\n", info.to_string());
-            let mut fb = crate::Framebuffer::MainFramebuffer.lock();
-            if fb.is_some() {
-                if (*fb).as_ref().unwrap().bpp == 32 {
-                    (*fb).as_mut().unwrap().Clear(0x0b0f14);
-                    let height = (*fb).as_ref().unwrap().height;
-                    (*fb).as_mut().unwrap().DrawString(0, height - (3 * 5), "Restart Computer", 0xFFFFFF);
-                    (*fb).as_mut().unwrap().DrawString(0, 0, info.to_string().as_str(), 0xFFFFFF);
-                }
-            }
+            print!("{}\n", m);
+            print!("{}\n\x1b[0m", info.location().unwrap());
         }
         None => {
-            print!("\x1b[31mpanic (hart 0x{}): Unknown Exception\n\x1b[0m", CurrentHart());
+            print!("\x1b[31mpanic (hart 0x{}): Unknown Exception\n", CurrentHart());
+            print!("{}\n\x1b[0m", info.location().unwrap());
         }
     }
     halt!();

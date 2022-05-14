@@ -110,8 +110,7 @@ elif args[0] == "run":
         -no-shutdown \
         -serial stdio \
         -device qemu-xhci \
-        -device usb-kbd \
-        -device usb-mouse \
+        -d cpu_reset \
         -enable-kvm")
 elif args[0] == "pane":
     setup_term()

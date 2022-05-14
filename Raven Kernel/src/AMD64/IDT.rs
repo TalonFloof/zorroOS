@@ -8,9 +8,9 @@ use crate::arch::Task::State;
 use crate::{CurrentHart, halt};
 use crate::Scheduler::{Scheduler, SCHEDULER_STARTED, SCHEDULERS};
 use crate::print;
+use spin::Mutex;
 
 static mut kidt: InterruptDescriptorTable = InterruptDescriptorTable::new();
-
 
 static ExceptionMessages: [&str; 32] = [
     "DivisionByZero",
@@ -46,6 +46,8 @@ static ExceptionMessages: [&str; 32] = [
     "Reserved",
     "Reserved",
 ];
+
+pub static IRQ_HANDLERS: Mutex<[Option<fn()>; 0xE0]> = Mutex::new([None; 0xE0]);
 
 fn x86Fault(
     stack_frame: InterruptStackFrame,
@@ -149,7 +151,11 @@ extern "C" fn x86IRQ(
             crate::Scheduler::Scheduler::Tick(CurrentHart(), cr);
         }
     } else {
-
+        let lock = IRQ_HANDLERS.lock();
+        if lock[(index as usize)-0x20].is_some() {
+            (lock[index as usize-0x20].unwrap())();
+        }
+        drop(lock);
     }
 }
 

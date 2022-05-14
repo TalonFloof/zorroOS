@@ -79,8 +79,8 @@ impl Framebuffer {
 pub fn Init(pointer: *mut u32, width: usize, height: usize, stride: usize, bpp: usize) {
     let mut lock = MainFramebuffer.lock();
     *lock = Some(Framebuffer::new(pointer,width,height,stride,bpp));
-    /*if bpp == 32 {
-        (*lock).as_mut().unwrap().Clear(0xE0E0E0);
-    }*/
+    if bpp == 32 {
+        (*lock).as_mut().unwrap().Clear(0x2E3436);
+    }
     drop(lock);
 }

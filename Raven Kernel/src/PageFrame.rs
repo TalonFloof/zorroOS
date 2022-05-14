@@ -4,6 +4,7 @@ use lazy_static::lazy_static;
 use spin::Mutex;
 use crate::arch::PHYSMEM_BEGIN;
 use crate::arch::Memory::PageTableImpl;
+use core::marker::PhantomData;
 
 #[derive(Copy, Clone)]
 pub struct HeapRange {
@@ -16,7 +17,7 @@ pub static Pages: AtomicU64 = AtomicU64::new(0);
 static NextPage: AtomicU64 = AtomicU64::new(0);
 pub static FreeMem: AtomicU64 = AtomicU64::new(0);
 pub static TotalMem: AtomicU64 = AtomicU64::new(0);
-static PhysMemLock: Mutex<Option<bool>> = Mutex::new(None);
+static PhysMemLock: Mutex<PhantomData<()>> = Mutex::new(PhantomData);
 lazy_static! {
     pub static ref KernelPageTable: Mutex<PageTableImpl> = Mutex::new(PageTableImpl::new());
 }

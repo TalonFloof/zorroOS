@@ -97,6 +97,7 @@ impl Process {
         self.task_state.Enter()
     }
     //////////////////////////////////////////////////////////////
+    #[allow(dead_code)]
     fn AddProcess(mut proc: Process) -> i32 {
         let mut plock = PROCESSES.lock();
         let start = NEXTPROCESS.load(Ordering::SeqCst);

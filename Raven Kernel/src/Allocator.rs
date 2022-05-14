@@ -48,19 +48,27 @@ unsafe impl GlobalAlloc for SafeZoneAllocator {
             }
             0..=ZoneAllocator::MAX_ALLOC_SIZE => {
                 let mut zone_allocator = self.0.lock();
+                let lock = crate::Console::MUTE_LOG.read();
                 match zone_allocator.allocate(layout) {
-                    Ok(output) => output.as_ptr(),
+                    Ok(output) => {
+                        drop(lock);
+                        return output.as_ptr();
+                    },
                     Err(AllocationError::OutOfMemory) => {
                         if layout.size() <= ZoneAllocator::MAX_BASE_ALLOC_SIZE {
-                            PAGER.allocate_page().map_or(ptr::null_mut(), |page| {
+                            let val = PAGER.allocate_page().map_or(ptr::null_mut(), |page| {
                                 zone_allocator.refill(layout, page).expect("Slabmalloc refused to refill? (Slabmalloc crate contains bugs!!)");
                                 zone_allocator.allocate(layout).expect("Slabmalloc failed to refill after second attempt? (Contact author(s) if you're seeing this!)").as_ptr()
-                            })
+                            });
+                            drop(lock);
+                            return val;
                         } else {
-                            PAGER.allocate_large_page().map_or(ptr::null_mut(), |page| {
+                            let val = PAGER.allocate_large_page().map_or(ptr::null_mut(), |page| {
                                 zone_allocator.refill_large(layout, page).expect("Slabmalloc refused to refill? (Slabmalloc crate contains bugs!!)");
                                 zone_allocator.allocate(layout).expect("Slabmalloc failed to refill after second attempt? (Contact author(s) if you're seeing this!)").as_ptr()
-                            })
+                            });
+                            drop(lock);
+                            return val;
                         }
                     }
                     Err(AllocationError::InvalidLayout) => panic!("GlobalAllocator cannot allocate requested size"),
@@ -70,14 +78,17 @@ unsafe impl GlobalAlloc for SafeZoneAllocator {
         }
     }
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        let lock = crate::Console::MUTE_LOG.read();
         match layout.size() {
-            0x1000 => {Free(ptr, 0x1000);}
-            0x200000 => {Free(ptr, 2*1024*1024);}
+            0x1000 => {Free(ptr, 0x1000); drop(lock);}
+            0x200000 => {Free(ptr, 2*1024*1024); drop(lock);}
             0..=ZoneAllocator::MAX_ALLOC_SIZE => {
                 if let Some(nptr) = NonNull::new(ptr) {
                     self.0.lock().deallocate(nptr, layout).expect("GlobalAllocator refused to free pages? (Contact author(s) if you're seeing this!)");
+                    drop(lock);
                 } else {
                     // Nothing...
+                    drop(lock);
                 }
 
             }

@@ -65,22 +65,10 @@ extern "C" fn _start(pmr: &mut StivaleStruct) {
 	APIC::EnableHarts(
 		pmr.smp_mut().expect("The Raven Kernel requires that the Stivale2 compatible bootloader that you are using is compatable with the SMP feature."));
 	print!("\x07");
-	let mod_tag = pmr.modules().expect("The Raven Kernel requires that the Stivale2 compatible bootloader that you are using supports modules.");
-	if mod_tag.module_len == 0 {
-		crate::main(None, 0);
-	}
-	let module = mod_tag.iter().next().unwrap();
-	let start = if module.start < PHYSMEM_BEGIN {module.start+PHYSMEM_BEGIN} else {module.start};
-	/*let mmap = pmr.memory_map().unwrap();
-	for i in mmap.iter() {
-		if i.entry_type == StivaleMemoryMapEntryType::BootloaderReclaimable {
-			crate::PageFrame::Free((i.base+PHYSMEM_BEGIN) as *mut u8,i.length);
-		}
-	}*/ // At the moment this is disabled because it also frees the kernel PDPT which we need...
 	let free = crate::PageFrame::FreeMem.load(core::sync::atomic::Ordering::SeqCst);
 	let total = crate::PageFrame::TotalMem.load(core::sync::atomic::Ordering::SeqCst);
 	print!("{} MiB Used out of {} MiB Total\n", (total-free)/1024/1024, total/1024/1024);
-	crate::main(Some(start as usize), (module.end-module.start) as usize);
+	crate::main();
 }
 
 extern "C" fn _Hart_start(smp: &'static StivaleSmpInfo) -> ! {

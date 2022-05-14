@@ -66,7 +66,7 @@ unsafe extern "C" fn __syscall() {
 
 #[no_mangle]
 extern "C" fn x86SCall(
-    cr: &mut State
+    _cr: &mut State
 ) {
     //crate::Syscall::SystemCall(cr);
 }
