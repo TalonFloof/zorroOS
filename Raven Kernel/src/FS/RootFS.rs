@@ -69,7 +69,7 @@ impl VFS::Inode for RootInode {
             filesystem: self.filesystem.clone(),
         }));
         drop(lock);
-        Ok(self.children.lock().get(len-1).unwrap().clone())
+        Ok(self.children.lock().get(len).unwrap().clone())
     }
 
     fn Unlink(&self, name: &str) -> i64 {
