@@ -8,6 +8,7 @@ extern crate alloc;
 
 #[cfg(target_arch="x86_64")]
 #[path = "AMD64/mod.rs"]
+#[macro_use]
 pub mod arch;
 
 #[macro_use]

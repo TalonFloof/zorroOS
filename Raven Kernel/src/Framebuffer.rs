@@ -50,26 +50,26 @@ impl Framebuffer {
     pub fn Clear(&mut self, color: u32) {
         self.DrawRect(0,0,self.width,self.height,color);
     }
-    pub fn DrawSymbol(&mut self, x: usize, y: usize, sym: u8, color: u32) {
+    pub fn DrawSymbol(&mut self, x: usize, y: usize, sym: u8, color: u32, scale: usize) {
         let index: usize = (sym - b' ') as usize;
         for i in 0..5 { // y
             for j in 0..3 { // x
                 if (RavenScript[index] >> (i*3+j)) & 1 == 1 {
-                    self.DrawRect(x+j*3,y+i*3,3,3,color);
+                    self.DrawRect(x+j*scale,y+i*scale,scale,scale,color);
                 }
             }
         }
     }
-    pub fn DrawString(&mut self, x: usize, y: usize, s: &str, color: u32) {
+    pub fn DrawString(&mut self, x: usize, y: usize, s: &str, color: u32, scale: usize) {
         let mut index = 0;
         let mut yindex = 0;
         for b in s.bytes() {
-            if x+(index*12)+12 >= self.width || b == b'\n'{
+            if x+(index*(4*scale))+(4*scale) >= self.width || b == b'\n'{
                 index = 0;
-                yindex += 3*6;
+                yindex += scale*6;
             }
             if b >= 32 {
-                self.DrawSymbol(x + (index * 12), y + yindex, b, color);
+                self.DrawSymbol(x + (index * (4*scale)), y + yindex, b, color, scale);
                 index += 1;
             }
         }

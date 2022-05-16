@@ -39,20 +39,21 @@ impl core::fmt::Write for Writer {
             let fb = lock.as_mut().unwrap();
             let mut ansi_seq: Vec<u8> = Vec::new();
             let mut parse_ansi = false;
-            let console_height = fb.height.div_floor(6*3) * (6*3);
+            let console_height = fb.height.div_floor(6*2) * (6*2);
             for b in s.bytes() {
-                if self.cursor_x*12 > (fb.width/(6*3))*(6*3) || b == b'\n' {
+                if self.cursor_x*(4*2) >= (fb.width/(4*2))*(4*2) || b == b'\n' {
                     self.cursor_x = 0;
-                    if self.cursor_y*(6*3) >= console_height-(6*3) {
-                        unsafe {core::ptr::copy((fb.pointer+((6*3)*fb.stride as u64)) as *const u32, fb.pointer as *mut u32, (fb.width*console_height)-((6*3)*fb.width));}
-                        fb.DrawRect(0, self.cursor_y*(6*3), fb.width, 6*3, 0x2E3436);
+                    if self.cursor_y*(6*2) >= console_height-(6*2) {
+                        //unsafe {core::ptr::copy((fb.pointer+((6*2)*fb.stride as u64)) as *const u32, fb.pointer as *mut u32, (fb.width*console_height)-((6*2)*fb.width));}
+                        self.cursor_y = 0;
                     } else {
                         self.cursor_y += 1;
                     }
+                    fb.DrawRect(0, self.cursor_y*(6*2), fb.width, 6*2, 0x2E3436);
                 }
                 if b >= 32 && b <= 127 {
                     if !parse_ansi {
-                        fb.DrawSymbol(self.cursor_x*12, self.cursor_y*(6*3), b, self.text_color);
+                        fb.DrawSymbol(self.cursor_x*(4*2), self.cursor_y*(6*2), b, self.text_color, 2);
                         self.cursor_x += 1;
                     } else {
                         if b == b'm' {

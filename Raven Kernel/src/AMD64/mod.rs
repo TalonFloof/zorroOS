@@ -40,7 +40,7 @@ macro_rules! halt_other_harts {
 		x86_64::instructions::interrupts::disable();
 		unsafe {crate::Console::WRITER.force_unlock();}
 		if crate::arch::APIC::LAPIC_READY.load(core::sync::atomic::Ordering::SeqCst) {
-			crate::arch::APIC::SendIPI(CurrentHart() as u8,crate::arch::APIC::ICR_DSH_OTHER,crate::arch::APIC::ICR_MESSAGE_TYPE_NMI,0);
+			crate::arch::APIC::SendIPI(crate::arch::CurrentHart() as u8,crate::arch::APIC::ICR_DSH_OTHER,crate::arch::APIC::ICR_MESSAGE_TYPE_NMI,0);
 		}
 	}
 }

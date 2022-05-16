@@ -107,7 +107,6 @@ elif args[0] == "run":
         -smp 4 \
         -no-reboot \
         -cpu host \
-        -no-shutdown \
         -serial stdio \
         -device qemu-xhci \
         -d cpu_reset \

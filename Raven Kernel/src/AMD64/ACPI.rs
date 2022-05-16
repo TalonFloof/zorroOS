@@ -13,7 +13,8 @@ use alloc::vec::Vec;
 extern crate acpi;
 
 #[derive(Clone)]
-struct ACPIMapping {}
+#[doc(hidden)]
+pub struct ACPIMapping {}
 impl AcpiHandler for ACPIMapping {
     unsafe fn map_physical_region<T>(&self, physical_address: usize, size: usize) -> PhysicalMapping<Self, T> {
         PhysicalMapping::new(physical_address,NonNull::<T>::new(((physical_address as u64)+PHYSMEM_BEGIN) as *mut T).expect("Couldn't get address while mapping for ACPI"),size,size,self.to_owned())
@@ -22,19 +23,26 @@ impl AcpiHandler for ACPIMapping {
 }
 
 pub static AML_TABLES: Mutex<Vec<&[u8]>> = Mutex::new(Vec::new());
+pub static ACPI_TABLES: Mutex<Option<AcpiTables<ACPIMapping>>> = Mutex::new(None);
 
 pub fn AnalyzeRSDP(tag: &StivaleRsdpTag) {
-    let tables: AcpiTables<ACPIMapping>;
-    unsafe {
-        tables = acpi::AcpiTables::from_rsdp(ACPIMapping {}, (tag.rsdp-PHYSMEM_BEGIN) as usize).expect("No XSDT From RSDP...");
+    if tag.rsdp == 0 {
+        panic!("Your Firmware is not ACPI-Compliant");
     }
+    unsafe {
+        *ACPI_TABLES.lock() = Some(acpi::AcpiTables::from_rsdp(ACPIMapping {}, (tag.rsdp-PHYSMEM_BEGIN) as usize).expect("Your Firmware is not ACPI-Compliant"));
+    }
+    let mut acpilock = ACPI_TABLES.lock();
+    let tables = acpilock.as_mut().unwrap();
     match tables.dsdt.as_ref() {
         Some(dsdt) => {
             unsafe {
                 AML_TABLES.lock().push(core::slice::from_raw_parts((dsdt.address+PHYSMEM_BEGIN as usize) as *const u8,dsdt.length as usize));
             }
         }
-        _ => {}
+        _ => {
+            print!("\x1b[35mCouldn't find DSDT in ACPI! (Possible Firmware Bug)\x1b[0m\n");
+        }
     }
     for i in tables.ssdts.iter() {
         unsafe {AML_TABLES.lock().push(core::slice::from_raw_parts((i.address+PHYSMEM_BEGIN as usize) as *const u8,i.length as usize));}
@@ -61,19 +69,25 @@ pub fn AnalyzeRSDP(tag: &StivaleRsdpTag) {
             }
             print!("Found {} IOAPIC(s)\n", count);
             for i in a.interrupt_source_overrides.iter() {
-                print!("ISA Redirect: ISAIRQ 0x{:x} -> GSI 0x{:x}\n", i.isa_source, i.global_system_interrupt);
+                print!("ISA Redirect: ISAIRQ 0x{:x} -> GSI 0x{:x}", i.isa_source, i.global_system_interrupt);
                 let mut flags = 0;
                 match i.polarity {
                     acpi::platform::interrupt::Polarity::ActiveLow => {
+                        print!(" (ActiveLow, ");
                         flags = flags | APIC::IOAPIC_ACTIVE_LOW;
                     }
-                    _ => {}
+                    _ => {
+                        print!(" (ActiveHigh, ");
+                    }
                 }
                 match i.trigger_mode {
                     acpi::platform::interrupt::TriggerMode::Level => {
                         flags = flags | APIC::IOAPIC_LEVEL_TRIGGER;
+                        print!("Level)\n");
                     }
-                    _ => {}
+                    _ => {
+                        print!("Edge)\n");
+                    }
                 }
                 APIC::IOAPIC_CreateRedirect(0x20+i.isa_source as u32,i.global_system_interrupt,flags as u16,true);
                 if i.isa_source as u32 != i.global_system_interrupt {
@@ -87,4 +101,5 @@ pub fn AnalyzeRSDP(tag: &StivaleRsdpTag) {
     }
     APIC::Enable();
     APIC::EnableTimer();
+    drop(acpilock);
 }

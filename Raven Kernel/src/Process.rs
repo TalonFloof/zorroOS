@@ -60,7 +60,7 @@ pub struct Process {
 
     pub pagetable: PageTableImpl,
 
-    pub syscall: Option<(usize,usize,usize,usize)>,
+    pub cwd: String,
     pub status: ProcessStatus,
 }
 
@@ -85,7 +85,7 @@ impl Process {
             
             pagetable: PageTableImpl::new(),
 
-            syscall: None,
+            cwd: String::from("/"),
             status: ProcessStatus::NEW,
         }
     }
