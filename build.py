@@ -95,14 +95,18 @@ if args[0] == "build":
     close_pane()
 
 elif args[0] == "image":
-    # Image goes here
-    pass
+    os.system("git clone --branch v3.0-branch-binary --depth 1 https://github.com/limine-bootloader/limine /tmp/limine"),
+    os.system("mkdir /tmp/owlos_iso")
+    os.system("cp --force /tmp/limine/BOOTX64.EFI /tmp/limine/limine-cd-efi.bin /tmp/limine/limine-cd.bin /tmp/limine/limine.sys out/ravenkernel Boot/AMD64/limine.cfg /tmp/owlos_iso")
+    os.system("rm -r --force /tmp/limine")
+    os.system("xorriso -as mkisofs -b limine-cd.bin -no-emul-boot -boot-load-size 4 -boot-info-table --efi-boot limine-cd-efi.bin -efi-boot-part --efi-boot-image --protective-msdos-label /tmp/owlos_iso -o owlOS.iso")
+    os.system("rm -r --force /tmp/owlos_iso")
 elif args[0] == "run":
     if args[1] == "AMD64":
         os.system("clear")
         os.system("(udisksctl unmount --block-device /dev/sdb1) 2>/dev/null >/dev/null")
         os.system("qemu-system-x86_64 \
-        -drive file=/dev/sdb,format=raw \
+        -cdrom owlOS.iso \
         -m 128M \
         -smp 4 \
         -no-reboot \
