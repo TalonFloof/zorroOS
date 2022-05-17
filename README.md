@@ -49,8 +49,9 @@ $ rustup default nightly
 **Afterwards, please make sure that you have the following software installed:**
 
 - `rustc` needs to be the **Latest Nightly**
+- `coreutils` **(or equivilent)**
 - `cargo`
-- `gcc & binutils` for Legacy BIOS Based, Limine Bootloader Installation (AMD64 Only)
+- `xorriso`
 - `python3`
 
 ---
