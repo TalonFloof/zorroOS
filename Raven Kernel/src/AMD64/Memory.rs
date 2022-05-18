@@ -9,7 +9,7 @@ use x86_64::{PhysAddr, VirtAddr};
 use x86_64::registers::control::Cr3Flags;
 use crate::Memory::{PageEntry, PageTable};
 use crate::PageFrame::{Allocate,Free,KernelPageTable};
-use crate::print;
+use log::debug;
 
 static Startup_PageTable: Mutex<Option<u64>> = Mutex::new(None);
 
@@ -67,7 +67,7 @@ pub fn AnalyzeMMAP(mmap: &StivaleMemoryMapTag) {
             StivaleMemoryMapEntryType::Kernel => "Raven Kernel/InitRD",
             StivaleMemoryMapEntryType::Framebuffer => "GPU Framebuffer",
         };
-        print!("[mem 0x{:016x}-0x{:016x}] {}\n", base, end, entry_type);
+        debug!("[mem 0x{:016x}-0x{:016x}] {}", base, end, entry_type);
         if i.entry_type == StivaleMemoryMapEntryType::Usable {
             array[array_index].base = i.base;
             array[array_index].length = i.length;

@@ -4,7 +4,7 @@ use x86_64::registers::model_specific::Msr;
 use crate::arch::{GDT, HPET, PHYSMEM_BEGIN};
 use crate::PageFrame::Allocate;
 use spin::Mutex;
-use crate::print;
+use log::debug;
 
 pub const LOCAL_APIC_ID: u32 = 0x20; // APIC ID Register
 pub const LOCAL_APIC_VERSION: u32 = 0x30; // APIC Version Register
@@ -105,7 +105,7 @@ pub fn EnableHarts(smp: &mut StivaleSmpTag) {
                 let stack = Allocate(0x10000).unwrap() as u64;
                 hart.set_rsp0(stack+0x10000);
                 GDT::HARTS[i.lapic_id as usize] = Some(hart);
-                print!("hart 0x{:02x} rip=0x{:016x},rsp=0x{:016x}\n", i.lapic_id,(crate::arch::_Hart_start as *mut u8) as u64,stack+0x10000);
+                debug!("hart 0x{:02x} rip=0x{:016x},rsp=0x{:016x}", i.lapic_id,(crate::arch::_Hart_start as *mut u8) as u64,stack+0x10000);
                 i.target_stack = stack+0x10000;
                 i.goto_address = (crate::arch::_Hart_start as *mut u8) as u64;
                 while LAPIC_HART_WAIT.load(Ordering::SeqCst) {

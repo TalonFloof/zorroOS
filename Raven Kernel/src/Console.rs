@@ -1,8 +1,7 @@
-use spin::{RwLock,Mutex};
+use spin::Mutex;
 use crate::Framebuffer::MainFramebuffer;
 use alloc::vec::Vec;
-use core::marker::PhantomData;
-use log::{Record, Metadata};
+use log::{Record, Metadata, Level};
 
 pub static WRITER: Mutex<Writer> = Mutex::new(Writer {cursor_x:0,cursor_y:0,text_color: 0xFFFFFF});
 
@@ -15,13 +14,17 @@ pub struct Writer {
 struct KernelLogger;
 
 impl log::Log for KernelLogger {
-    fn enabled(&self, _metadata: &Metadata) -> bool {
-        true
+    fn enabled(&self, metadata: &Metadata) -> bool {
+        metadata.level() <= Level::Debug
     }
 
     fn log(&self, record: &Record) {
-        if MUTE_LOG.reader_count() == 0 {
-            crate::print!("[{}] {}\n", record.level(), record.args());
+        match record.level() {
+            Level::Trace => {},
+            Level::Debug => crate::print!("{}:{} \x1b[2mdebug\x1b[0m {}\n", record.file().unwrap(), record.line().unwrap(), record.args()),
+            Level::Info => crate::print!("{}:{} \x1b[34minfo\x1b[0m {}\n", record.file().unwrap(), record.line().unwrap(), record.args()),
+            Level::Warn => crate::print!("{}:{} \x1b[35mwarn\x1b[0m {}\n", record.file().unwrap(), record.line().unwrap(), record.args()),
+            Level::Error => crate::print!("{}:{} \x1b[31merror\x1b[0m {}\n", record.file().unwrap(), record.line().unwrap(), record.args()),
         }
     }
 
@@ -29,7 +32,6 @@ impl log::Log for KernelLogger {
 }
 
 static LOGGER: KernelLogger = KernelLogger;
-pub static MUTE_LOG: RwLock<PhantomData<()>> = RwLock::new(PhantomData);
 
 impl core::fmt::Write for Writer {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
@@ -59,10 +61,18 @@ impl core::fmt::Write for Writer {
                         if b == b'm' {
                             if ansi_seq.len() == 3 {
                                 if ansi_seq[1] == b'3' {
-                                    if ansi_seq[2] == b'1' {
+                                           if ansi_seq[2] == b'1' {
                                         self.text_color = 0xCC0000;
+                                    } else if ansi_seq[2] == b'2' {
+                                        self.text_color = 0x4E9A06;
+                                    } else if ansi_seq[2] == b'3' {
+                                        self.text_color = 0xC4A000;
+                                    } else if ansi_seq[2] == b'4' {
+                                        self.text_color = 0x3465A4;
                                     } else if ansi_seq[2] == b'5' {
                                         self.text_color = 0x75507B;
+                                    } else if ansi_seq[2] == b'6' {
+                                        self.text_color = 0x06989A;
                                     } else if ansi_seq[2] == b'7' {
                                         self.text_color = 0xFFFFFF;
                                     }

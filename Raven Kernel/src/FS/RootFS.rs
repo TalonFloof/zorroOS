@@ -186,17 +186,17 @@ impl VFS::Filesystem for RootFS {
 }
 
 lazy_static! {
-    static ref ROOTFS: RootFS = RootFS {
+    static ref ROOTFS: Arc<RootFS> = Arc::new(RootFS {
         root: Arc::new(RootInode {
             children: Mutex::new(Vec::new())
         }),
         true_fs: None,
-    };
+    });
 }
 
 pub fn Initalize() {
-    let ptr = (&ROOTFS as *const _) as usize;
-    VFS::Mount("/",unsafe {Arc::from_raw(ptr as *const RootFS)});
+    lazy_static::initialize(&ROOTFS);
+    VFS::Mount("/",ROOTFS.clone());
     ROOTFS.root.Creat("dev",0o0040000);
     ROOTFS.root.Creat("proc",0o0040000);
 }

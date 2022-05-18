@@ -11,7 +11,7 @@ pub mod Keyboard {
             u8::write_to_port(0x64,0x20);                    // Disable First PS/2 port clock & Enable First PS/2 port interrupt
             let status = u8::read_from_port(0x60);
             if status & 0x4 != 0x4 {
-                print!("\x1b[35m!!WARNING!! System Flag on PS/2 Controller is clear! (Should be set if POST passes)\n\x1b[0m");
+                log::warn!("System Flag on PS/2 Controller is clear! (Should be set if POST passes)");
             }
             u8::write_to_port(0x64,0x60);
             u8::write_to_port(0x60,(status | 1) & (!0x10u8));

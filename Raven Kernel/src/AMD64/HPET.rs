@@ -1,6 +1,5 @@
 use acpi::HpetInfo;
 use crate::arch::PHYSMEM_BEGIN;
-use crate::print;
 
 static mut BASE: u64 = 0;
 static mut CLOCK: u64 = 0;
@@ -10,7 +9,6 @@ const HPET_GENERAL_CONFIGURATION: u64 = 16;
 const HPET_MAIN_COUNTER_VALUE: u64 = 240;
 
 pub fn Setup(hpet: HpetInfo) {
-    print!("Setting up HPET...\n");
     unsafe {BASE = hpet.base_address as u64;}
     unsafe {CLOCK=Read(HPET_GENERAL_CAPABILITIES) >> 32;}
     Write(HPET_GENERAL_CONFIGURATION,0);

@@ -19,7 +19,7 @@ use stivale_boot::v2::*;
 use crate::Memory::PageTable;
 use crate::print_startup_message;
 use crate::Scheduler::SCHEDULER_STARTED;
-use crate::print;
+use log::info;
 
 pub const PHYSMEM_BEGIN: u64 = 0xFFFF_8000_0000_0000;
 
@@ -64,10 +64,9 @@ extern "C" fn _start(pmr: &mut StivaleStruct) {
 		pmr.rsdp().expect("The Raven Kernel requires that the Stivale2 compatible bootloader that you are using contains a pointer to the ACPI tables."));
 	APIC::EnableHarts(
 		pmr.smp_mut().expect("The Raven Kernel requires that the Stivale2 compatible bootloader that you are using is compatable with the SMP feature."));
-	print!("\x07");
 	let free = crate::PageFrame::FreeMem.load(core::sync::atomic::Ordering::SeqCst);
 	let total = crate::PageFrame::TotalMem.load(core::sync::atomic::Ordering::SeqCst);
-	print!("{} MiB Used out of {} MiB Total\n", (total-free)/1024/1024, total/1024/1024);
+	info!("{} MiB Used out of {} MiB Total", (total-free)/1024/1024, total/1024/1024);
 	crate::main();
 }
 

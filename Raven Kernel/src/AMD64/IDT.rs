@@ -7,7 +7,7 @@ use crate::arch::APIC;
 use crate::arch::Task::State;
 use crate::{CurrentHart, halt};
 use crate::Scheduler::{Scheduler, SCHEDULER_STARTED, SCHEDULERS};
-use crate::print;
+use log::error;
 use spin::Mutex;
 
 static mut kidt: InterruptDescriptorTable = InterruptDescriptorTable::new();
@@ -64,14 +64,14 @@ fn x86Fault(
         let ptr = l.get(&(CurrentHart())).unwrap() as *const Scheduler;
         drop(l);
         let pid = unsafe{(&*ptr).current_proc_id.load(Ordering::SeqCst)};
-        print!("\x1b[31m(hart 0x{}) Process #{} Exception {}\n{:?}\n", CurrentHart(), pid, ExceptionMessages[index as usize], stack_frame);
+        error!("(hart 0x{}) Process #{} Exception {}", CurrentHart(), pid, ExceptionMessages[index as usize]);
+        error!("{:?}", stack_frame);
         if let None = err_code {} else {
-            print!("AMD64_ERR_CODE=0x{:x}\n", err_code.unwrap());
+            error!("AMD64_ERR_CODE=0x{:x}", err_code.unwrap());
         }
         if index == 0x0e {
-            print!("CR2={:016x}\n", x86_64::registers::control::Cr2::read().as_u64());
+            error!("CR2={:016x}", x86_64::registers::control::Cr2::read().as_u64());
         }
-        print!("\x1b[0m");
         crate::Process::Process::DestroyProcess(pid);
         unsafe {(&*ptr).NextContext();}
     } else {

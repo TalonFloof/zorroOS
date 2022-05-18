@@ -1,5 +1,5 @@
 use core::sync::atomic::{AtomicU64, Ordering};
-use crate::print;
+use log::{debug,info};
 use lazy_static::lazy_static;
 use spin::Mutex;
 use crate::arch::PHYSMEM_BEGIN;
@@ -132,7 +132,7 @@ pub fn Setup(mem: [HeapRange; 64]) {
     let bm_pages = (bitmap_size / 0x1000) + (if bitmap_size % 0x1000 > 0 {1} else {0});
     Pages.store(pages,Ordering::SeqCst);
     NextPage.store(pages,Ordering::SeqCst);
-    print!("Allocating {} pages ({} KiB) for Page Frame Bitmap...\n", bm_pages, bm_pages*4);
+    info!("Allocating {} pages ({} KiB) for Page Frame Bitmap...", bm_pages, bm_pages*4);
     for i in mem.iter() {
         if i.length >= bm_pages * 0x1000 {
             Bitmap.store(PHYSMEM_BEGIN + i.base,Ordering::Relaxed);
@@ -149,5 +149,5 @@ pub fn Setup(mem: [HeapRange; 64]) {
     assert_ne!(bitmap, 0);
     SetRange(bitmap-PHYSMEM_BEGIN,(bitmap-PHYSMEM_BEGIN)+(bm_pages*0x1000));
     FreeMem.fetch_sub(bm_pages*0x1000,Ordering::SeqCst);
-    print!("Page Frame Bitmap located at 0x{:016x}\n", bitmap);
+    debug!("Page Frame Bitmap located at 0x{:016x}", bitmap);
 }

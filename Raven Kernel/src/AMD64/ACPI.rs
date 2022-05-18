@@ -6,7 +6,7 @@ use crate::arch::{APIC, HPET, PHYSMEM_BEGIN};
 use acpi::AcpiHandler;
 use acpi::hpet::HpetInfo;
 use acpi::madt::Madt;
-use crate::print;
+use log::{warn,info};
 use spin::Mutex;
 use alloc::vec::Vec;
 
@@ -41,7 +41,7 @@ pub fn AnalyzeRSDP(tag: &StivaleRsdpTag) {
             }
         }
         _ => {
-            print!("\x1b[35mCouldn't find DSDT in ACPI! (Possible Firmware Bug)\x1b[0m\n");
+            warn!("Couldn't find DSDT in ACPI! (Possible Firmware Bug)");
         }
     }
     for i in tables.ssdts.iter() {
@@ -67,27 +67,20 @@ pub fn AnalyzeRSDP(tag: &StivaleRsdpTag) {
             for j in 0..16 {
                 APIC::IOAPIC_CreateRedirect(0x20+j,j,0,true);
             }
-            print!("Found {} IOAPIC(s)\n", count);
+            info!("Found {} IOAPIC(s)", count);
             for i in a.interrupt_source_overrides.iter() {
-                print!("ISA Redirect: ISAIRQ 0x{:x} -> GSI 0x{:x}", i.isa_source, i.global_system_interrupt);
                 let mut flags = 0;
                 match i.polarity {
                     acpi::platform::interrupt::Polarity::ActiveLow => {
-                        print!(" (ActiveLow, ");
                         flags = flags | APIC::IOAPIC_ACTIVE_LOW;
                     }
-                    _ => {
-                        print!(" (ActiveHigh, ");
-                    }
+                    _ => {}
                 }
                 match i.trigger_mode {
                     acpi::platform::interrupt::TriggerMode::Level => {
                         flags = flags | APIC::IOAPIC_LEVEL_TRIGGER;
-                        print!("Level)\n");
                     }
-                    _ => {
-                        print!("Edge)\n");
-                    }
+                    _ => {}
                 }
                 APIC::IOAPIC_CreateRedirect(0x20+i.isa_source as u32,i.global_system_interrupt,flags as u16,true);
                 if i.isa_source as u32 != i.global_system_interrupt {

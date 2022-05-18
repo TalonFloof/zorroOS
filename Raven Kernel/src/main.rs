@@ -27,20 +27,22 @@ pub mod Drivers;
 use core::panic::PanicInfo;
 use core::alloc::Layout;
 use crate::arch::CurrentHart;
+use log::info;
 
 #[macro_export]
 macro_rules! print_startup_message {
     () => {
         crate::Console::Initalize();
-        print!("Raven Kernel has awoken...\nLong live the Raven!\n");
-        print!("Copyright (C) 2020-2022 TalonTheRaven\n");
+        info!("Raven Kernel has awoken...");
+        info!("Long live the Raven!");
+        info!("Copyright (C) 2020-2022 TalonTheRaven");
     }
 }
 
 fn main() -> ! {
     FS::Initalize();
     Drivers::Initalize();
-    print!("Starting Init\n");
+    info!("Starting Init");
     Scheduler::Scheduler::Start(CurrentHart())
 }
 

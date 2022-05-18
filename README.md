@@ -1,5 +1,8 @@
 # <img align="center" height="100" src="Docs/owlOS Light.png"><br>owlOS
 
+[![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FTalonTheRaven%2FowlOS&count_bg=%2379C83D&title_bg=%23555555&icon=&icon_color=%23E7E7E7&title=hits&edge_flat=false)](https://hits.seeyoufarm.com)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 ## What is owlOS?
 
 **owlOS** is a free, open-source **UNIX**-like operating system made from<br>

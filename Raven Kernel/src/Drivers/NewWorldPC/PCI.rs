@@ -1,3 +1,4 @@
+use log::debug;
 use crate::print;
 use spin::Mutex;
 use alloc::vec::Vec;
@@ -395,7 +396,7 @@ pub static PCI_DEVICES: Mutex<Vec<PCIDevice>> = Mutex::new(Vec::new());
 static IRQS_FREE: Mutex<[bool; 0xD0]> = Mutex::new([false; 0xD0]);
 
 pub fn Initalize() {
-    print!("Scanning PCI Buses\n");
+    debug!("Scanning PCI Buses");
     let mut lock = PCI_DEVICES.lock();
     for bus in 0..=255 {
         for slot in 0..=31 {
@@ -440,5 +441,5 @@ pub fn Initalize() {
         }
     }
     drop(lock);
-    print!("Finished PCI Scan\n");
+    debug!("Finished PCI Scan");
 }
