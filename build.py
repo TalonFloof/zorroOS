@@ -107,7 +107,7 @@ elif args[0] == "run":
         os.system("(udisksctl unmount --block-device /dev/sdb1) 2>/dev/null >/dev/null")
         os.system("qemu-system-x86_64 \
         -cdrom owlOS.iso \
-        -m 16M \
+        -m 128M \
         -smp 4 \
         -no-reboot \
         -cpu host \
