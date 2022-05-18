@@ -52,14 +52,22 @@ pub fn InitThread() -> ! {
     }
 }
 
+static mut PANICKING: bool = false;
+
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
+    if unsafe{PANICKING} {
+        print!("\n\x1b[31m!!!Nested Panic!!!\n");
+        halt!();
+        loop {};
+    }
+    unsafe {PANICKING = true;}
     halt_other_harts!();
     let msg = info.message();
     match msg {
         Some(m) => {
             print!("\x1b[31mpanic (hart 0x{}): Fatal Exception\n", CurrentHart());
-            print!("{}\n", m);
+            print!("{}\n", m.as_str().unwrap());
             print!("{}\n\x1b[0m", info.location().unwrap());
         }
         None => {
