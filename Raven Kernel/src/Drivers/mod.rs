@@ -2,9 +2,6 @@
 #[path = "NewWorldPC/mod.rs"]
 pub mod Arch;
 
-pub mod Generic;
-
 pub fn Initalize() {
     Arch::Initalize();
-    Generic::Initalize();
 }
