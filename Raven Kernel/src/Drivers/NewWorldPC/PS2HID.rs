@@ -14,15 +14,12 @@ pub mod Keyboard {
                 log::warn!("System Flag on PS/2 Controller is clear! (Should be set if POST passes)");
             }
             u8::write_to_port(0x64,0x60);
-            u8::write_to_port(0x60,(status | 1) & (!0x10u8));
+            u8::write_to_port(0x60,(status | 1) & (!0x50u8));
             u8::write_to_port(0x60,0xf4);
             let mut lock = crate::arch::IDT::IRQ_HANDLERS.lock();
             lock[0x1] = Some(Handle);
             drop(lock);
         }
-    }
-    pub fn Read() -> Option<u8> {
-        return None;
     }
     pub fn Handle() {
         unsafe {

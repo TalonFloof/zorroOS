@@ -5,6 +5,7 @@ use spin::Mutex;
 use crate::Syscall::Errors;
 use alloc::vec::Vec;
 use lazy_static::lazy_static;
+use log::debug;
 
 static DEVICES: Mutex<Vec<Arc<dyn Device>>> = Mutex::new(Vec::new());
 static NEXT_DEVICE: AtomicUsize = AtomicUsize::new(0);
@@ -17,6 +18,31 @@ pub trait Device: Send + Sync {
 pub struct DevRootInode {}
 
 impl VFS::Inode for DevRootInode {
+    fn Stat(&self) -> Result<VFS::Metadata, i64> {
+        Ok(VFS::Metadata {
+            inode_id: i64::MAX,
+            mode: 0o0040555, // dr-xr-xr-x
+            nlinks: 1,
+            uid: 0,
+            gid: 0,
+            rdev: 0,
+            size: 0,
+            blksize: 0,
+            blocks: 0,
+
+            atime: 0,
+            mtime: 0,
+            ctime: 0,
+        })
+    }
+
+    fn GetName(&self) -> Result<&str, i64> {
+        Ok("")
+    }
+    fn GetParent(&self) -> Option<Arc<dyn VFS::Inode>> {
+        Some(VFS::FindMount("/").ok().unwrap().1.GetRootInode())
+    }
+
     fn Lookup(&self, name: &str) -> Result<Arc<dyn VFS::Inode>, i64> {
         let lock = DEVICES.lock();
         for i in lock.iter() {
@@ -66,6 +92,7 @@ lazy_static! {
 
 pub fn InstallDevice(dev: Arc<dyn Device>) -> Result<(),i64> {
     let mut devices = DEVICES.lock();
+    debug!("Registering device \"{}\" with ID #{}", dev.Inode().GetName().ok().unwrap(), dev.DeviceID());
     devices.push(dev);
     drop(devices);
     Ok(())
