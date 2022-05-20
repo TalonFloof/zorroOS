@@ -1,7 +1,7 @@
 target
-/.idea
 /.vscode
 Cargo.lock
 /.VSCodeCounter
 /out
 /owlOS.iso
+/owlOS.code-workspace
