@@ -21,7 +21,7 @@ impl VFS::Inode for Null {
     fn Stat(&self) -> Result<VFS::Metadata, i64> {
         Ok(VFS::Metadata {
             inode_id: i64::MAX,
-            mode: 0o0000666, // -rw-rw-rw-
+            mode: 0o0020666, // crw-rw-rw-
             nlinks: 1,
             uid: 0,
             gid: 0,
@@ -64,7 +64,7 @@ impl VFS::Inode for Zero {
     fn Stat(&self) -> Result<VFS::Metadata, i64> {
         Ok(VFS::Metadata {
             inode_id: i64::MAX,
-            mode: 0o0000666, // -rw-rw-rw-
+            mode: 0o0020666, // crw-rw-rw-
             nlinks: 1,
             uid: 0,
             gid: 0,

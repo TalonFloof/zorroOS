@@ -2,7 +2,6 @@ use crate::FS::VFS;
 use alloc::sync::Arc;
 use core::sync::atomic::{AtomicUsize,Ordering};
 use spin::Mutex;
-use crate::Syscall::Errors;
 use alloc::vec::Vec;
 use lazy_static::lazy_static;
 use log::debug;

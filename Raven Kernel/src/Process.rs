@@ -7,6 +7,7 @@ use crate::Memory::PageTable;
 use crate::arch::Memory::PageTableImpl;
 use crate::Scheduler::SCHEDULERS;
 use alloc::string::String;
+use alloc::sync::Arc;
 
 pub static PROCESSES: Mutex<BTreeMap<i32,Process>> = Mutex::new(BTreeMap::new());
 pub static NEXTPROCESS: AtomicI32 = AtomicI32::new(0);
@@ -58,7 +59,7 @@ pub struct Process {
     pub euid: u32,
     pub egid: u32,
 
-    pub pagetable: PageTableImpl,
+    pub pagetable: Arc<PageTableImpl>,
 
     pub cwd: String,
     pub status: ProcessStatus,
@@ -83,14 +84,11 @@ impl Process {
             euid: 0,
             egid: 0,
             
-            pagetable: PageTableImpl::new(),
+            pagetable: Arc::new(PageTableImpl::new()),
 
             cwd: String::from("/"),
             status: ProcessStatus::NEW,
         }
-    }
-    fn Cleanup(&mut self) {
-        self.pagetable.cleanup();
     }
     pub fn ContextSwitch(&self) -> ! {
         unsafe {self.pagetable.Switch();}
@@ -131,7 +129,6 @@ impl Process {
             drop(pqlock);
         }
         drop(slock);
-        proc.Cleanup();
         lock.remove(&pid);
         drop(lock);
     }

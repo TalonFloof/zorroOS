@@ -112,7 +112,9 @@ impl PageTableImpl {
             pt
         }
     }
-    pub fn cleanup(&mut self) {
+}
+impl Drop for PageTableImpl {
+    fn drop(&mut self) {
         for h in 0..256 {
             if self.page_table.index(h).flags().contains(PageTableFlags::PRESENT) {
                 let pd_pagetable = (self.page_table.index(h).addr().as_u64()+PHYSMEM_BEGIN) as *mut HWPageTable;
@@ -141,6 +143,8 @@ impl PageTableImpl {
             }
         }
         Free((self.page_frame.start_address().as_u64()+PHYSMEM_BEGIN) as *mut u8, 0x1000);
+        self.page_table = unsafe {&mut *(core::ptr::null_mut())};
+        self.page_frame = PageFrame::from_start_address(PhysAddr::new(0)).unwrap() as PageFrame<Size4KiB>
     }
 }
 
