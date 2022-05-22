@@ -39,6 +39,8 @@ macro_rules! print_startup_message {
     }
 }
 
+pub static mut UNIX_EPOCH: u64 = 0;
+
 fn main() -> ! {
     FS::Initalize();
     Drivers::Initalize();

@@ -1,4 +1,5 @@
 use alloc::boxed::Box;
+use alloc::sync::Arc;
 use core::ops::{Index, IndexMut};
 use stivale_boot::v2::*;
 use crate::PageFrame::{Setup,HeapRange};
@@ -114,6 +115,7 @@ impl PageTableImpl {
     }
 }
 impl Drop for PageTableImpl {
+    #[allow(deref_nullptr)]
     fn drop(&mut self) {
         for h in 0..256 {
             if self.page_table.index(h).flags().contains(PageTableFlags::PRESENT) {
@@ -222,15 +224,44 @@ impl PageTable for PageTableImpl {
         }
     }
 
-    fn GetMutPageSlice<'a>(&mut self, _addr: u64) -> &'a mut [u8] {
-        todo!()
+    fn Clone(&self) -> Arc<dyn PageTable> {
+        let mut pt = PageTableImpl::new();
+        for h in 0..256 {
+            if self.page_table.index(h).flags().contains(PageTableFlags::PRESENT) {
+                let pd_pagetable = (self.page_table.index(h).addr().as_u64()+PHYSMEM_BEGIN) as *mut HWPageTable;
+                unsafe {
+                    for i in 0..512 {
+                        if (*pd_pagetable).index(i).flags().contains(PageTableFlags::PRESENT) {
+                            let pagedirectory = ((*pd_pagetable).index(i).addr().as_u64()+PHYSMEM_BEGIN) as *mut HWPageTable;
+                            for j in 0..512 {
+                                if (*pagedirectory).index(j).flags().contains(PageTableFlags::PRESENT) {
+                                    let pagetable = ((*pagedirectory).index(i).addr().as_u64()+PHYSMEM_BEGIN) as *mut HWPageTable;
+                                    for k in 0..512 {
+                                        if (*pagetable).index(k).flags().contains(PageTableFlags::PRESENT) {
+                                            let flags = (*pagetable).index(k).flags();
+                                            let new_page = Allocate(0x1000).unwrap();
+                                            core::ptr::copy(((*pagetable).index(k).addr().as_u64()+PHYSMEM_BEGIN) as *const usize,new_page as *mut usize,0x1000/usize::BITS as usize);
+                                            let mut npe = pt.Map(((h << 39) | (i << 30) | (j << 21) | (k << 12)) as u64,new_page as u64-PHYSMEM_BEGIN);
+                                            npe.SetWritable(flags.contains(PageTableFlags::WRITABLE));
+                                            npe.SetExecutable(!flags.contains(PageTableFlags::NO_EXECUTE));
+                                            npe.Update();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Arc::new(pt)
     }
 
     unsafe fn Switch(&self) {
         x86_64::registers::control::Cr3::write(self.page_frame,Cr3Flags::empty());
     }
 
-    fn Flush() {
+    fn Flush(&self) {
         x86_64::instructions::tlb::flush_all();
     }
 }

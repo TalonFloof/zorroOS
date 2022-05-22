@@ -152,8 +152,8 @@ pub fn LookupPath(path: &str) -> Result<Arc<dyn Inode>, i64> {
                     Ok(entry) => current = entry,
                     Err(e) => return Err(e),
                 }
-                if current.Stat()?.mode & FTYPE_DIR as i32 == FTYPE_DIR as i32 {
-                    if let Ok(mount_point) = FindMount(["/",path_seg[0..i].join("/").as_str()].join("/").as_str()) {
+                if current.Stat()?.mode & (FTYPE_DIR as i32) != 0 {
+                    if let Ok(mount_point) = FindMount(["",path_seg[0..=i].join("/").as_str()].join("/").as_str()) {
                         current = mount_point.1.GetRootInode();
                     }
                 }

@@ -1,20 +1,9 @@
 use alloc::boxed::Box;
 pub use crate::arch::Memory::*;
+use alloc::sync::Arc;
 
 pub fn MapPages(pt: &mut PageTableImpl, vaddr: usize, paddr: usize, size: usize, can_write: bool, can_exec: bool) -> bool {
-    // Check if the space is empty first
-    let mut index = vaddr;
-    let end = vaddr+size;
-    while index < end {
-        match pt.GetEntry(index as u64) {
-            Some(_page) => {
-                return false;
-            },
-            _ => {}
-        }
-        index += 0x1000;
-    }
-    index = 0;
+    let mut index = 0;
     while index < size {
         let mut page = pt.Map((vaddr+index) as u64,(paddr as u64)+index as u64);
         page.SetUser(true);
@@ -35,13 +24,13 @@ pub fn UnmapPages(pt: &mut PageTableImpl, vaddr: usize, size: usize) {
     }
 }
 
-pub trait PageTable {
+pub trait PageTable: Send + Sync {
     fn Map(&mut self, addr: u64, target: u64) -> Box<dyn PageEntry>;
     fn Unmap(&mut self, addr: u64);
     fn GetEntry(&self, addr: u64) -> Option<Box<dyn PageEntry>>;
-    fn GetMutPageSlice<'a>(&mut self, addr: u64) -> &'a mut [u8];
+    fn Clone(&self) -> Arc<dyn PageTable>;
     unsafe fn Switch(&self);
-    fn Flush();
+    fn Flush(&self);
 }
 
 pub trait PageEntry {
@@ -62,5 +51,4 @@ pub trait PageEntry {
 
     fn Target(&self) -> u64;
     fn SetTarget(&mut self, target: u64);
-
 }

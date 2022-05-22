@@ -155,6 +155,11 @@ impl TaskFloatState for FloatState {
     fn Save(&mut self) {
         unsafe { asm!("fxsave64 [rax]",in("rax")(&mut self.state as *mut u8)); }
     }
+    fn Clone(&self) -> Self {
+        Self {
+            state: self.state.clone(),
+        }
+    }
     fn Restore(&self) {
         unsafe { asm!("fxrstor64 [rax]",in("rax")(&self.state as *const u8)); }
     }

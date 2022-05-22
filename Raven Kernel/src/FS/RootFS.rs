@@ -158,9 +158,9 @@ impl VFS::Inode for VRootInode {
             blksize: 0,
             blocks: 0,
 
-            atime: 0,
-            mtime: 0,
-            ctime: 0,
+            atime: unsafe {crate::UNIX_EPOCH as i64},
+            mtime: unsafe {crate::UNIX_EPOCH as i64},
+            ctime: unsafe {crate::UNIX_EPOCH as i64},
         })
     }
     fn GetName(&self) -> Result<&str, i64> {

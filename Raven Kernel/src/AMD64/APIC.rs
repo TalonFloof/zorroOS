@@ -1,7 +1,7 @@
 use core::sync::atomic::{AtomicBool, Ordering};
 use stivale_boot::v2::StivaleSmpTag;
 use x86_64::registers::model_specific::Msr;
-use crate::arch::{GDT, HPET, PHYSMEM_BEGIN};
+use crate::arch::{GDT, Timer, PHYSMEM_BEGIN};
 use crate::PageFrame::Allocate;
 use spin::Mutex;
 use log::debug;
@@ -64,7 +64,7 @@ pub fn EnableTimer() {
     Write(LOCAL_APIC_TIMER_DIVIDE, 3);
     Write(LOCAL_APIC_TIMER_INITIAL_COUNT, 0xFFFFFFFF);
     Write(LOCAL_APIC_LVT_TIMER, 0x0);
-    HPET::Sleep(10);
+    Timer::Sleep(10);
     Write(LOCAL_APIC_LVT_TIMER, 0x10000);
     let tick_in_10ms: u32 = 0xFFFFFFFF - Read(LOCAL_APIC_TIMER_CURRENT_COUNT);
     Write(LOCAL_APIC_TIMER_DIVIDE, 3);

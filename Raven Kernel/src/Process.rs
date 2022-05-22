@@ -16,11 +16,10 @@ pub enum ProcessStatus {
     NEW,
     RUNNABLE,
     DYING,
-    BLOCKED_PROTOCOL(u64),
     BLOCKED_WAITPID(i32),
 }
 
-pub trait TaskState {
+pub trait TaskState: Send + Sync {
     fn SetIP(&mut self, ip: usize);
     fn GetIP(&self) -> usize;
     fn SetSP(&mut self, sp: usize);
@@ -40,8 +39,9 @@ pub trait TaskState {
     fn Exit(&self);
 }
 
-pub trait TaskFloatState {
+pub trait TaskFloatState: Send + Sync {
     fn Save(&mut self);
+    fn Clone(&self) -> Self;
     fn Restore(&self);
 }
 
@@ -59,7 +59,7 @@ pub struct Process {
     pub euid: u32,
     pub egid: u32,
 
-    pub pagetable: Arc<PageTableImpl>,
+    pub pagetable: Arc<dyn PageTable>,
 
     pub cwd: String,
     pub status: ProcessStatus,
@@ -159,5 +159,32 @@ impl Process {
             _ => {}
         }
         drop(lock);
+    }
+    pub fn Fork(&mut self) -> Self {
+        let mut task_state = State::new(false);
+        task_state.Save(&self.task_state);
+        task_state.SetSC0(0);
+        Self {
+            id: i32::MIN,
+
+            task_state,
+            task_fpstate: self.task_fpstate.Clone(),
+
+            hart: AtomicU32::new(u32::MAX),
+            name: self.name.clone(),
+
+            ruid: self.ruid,
+            rgid: self.rgid,
+            euid: self.euid,
+            egid: self.egid,
+
+            pagetable: self.pagetable.Clone(),
+
+            cwd: self.cwd.clone(),
+            status: ProcessStatus::NEW,
+        }
+    }
+    pub fn WipeVM(&mut self) {
+        self.pagetable = Arc::new(PageTableImpl::new());
     }
 }

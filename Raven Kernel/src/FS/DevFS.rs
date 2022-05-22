@@ -29,9 +29,9 @@ impl VFS::Inode for DevRootInode {
             blksize: 0,
             blocks: 0,
 
-            atime: 0,
-            mtime: 0,
-            ctime: 0,
+            atime: unsafe {crate::UNIX_EPOCH as i64},
+            mtime: unsafe {crate::UNIX_EPOCH as i64},
+            ctime: unsafe {crate::UNIX_EPOCH as i64},
         })
     }
 

@@ -2,7 +2,7 @@ use alloc::borrow::ToOwned;
 use core::ptr::NonNull;
 use acpi::{AcpiTables, PhysicalMapping};
 use stivale_boot::v2::StivaleRsdpTag;
-use crate::arch::{APIC, HPET, PHYSMEM_BEGIN};
+use crate::arch::{APIC, Timer, PHYSMEM_BEGIN};
 use acpi::AcpiHandler;
 use acpi::hpet::HpetInfo;
 use acpi::madt::Madt;
@@ -48,7 +48,7 @@ pub fn AnalyzeRSDP(tag: &StivaleRsdpTag) {
         unsafe {AML_TABLES.lock().push(core::slice::from_raw_parts((i.address+PHYSMEM_BEGIN as usize) as *const u8,i.length as usize));}
     }
     let hpet: HpetInfo = HpetInfo::new(&tables).expect("Your motherboard doesn't have a HPET.");
-    HPET::Setup(hpet);
+    Timer::Setup(hpet);
     let madt = unsafe { tables.get_sdt::<Madt>(acpi::sdt::Signature::MADT).unwrap().unwrap() };
     let int_model = madt.parse_interrupt_model().unwrap();
     match int_model.0 {

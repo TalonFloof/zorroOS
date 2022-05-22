@@ -128,8 +128,8 @@ pub fn Setup(mem: [HeapRange; 64]) {
         }
     }
     let pages = max_mem / 0x1000;
-    let bitmap_size = (pages / 8) + (if pages % 8 > 0 {1} else {0});
-    let bm_pages = (bitmap_size / 0x1000) + (if bitmap_size % 0x1000 > 0 {1} else {0});
+    let bitmap_size = pages.div_ceil(8);
+    let bm_pages = bitmap_size.div_ceil(0x1000);
     Pages.store(pages,Ordering::SeqCst);
     NextPage.store(pages,Ordering::SeqCst);
     info!("Allocating {} pages ({} KiB) for Page Frame Bitmap...", bm_pages, bm_pages*4);
@@ -141,9 +141,11 @@ pub fn Setup(mem: [HeapRange; 64]) {
         }
     }
     for i in mem.iter() {
-        FreeRange(i.base,i.base+i.length);
-        FreeMem.fetch_add(i.length,Ordering::SeqCst);
-        TotalMem.fetch_add(i.length,Ordering::SeqCst);
+        if i.length != 0 {
+            FreeRange(i.base,i.base+i.length);
+            FreeMem.fetch_add(i.length,Ordering::SeqCst);
+            TotalMem.fetch_add(i.length,Ordering::SeqCst);
+        }
     }
     let bitmap = Bitmap.load(Ordering::Relaxed);
     assert_ne!(bitmap, 0);

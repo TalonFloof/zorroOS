@@ -6,7 +6,7 @@ pub mod IDT;
 pub mod GDT;
 pub mod APIC;
 pub mod ACPI;
-pub mod HPET;
+pub mod Timer;
 pub mod Task;
 pub mod Syscall;
 
@@ -60,6 +60,7 @@ extern "C" fn _start(pmr: &mut StivaleStruct) {
 		let fb_tag = pmr.framebuffer().unwrap();
 		crate::Framebuffer::Init(fb_tag.framebuffer_addr as *mut u32,fb_tag.framebuffer_width as usize,fb_tag.framebuffer_height as usize,fb_tag.framebuffer_pitch as usize,fb_tag.framebuffer_bpp as usize);
 	}
+	unsafe {crate::UNIX_EPOCH = pmr.epoch().expect("The Raven Kernel requires that the Stivale2 compatible bootloader that you are using contains a UNIX Epoch Timestamp.").epoch};
 	ACPI::AnalyzeRSDP(
 		pmr.rsdp().expect("The Raven Kernel requires that the Stivale2 compatible bootloader that you are using contains a pointer to the ACPI tables."));
 	APIC::EnableHarts(
