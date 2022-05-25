@@ -173,7 +173,7 @@ impl VFS::Inode for VRootInode {
 
 pub struct RootFS {
     root: Arc<dyn VFS::Inode>,
-    true_fs: Option<Arc<dyn VFS::Filesystem>>,
+    pub true_fs: Option<Arc<dyn VFS::Filesystem>>,
 }
 
 impl VFS::Filesystem for RootFS {
@@ -186,7 +186,7 @@ impl VFS::Filesystem for RootFS {
 }
 
 lazy_static! {
-    static ref ROOTFS: Arc<RootFS> = Arc::new(RootFS {
+    pub static ref ROOTFS: Arc<RootFS> = Arc::new(RootFS {
         root: Arc::new(RootInode {
             children: Mutex::new(Vec::new())
         }),

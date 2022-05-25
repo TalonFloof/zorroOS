@@ -4,6 +4,7 @@ use core::sync::atomic::{AtomicUsize,Ordering};
 use spin::Mutex;
 use alloc::vec::Vec;
 use lazy_static::lazy_static;
+use crate::Syscall::Errors;
 use log::debug;
 
 static DEVICES: Mutex<Vec<Arc<dyn Device>>> = Mutex::new(Vec::new());
@@ -50,7 +51,7 @@ impl VFS::Inode for DevRootInode {
             }
         }
         drop(lock);
-        Err(0)
+        Err(Errors::ENOENT as i64)
     }
 
     fn ReadDir(&self, index: usize) -> Result<Option<Arc<dyn VFS::Inode>>, i64> {

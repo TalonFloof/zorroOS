@@ -14,6 +14,7 @@ PHDRS
     rodata  PT_LOAD    FLAGS((1 << 2)) ;            /* Read only */
     data    PT_LOAD    FLAGS((1 << 1) | (1 << 2)) ; /* Write + Read */
     header  PT_LOAD    FLAGS((1 << 0) | (1 << 1) | (1 << 2));
+    guard   PT_LOAD    FLAGS(0);
 }
  
 SECTIONS
@@ -65,8 +66,9 @@ SECTIONS
     } :data
  
     .bss : {
+        . = ALIGN(CONSTANT(MAXPAGESIZE));
         __stack_low = .;
-        . += 64K;
+        . += 16K;
         __stack_high = .;
         *(COMMON)
         *(.bss .bss.*)

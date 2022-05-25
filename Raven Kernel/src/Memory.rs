@@ -28,7 +28,7 @@ pub trait PageTable: Send + Sync {
     fn Map(&mut self, addr: u64, target: u64) -> Box<dyn PageEntry>;
     fn Unmap(&mut self, addr: u64);
     fn GetEntry(&self, addr: u64) -> Option<Box<dyn PageEntry>>;
-    fn Clone(&self) -> Arc<dyn PageTable>;
+    fn Clone(&self, is_thread: bool) -> Arc<dyn PageTable>;
     unsafe fn Switch(&self);
     fn Flush(&self);
 }

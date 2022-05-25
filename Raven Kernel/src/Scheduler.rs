@@ -36,12 +36,6 @@ impl Scheduler {
         if val != -1i32 {
             let proc = plock.get(&val).unwrap();
             match proc.status {
-                ProcessStatus::DYING => {
-                    drop(pqlock);
-                    drop(plock);
-                    Process::DestroyProcess(val);
-                    return self.FindNextProcess();
-                }
                 ProcessStatus::RUNNABLE => {
                     drop(plock);
                     drop(pqlock);

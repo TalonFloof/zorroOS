@@ -102,11 +102,11 @@ pub fn EnableHarts(smp: &mut StivaleSmpTag) {
             if i.lapic_id != 0 {
                 LAPIC_HART_WAIT.store(true,Ordering::SeqCst);
                 let mut hart = GDT::Hart::new();
-                let stack = Allocate(0x10000).unwrap() as u64;
-                hart.set_rsp0(stack+0x10000);
+                let stack = Allocate(0x4000).unwrap() as u64;
+                hart.set_rsp0(stack+0x4000);
                 GDT::HARTS[i.lapic_id as usize] = Some(hart);
-                debug!("hart 0x{:02x} rip=0x{:016x},rsp=0x{:016x}", i.lapic_id,(crate::arch::_Hart_start as *mut u8) as u64,stack+0x10000);
-                i.target_stack = stack+0x10000;
+                debug!("hart 0x{:02x} rip=0x{:016x},rsp=0x{:016x}", i.lapic_id,(crate::arch::_Hart_start as *mut u8) as u64,stack+0x4000);
+                i.target_stack = stack+0x4000;
                 i.goto_address = (crate::arch::_Hart_start as *mut u8) as u64;
                 while LAPIC_HART_WAIT.load(Ordering::SeqCst) {
                     core::hint::spin_loop();

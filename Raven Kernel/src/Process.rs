@@ -15,8 +15,9 @@ pub static NEXTPROCESS: AtomicI32 = AtomicI32::new(0);
 pub enum ProcessStatus {
     NEW,
     RUNNABLE,
-    DYING,
-    BLOCKED_WAITPID(i32),
+    SLEEP_IO(Arc<dyn crate::FS::VFS::Inode>,usize,usize),
+    SLEEP_WAIT(i32,usize),
+    SLEEP_SLEEP(i64),
 }
 
 pub trait TaskState: Send + Sync {
@@ -63,6 +64,8 @@ pub struct Process {
 
     pub cwd: String,
     pub status: ProcessStatus,
+
+    pub syscall_stack_base: usize,
 }
 
 pub const USERSPACE_STACK_SIZE: u64 = 0x4000;
@@ -88,6 +91,8 @@ impl Process {
 
             cwd: String::from("/"),
             status: ProcessStatus::NEW,
+
+            syscall_stack_base: (crate::PageFrame::Allocate(0x4000).unwrap() as usize) + 0x4000,
         }
     }
     pub fn ContextSwitch(&self) -> ! {
@@ -129,6 +134,7 @@ impl Process {
             drop(pqlock);
         }
         drop(slock);
+        crate::PageFrame::Free((proc.syscall_stack_base - 0x4000) as *mut u8,0x4000);
         lock.remove(&pid);
         drop(lock);
     }
@@ -160,7 +166,7 @@ impl Process {
         }
         drop(lock);
     }
-    pub fn Fork(&mut self) -> Self {
+    pub fn Fork(&mut self, is_thread: bool) -> Self {
         let mut task_state = State::new(false);
         task_state.Save(&self.task_state);
         task_state.SetSC0(0);
@@ -178,13 +184,12 @@ impl Process {
             euid: self.euid,
             egid: self.egid,
 
-            pagetable: self.pagetable.Clone(),
+            pagetable: self.pagetable.Clone(is_thread),
 
             cwd: self.cwd.clone(),
             status: ProcessStatus::NEW,
+
+            syscall_stack_base: (crate::PageFrame::Allocate(0x4000).unwrap() as usize) + 0x4000,
         }
-    }
-    pub fn WipeVM(&mut self) {
-        self.pagetable = Arc::new(PageTableImpl::new());
     }
 }

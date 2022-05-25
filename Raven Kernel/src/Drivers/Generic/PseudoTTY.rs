@@ -141,6 +141,10 @@ impl VFS::Inode for PTClient {
         let arc = plock.get(&self.p).unwrap();
         let mut i = 0;
         let mut lock = arc.pty_read.lock();
+        if lock.len() == 0 {
+            drop(lock);
+            return -(Errors::EAGAIN as i64);
+        }
         while i < buffer.len() && lock.len() > 0 {
             buffer[i] = lock.pop_front().unwrap();
             i += 1;
@@ -170,6 +174,10 @@ impl VFS::Inode for PTServer {
         let arc = plock.get(&self.p).unwrap();
         let mut i = 0;
         let mut lock = arc.pty_write.lock();
+        if lock.len() == 0 {
+            drop(lock);
+            return -(Errors::EAGAIN as i64);
+        }
         while i < buffer.len() && lock.len() > 0 {
             buffer[i] = lock.pop_front().unwrap();
             i += 1;
@@ -191,6 +199,14 @@ impl VFS::Inode for PTServer {
     }
 }
 struct Ptmx(AtomicUsize);
+impl Drop for Ptmx {
+    fn drop(&mut self) {
+        if self.0.load(Ordering::SeqCst) != usize::MAX {
+            DestroyPTY(self.0.load(Ordering::SeqCst));
+            self.0.store(usize::MAX,Ordering::SeqCst);
+        }
+    }
+}
 impl VFS::Inode for Ptmx {
     fn Stat(&self) -> Result<VFS::Metadata, i64> {
         Ok(VFS::Metadata {
@@ -218,10 +234,7 @@ impl VFS::Inode for Ptmx {
     }
 
     fn Close(&self) {
-        if self.0.load(Ordering::SeqCst) != usize::MAX {
-            DestroyPTY(self.0.load(Ordering::SeqCst));
-            self.0.store(usize::MAX,Ordering::SeqCst);
-        }
+        
     }
 
     fn Read(&self, offset: i64, buffer: &mut [u8]) -> i64 {

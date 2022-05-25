@@ -84,7 +84,7 @@ pub fn AnalyzeMMAP(mmap: &StivaleMemoryMapTag) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // This portion has the hardware level paging stuff
 pub struct PageTableImpl {
-    page_table: &'static mut HWPageTable,
+    pub page_table: &'static mut HWPageTable,
     page_frame: PageFrame<Size4KiB>,
 }
 
@@ -121,23 +121,25 @@ impl Drop for PageTableImpl {
             if self.page_table.index(h).flags().contains(PageTableFlags::PRESENT) {
                 let pd_pagetable = (self.page_table.index(h).addr().as_u64()+PHYSMEM_BEGIN) as *mut HWPageTable;
                 unsafe {
-                    for i in 0..512 {
-                        if (*pd_pagetable).index(i).flags().contains(PageTableFlags::PRESENT) {
-                            let pagedirectory = ((*pd_pagetable).index(i).addr().as_u64()+PHYSMEM_BEGIN) as *mut HWPageTable;
-                            for j in 0..512 {
-                                if (*pagedirectory).index(j).flags().contains(PageTableFlags::PRESENT) {
-                                    let pagetable = ((*pagedirectory).index(i).addr().as_u64()+PHYSMEM_BEGIN) as *mut HWPageTable;
-                                    for k in 0..512 {
-                                        if (*pagetable).index(k).flags().contains(PageTableFlags::PRESENT) {
-                                            if (*pagetable).index(k).addr().as_u64() >= PHYSMEM_BEGIN {
-                                                Free(((*pagetable).index(k).addr().as_u64()+PHYSMEM_BEGIN) as *mut u8, 0x1000);
+                    if !self.page_table.index(h).flags().contains(PageTableFlags::BIT_9) {
+                        for i in 0..512 {
+                            if (*pd_pagetable).index(i).flags().contains(PageTableFlags::PRESENT) {
+                                let pagedirectory = ((*pd_pagetable).index(i).addr().as_u64()+PHYSMEM_BEGIN) as *mut HWPageTable;
+                                for j in 0..512 {
+                                    if (*pagedirectory).index(j).flags().contains(PageTableFlags::PRESENT) {
+                                        let pagetable = ((*pagedirectory).index(i).addr().as_u64()+PHYSMEM_BEGIN) as *mut HWPageTable;
+                                        for k in 0..512 {
+                                            if (*pagetable).index(k).flags().contains(PageTableFlags::PRESENT) {
+                                                if (*pagetable).index(k).addr().as_u64() >= PHYSMEM_BEGIN {
+                                                    Free(((*pagetable).index(k).addr().as_u64()+PHYSMEM_BEGIN) as *mut u8, 0x1000);
+                                                }
                                             }
                                         }
+                                        Free(pagetable as *mut u8, 0x1000);
                                     }
-                                    Free(pagetable as *mut u8, 0x1000);
                                 }
+                                Free(pagedirectory as *mut u8, 0x1000);
                             }
-                            Free(pagedirectory as *mut u8, 0x1000);
                         }
                     }
                     Free(pd_pagetable as *mut u8, 0x1000);
@@ -224,9 +226,13 @@ impl PageTable for PageTableImpl {
         }
     }
 
-    fn Clone(&self) -> Arc<dyn PageTable> {
+    fn Clone(&self, is_thread: bool) -> Arc<dyn PageTable> {
         let mut pt = PageTableImpl::new();
-        for h in 0..256 {
+        let start = if is_thread {255} else {0};
+        if is_thread {
+            pt.page_table.index_mut(0).set_addr(self.page_table.index(0).addr(), PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::USER_ACCESSIBLE | PageTableFlags::BIT_9);
+        }
+        for h in start..256 {
             if self.page_table.index(h).flags().contains(PageTableFlags::PRESENT) {
                 let pd_pagetable = (self.page_table.index(h).addr().as_u64()+PHYSMEM_BEGIN) as *mut HWPageTable;
                 unsafe {
