@@ -1,6 +1,7 @@
 use crate::Color::Color;
 use crate::Bitmap::Bitmap;
 
+// The bitmap font used originated from qword-os on GitHub. The repo for qword-os can be found here: https://github.com/qword-os/qword.
 const BitmapFont: &[u8; 4096] = include_bytes!("BitmapFont");
 
 pub fn Rectangle(bitmap: &mut Bitmap, x: isize, y: isize, w: isize, h: isize, color: Color) {
