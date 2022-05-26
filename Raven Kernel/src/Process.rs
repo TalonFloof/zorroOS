@@ -15,7 +15,6 @@ pub static NEXTPROCESS: AtomicI32 = AtomicI32::new(0);
 pub enum ProcessStatus {
     NEW,
     RUNNABLE,
-    SLEEP_IO(Arc<dyn crate::FS::VFS::Inode>,usize,usize),
     SLEEP_WAIT(i32,usize),
     SLEEP_SLEEP(i64),
 }
@@ -64,8 +63,6 @@ pub struct Process {
 
     pub cwd: String,
     pub status: ProcessStatus,
-
-    pub syscall_stack_base: usize,
 }
 
 pub const USERSPACE_STACK_SIZE: u64 = 0x4000;
@@ -91,8 +88,6 @@ impl Process {
 
             cwd: String::from("/"),
             status: ProcessStatus::NEW,
-
-            syscall_stack_base: (crate::PageFrame::Allocate(0x4000).unwrap() as usize) + 0x4000,
         }
     }
     pub fn ContextSwitch(&self) -> ! {
@@ -134,7 +129,6 @@ impl Process {
             drop(pqlock);
         }
         drop(slock);
-        crate::PageFrame::Free((proc.syscall_stack_base - 0x4000) as *mut u8,0x4000);
         lock.remove(&pid);
         drop(lock);
     }
@@ -188,8 +182,6 @@ impl Process {
 
             cwd: self.cwd.clone(),
             status: ProcessStatus::NEW,
-
-            syscall_stack_base: (crate::PageFrame::Allocate(0x4000).unwrap() as usize) + 0x4000,
         }
     }
 }
