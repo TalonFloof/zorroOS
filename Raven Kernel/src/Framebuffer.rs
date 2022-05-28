@@ -80,7 +80,7 @@ pub fn Init(pointer: *mut u32, width: usize, height: usize, stride: usize, bpp: 
     let mut lock = MainFramebuffer.lock();
     *lock = Some(Framebuffer::new(pointer,width,height,stride,bpp));
     if bpp == 32 {
-        (*lock).as_mut().unwrap().Clear(0x2E3436);
+        (*lock).as_mut().unwrap().Clear(0x000000);
     }
     drop(lock);
 }

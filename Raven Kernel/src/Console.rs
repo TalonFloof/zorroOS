@@ -51,7 +51,7 @@ impl core::fmt::Write for Writer {
                     } else {
                         self.cursor_y += 1;
                     }
-                    fb.DrawRect(0, self.cursor_y*(6*2), fb.width, 6*2, 0x2E3436);
+                    fb.DrawRect(0, self.cursor_y*(6*2), fb.width, 6*2, 0x000000);
                 }
                 if b >= 32 && b <= 127 {
                     if !parse_ansi {
