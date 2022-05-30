@@ -80,6 +80,8 @@ impl core::fmt::Write for Writer {
                             } else if ansi_seq.len() == 2 {
                                 if ansi_seq[1] == b'0' {
                                     self.text_color = 0xFFFFFF;
+                                } else if ansi_seq[1] == b'2' {
+                                    self.text_color = 0x7F7F7F;
                                 }
                             }
                             parse_ansi = false;

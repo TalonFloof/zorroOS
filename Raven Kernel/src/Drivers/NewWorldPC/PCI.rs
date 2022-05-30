@@ -418,7 +418,7 @@ pub fn Initalize() {
                         } else if msicap.is_ok() {
                             irql = EnableMSI(bus,slot,func,msicap.ok().unwrap());
                             print!("├─[bus: 0x{:02x} slot: 0x{:02x} func: 0x{:02x}]\n│ vendor: 0x{:04x}\n│ device: 0x{:04x}\n│ msi-irq: 0x{:02x}\n│ type: {}\n", bus,slot,func,vendor,device,irql,PCIDevToString(class,subclass,progif));
-                        } else if irql != 0xFF {
+                        } else if irql != 0xFF && irql != 0x00 {
                             irql = irql + 0x20;
                             print!("├─[bus: 0x{:02x} slot: 0x{:02x} func: 0x{:02x}]\n│ vendor: 0x{:04x}\n│ device: 0x{:04x}\n│ isa-irq: 0x{:02x}\n│ type: {}\n", bus,slot,func,vendor,device,irql,PCIDevToString(class,subclass,progif));
                         } else {

@@ -88,9 +88,6 @@ should work.
 
 ---
 ## License
-<a href="https://opensource.org/licenses/MIT">
-  <img align="right" height="96" alt="MIT License" src="Docs/mit-license.png" />
-</a>
 
-owlOS, the Raven Kernel, and their core components are licensed under **the MIT License**.<br>
+owlOS, the Raven Kernel, and their core components are licensed under **the Apache License, Version 2.0**.<br>
 The full text of the license is included in the license file of this software package, which can be accessed [here](COPYING).

@@ -25,3 +25,4 @@ x86_64 = {version="0.14",features=["nightly"]}
 stivale-boot = "0.2"
 acpi = "*"
 rsdp = "*"
+xhci = "*"
