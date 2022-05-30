@@ -4,7 +4,7 @@ version = "0.0.2"
 authors = ["TalonTheRaven"]
 edition = "2021"
 description = "A UNIX-like Kernel"
-license = "MIT"
+license = "Apache-2.0"
 
 [dependencies]
 spin = "0.9"
