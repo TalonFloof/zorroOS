@@ -15,7 +15,7 @@ kernel known as the **Raven Kernel**.
 - **owlOS** is portable.
 - **owlOS** is open.
 
-<img src="Docs/Screenshot_May_22_22.png" alt="Screenshot of Raven Kernel booting" width="640">
+<img src="Docs/Screenshot_May_30_22.png" alt="Screenshot of Raven Kernel booting" width="640">
 
 ---
 ## Building
