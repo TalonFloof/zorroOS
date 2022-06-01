@@ -3,8 +3,6 @@
 [![forthebadge](https://forthebadge.com/images/badges/made-with-rust.svg)](https://forthebadge.com)
 [![forthebadge](https://forthebadge.com/images/badges/open-source.svg)](https://forthebadge.com)
 
-# HAPPY 2ND ANNIVERSARY OWLOS!
-
 ## What is owlOS?
 
 **owlOS** is a free, open-source **UNIX**-like operating system made from<br>
