@@ -1,5 +1,5 @@
 [package]
-name = "ravenkernel"
+name = "foxkernel"
 version = "0.0.2"
 authors = ["TalonTheRaven"]
 edition = "2021"

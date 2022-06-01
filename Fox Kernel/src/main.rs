@@ -33,8 +33,7 @@ use log::info;
 macro_rules! print_startup_message {
     () => {
         crate::Console::Initalize();
-        info!("Raven Kernel has awoken...");
-        info!("Long live the Raven!");
+        info!("Fox Kernel has awoken...");
         info!("Copyright (C) 2020-2022 TalonTheRaven");
     }
 }

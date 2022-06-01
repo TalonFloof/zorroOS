@@ -1,5 +1,5 @@
 [package]
-name = "ArcticFox"
+name = "Raven"
 version = "0.1.0"
 edition = "2021"
 description = "Simple graphics libary with some fancy effects. For owlOS"

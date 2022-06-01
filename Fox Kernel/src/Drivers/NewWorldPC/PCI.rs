@@ -80,6 +80,8 @@ pub fn ReadBAR(bus: u8, slot: u8, fun: u8, bar: u8) -> u64 {
     let Type = low & 7;
     if Type == 0 {
         return low & (!0xf);
+    } else if low & 1 == 1 {
+        return low & (!0x3);
     }
     let high = ReadU32(bus,slot,fun,(addr+4) as u16) as u64;
     return (low & (!0xf)) | (high << 32);
@@ -380,6 +382,13 @@ pub fn EnableMSIX(bus: u8, slot: u8, func: u8, off: u8) -> u8 {
     return irql;
 }
 
+pub enum IRQ {
+    None,
+    Irql(u8),
+    Msi(u8),
+    Msix(u8),
+}
+
 pub struct PCIDevice {
     pub bus: u8,
     pub slot: u8,
@@ -389,7 +398,7 @@ pub struct PCIDevice {
     pub class: u8,
     pub subclass: u8,
     pub progif: u8,
-    pub irq: u8,
+    pub irq: IRQ,
 }
 
 pub static PCI_DEVICES: Mutex<Vec<PCIDevice>> = Mutex::new(Vec::new());
@@ -410,17 +419,20 @@ pub fn Initalize() {
                         let progif = ReadU8(bus,slot,func,PCI_PROG_IF);
                         let msicap = SearchCapability(bus,slot,func,0x5);
                         let msixcap = SearchCapability(bus,slot,func,0x11);
-                        let mut irql = ReadU8(bus,slot,func,PCI_INTERRUPT_LINE);
+                        let mut irql = IRQ::None;
                         WriteU16(bus,slot,func,PCI_COMMAND,ReadU16(bus,slot,func,PCI_COMMAND) | 0x6);
                         if msixcap.is_ok() {
-                            irql = EnableMSIX(bus,slot,func,msixcap.ok().unwrap());
-                            print!("├─[bus: 0x{:02x} slot: 0x{:02x} func: 0x{:02x}]\n│ vendor: 0x{:04x}\n│ device: 0x{:04x}\n│ msix-irq: 0x{:02x}\n│ type: {}\n", bus,slot,func,vendor,device,irql,PCIDevToString(class,subclass,progif));
+                            let irq = EnableMSIX(bus,slot,func,msixcap.ok().unwrap());
+                            irql = IRQ::Msix(irq);
+                            print!("├─[bus: 0x{:02x} slot: 0x{:02x} func: 0x{:02x}]\n│ vendor: 0x{:04x}\n│ device: 0x{:04x}\n│ msix-irq: 0x{:02x}\n│ type: {}\n", bus,slot,func,vendor,device,irq,PCIDevToString(class,subclass,progif));
                         } else if msicap.is_ok() {
-                            irql = EnableMSI(bus,slot,func,msicap.ok().unwrap());
-                            print!("├─[bus: 0x{:02x} slot: 0x{:02x} func: 0x{:02x}]\n│ vendor: 0x{:04x}\n│ device: 0x{:04x}\n│ msi-irq: 0x{:02x}\n│ type: {}\n", bus,slot,func,vendor,device,irql,PCIDevToString(class,subclass,progif));
-                        } else if irql != 0xFF && irql != 0x00 {
-                            irql = irql + 0x20;
-                            print!("├─[bus: 0x{:02x} slot: 0x{:02x} func: 0x{:02x}]\n│ vendor: 0x{:04x}\n│ device: 0x{:04x}\n│ isa-irq: 0x{:02x}\n│ type: {}\n", bus,slot,func,vendor,device,irql,PCIDevToString(class,subclass,progif));
+                            let irq = EnableMSI(bus,slot,func,msicap.ok().unwrap());
+                            irql = IRQ::Msi(irq);
+                            print!("├─[bus: 0x{:02x} slot: 0x{:02x} func: 0x{:02x}]\n│ vendor: 0x{:04x}\n│ device: 0x{:04x}\n│ msi-irq: 0x{:02x}\n│ type: {}\n", bus,slot,func,vendor,device,irq,PCIDevToString(class,subclass,progif));
+                        } else if ReadU8(bus,slot,func,PCI_INTERRUPT_LINE) != 0xFF && ReadU8(bus,slot,func,PCI_INTERRUPT_LINE) != 0x00 {
+                            let irq = ReadU8(bus,slot,func,PCI_INTERRUPT_LINE) + 0x20;
+                            irql = IRQ::Irql(irq);
+                            print!("├─[bus: 0x{:02x} slot: 0x{:02x} func: 0x{:02x}]\n│ vendor: 0x{:04x}\n│ device: 0x{:04x}\n│ isa-irq: 0x{:02x}\n│ type: {}\n", bus,slot,func,vendor,device,irq,PCIDevToString(class,subclass,progif));
                         } else {
                             print!("├─[bus: 0x{:02x} slot: 0x{:02x} func: 0x{:02x}]\n│ vendor: 0x{:04x}\n│ device: 0x{:04x}\n│ no-irq-support\n│ type: {}\n", bus,slot,func,vendor,device,PCIDevToString(class,subclass,progif));
                         }

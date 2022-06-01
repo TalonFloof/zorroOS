@@ -3,13 +3,11 @@
 [![forthebadge](https://forthebadge.com/images/badges/made-with-rust.svg)](https://forthebadge.com)
 [![forthebadge](https://forthebadge.com/images/badges/open-source.svg)](https://forthebadge.com)
 
-# HAPPY 2ND ANNIVERSARY OWLOS!
-
 ## What is owlOS?
 
 **owlOS** is a free, open-source **UNIX**-like operating system made from<br>
 scratch in the **Rust** Programming Language. The OS run on top of a<br>
-kernel known as the **Raven Kernel**.
+kernel known as the **Fox Kernel**.
 
 ---
 - **owlOS** tries to implement clean APIs to allow developers to easily create programs.
@@ -17,7 +15,7 @@ kernel known as the **Raven Kernel**.
 - **owlOS** is portable.
 - **owlOS** is open.
 
-<img src="Docs/Screenshot_May_30_22.png" alt="Screenshot of Raven Kernel booting" width="640">
+<img src="Docs/Screenshot_May_30_22.png" alt="Screenshot of Fox Kernel booting" width="640">
 
 ---
 ## Building
@@ -91,5 +89,5 @@ should work.
 ---
 ## License
 
-owlOS, the Raven Kernel, and their core components are licensed under **the Apache License, Version 2.0**.<br>
+owlOS, the Fox Kernel, and their core components are licensed under **the Apache License, Version 2.0**.<br>
 The full text of the license is included in the license file of this software package, which can be accessed [here](COPYING).

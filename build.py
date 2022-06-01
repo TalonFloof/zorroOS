@@ -41,12 +41,12 @@ def attempt_package(name,relpath,cmds):
     os.chdir(path)
 
 if args[0] == "build":
-    attempt_build("Raven Kernel","Raven Kernel","cargo build -Z unstable-options --target targets/"+args[1]+".json --out-dir ../out/")
+    attempt_build("Fox Kernel","Fox Kernel","cargo build -Z unstable-options --target targets/"+args[1]+".json --out-dir ../out/")
     if args[1] == "AMD64":
         attempt_package("Create ISO", "", (
             "git clone --branch v3.0-branch-binary --depth 1 https://github.com/limine-bootloader/limine /tmp/limine",
             "mkdir /tmp/owlos_iso",
-            "cp --force /tmp/limine/BOOTX64.EFI /tmp/limine/limine-cd-efi.bin /tmp/limine/limine-cd.bin /tmp/limine/limine.sys out/ravenkernel Boot/AMD64/limine.cfg /tmp/owlos_iso",
+            "cp --force /tmp/limine/BOOTX64.EFI /tmp/limine/limine-cd-efi.bin /tmp/limine/limine-cd.bin /tmp/limine/limine.sys out/foxkernel Boot/AMD64/limine.cfg /tmp/owlos_iso",
             "rm -r --force /tmp/limine",
             "xorriso -as mkisofs -b limine-cd.bin -no-emul-boot -boot-load-size 4 -boot-info-table --efi-boot limine-cd-efi.bin -efi-boot-part --efi-boot-image --protective-msdos-label /tmp/owlos_iso -o owlOS.iso",
             "rm -r --force /tmp/owlos_iso",    
