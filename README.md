@@ -89,5 +89,9 @@ should work.
 ---
 ## License
 
+<<<<<<< HEAD
 owlOS, the Fox Kernel, and their core components are licensed under **the Apache License, Version 2.0**.<br>
+=======
+owlOS, the Raven Kernel, and their core components are licensed under **the Apache License, Version 2.0**.<br>
+>>>>>>> 1b9acc53776ff4f8ba31428a1a69b34fd6c6c554
 The full text of the license is included in the license file of this software package, which can be accessed [here](COPYING).
