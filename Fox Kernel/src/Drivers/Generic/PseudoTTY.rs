@@ -258,7 +258,7 @@ impl VFS::Inode for Ptmx {
     fn IOCtl(&self, cmd: usize, _arg: usize) -> Result<usize, i64> {
         match cmd {
             0x4F00 => {
-                // This is a special Raven Kernel specific request that returns the index of the PTY.
+                // This is a special Fox Kernel specific request that returns the index of the PTY.
                 return Ok(self.0.load(Ordering::SeqCst));
             }
             0x4F02 => { // TTYLOGIN

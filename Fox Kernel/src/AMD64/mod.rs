@@ -55,16 +55,16 @@ extern "C" fn _start(pmr: &mut StivaleStruct) {
 	Syscall::Initialize();
 	Task::SetupFPU();
 	Memory::AnalyzeMMAP(
-		pmr.memory_map().expect("The Raven Kernel requires that the Stivale2 compatible bootloader that you are using contains a memory map."));
+		pmr.memory_map().expect("The Fox Kernel requires that the Stivale2 compatible bootloader that you are using contains a memory map."));
 	if pmr.framebuffer().is_some() {
 		let fb_tag = pmr.framebuffer().unwrap();
 		crate::Framebuffer::Init(fb_tag.framebuffer_addr as *mut u32,fb_tag.framebuffer_width as usize,fb_tag.framebuffer_height as usize,fb_tag.framebuffer_pitch as usize,fb_tag.framebuffer_bpp as usize);
 	}
-	unsafe {crate::UNIX_EPOCH = pmr.epoch().expect("The Raven Kernel requires that the Stivale2 compatible bootloader that you are using contains a UNIX Epoch Timestamp.").epoch};
+	unsafe {crate::UNIX_EPOCH = pmr.epoch().expect("The Fox Kernel requires that the Stivale2 compatible bootloader that you are using contains a UNIX Epoch Timestamp.").epoch};
 	ACPI::AnalyzeRSDP(
-		pmr.rsdp().expect("The Raven Kernel requires that the Stivale2 compatible bootloader that you are using contains a pointer to the ACPI tables."));
+		pmr.rsdp().expect("The Fox Kernel requires that the Stivale2 compatible bootloader that you are using contains a pointer to the ACPI tables."));
 	APIC::EnableHarts(
-		pmr.smp_mut().expect("The Raven Kernel requires that the Stivale2 compatible bootloader that you are using is compatable with the SMP feature."));
+		pmr.smp_mut().expect("The Fox Kernel requires that the Stivale2 compatible bootloader that you are using is compatable with the SMP feature."));
 	let free = crate::PageFrame::FreeMem.load(core::sync::atomic::Ordering::SeqCst);
 	let total = crate::PageFrame::TotalMem.load(core::sync::atomic::Ordering::SeqCst);
 	info!("{} MiB Used out of {} MiB Total", (total-free)/1024/1024, total/1024/1024);

@@ -65,7 +65,7 @@ pub fn AnalyzeMMAP(mmap: &StivaleMemoryMapTag) {
             StivaleMemoryMapEntryType::AcpiNvs => "ACPI Non-volatile Storage",
             StivaleMemoryMapEntryType::BadMemory => "Damaged/Bad Memory",
             StivaleMemoryMapEntryType::BootloaderReclaimable => "Usable (Bootloader Data)",
-            StivaleMemoryMapEntryType::Kernel => "Raven Kernel/InitRD",
+            StivaleMemoryMapEntryType::Kernel => "Fox Kernel/InitRD",
             StivaleMemoryMapEntryType::Framebuffer => "GPU Framebuffer",
         };
         debug!("[mem 0x{:016x}-0x{:016x}] {}", base, end, entry_type);

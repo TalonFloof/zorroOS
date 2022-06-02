@@ -1,6 +1,6 @@
 use spin::mutex::Mutex;
 
-const RavenScript: [u16; 95] = [
+const FoxScript: [u16; 95] = [
 0x0000,0x2092,0x002d,0x5f7d,0x279e,0x52a5,0x7ad6,0x0012,
 0x4494,0x1491,0x0aba,0x05d0,0x1400,0x01c0,0x0400,0x12a4,
 0x2b6a,0x749a,0x752a,0x38a3,0x4f4a,0x38cf,0x3bce,0x12a7,
@@ -54,7 +54,7 @@ impl Framebuffer {
         let index: usize = (sym - b' ') as usize;
         for i in 0..5 { // y
             for j in 0..3 { // x
-                if (RavenScript[index] >> (i*3+j)) & 1 == 1 {
+                if (FoxScript[index] >> (i*3+j)) & 1 == 1 {
                     self.DrawRect(x+j*scale,y+i*scale,scale,scale,color);
                 }
             }
