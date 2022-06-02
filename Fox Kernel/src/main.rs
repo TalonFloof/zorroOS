@@ -23,6 +23,7 @@ pub mod Framebuffer;
 pub mod Syscall;
 pub mod FS;
 pub mod Drivers;
+pub mod CommandLine;
 
 use core::panic::PanicInfo;
 use core::alloc::Layout;
@@ -43,6 +44,7 @@ pub static mut UNIX_EPOCH: u64 = 0;
 fn main() -> ! {
     FS::Initalize();
     Drivers::Initalize();
+    if crate::CommandLine::FLAGS.get().unwrap().contains("--break") {panic!("Break");}
     info!("Starting Init");
     Scheduler::Scheduler::Start(CurrentHart())
 }
@@ -57,6 +59,7 @@ static mut PANICKING: bool = false;
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
+    unsafe {crate::Console::QUIET = false;}
     if unsafe{PANICKING} {
         print!("\n\x1b[31m!!!Nested Panic!!!\n");
         halt!();

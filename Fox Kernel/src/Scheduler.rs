@@ -29,28 +29,30 @@ impl Scheduler {
         }
     }
     fn FindNextProcess(&self) -> i32 {
+        loop {
         let mut pqlock = self.process_queue.lock();
         let val = *(pqlock.front().unwrap());
-        pqlock.rotate_left(1);
-        let plock = PROCESSES.lock();
-        if val != -1i32 {
-            let proc = plock.get(&val).unwrap();
-            match proc.status {
-                ProcessStatus::RUNNABLE => {
-                    drop(plock);
-                    drop(pqlock);
-                    return val;
-                }
-                _ => {
-                    drop(pqlock);
-                    drop(plock);
-                    return self.FindNextProcess();
-                }
-            };
-        } else {
-            drop(plock);
-            drop(pqlock);
-            return -1i32;
+            pqlock.rotate_left(1);
+            let plock = PROCESSES.lock();
+            if val != -1i32 {
+                let proc = plock.get(&val).unwrap();
+                match proc.status {
+                    ProcessStatus::RUNNABLE => {
+                        drop(plock);
+                        drop(pqlock);
+                        return val;
+                    }
+                    _ => {
+                        drop(pqlock);
+                        drop(plock);
+                        continue;
+                    }
+                };
+            } else {
+                drop(plock);
+                drop(pqlock);
+                return -1i32;
+            }
         }
     }
     fn ContextSwitch(&self, pid: i32) -> ! {

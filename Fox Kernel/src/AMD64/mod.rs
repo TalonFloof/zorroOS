@@ -20,6 +20,7 @@ use crate::Memory::PageTable;
 use crate::print_startup_message;
 use crate::Scheduler::SCHEDULER_STARTED;
 use log::info;
+use alloc::string::String;
 
 pub const PHYSMEM_BEGIN: u64 = 0xFFFF_8000_0000_0000;
 
@@ -56,6 +57,19 @@ extern "C" fn _start(pmr: &mut StivaleStruct) {
 	Task::SetupFPU();
 	Memory::AnalyzeMMAP(
 		pmr.memory_map().expect("The Fox Kernel requires that the Stivale2 compatible bootloader that you are using contains a memory map."));
+	unsafe {
+		if let Some(cmdtag) = pmr.command_line() {
+			let cmdstr = String::from(cstr_core::CStr::from_ptr(cmdtag.command_line as *const cstr_core::c_char).to_str().unwrap());
+			if cmdstr.len() == 0 {
+				log::warn!("Kernel Command Line is empty!");
+			} else {
+				log::info!("Kernel Command Line: \"{}\"", cmdstr.as_str());
+			}
+			crate::CommandLine::Parse(cmdstr);
+		} else {
+			log::error!("Bootloader didn't specify Kernel Command Line!");
+		}
+	}
 	if pmr.framebuffer().is_some() {
 		let fb_tag = pmr.framebuffer().unwrap();
 		crate::Framebuffer::Init(fb_tag.framebuffer_addr as *mut u32,fb_tag.framebuffer_width as usize,fb_tag.framebuffer_height as usize,fb_tag.framebuffer_pitch as usize,fb_tag.framebuffer_bpp as usize);
@@ -63,8 +77,12 @@ extern "C" fn _start(pmr: &mut StivaleStruct) {
 	unsafe {crate::UNIX_EPOCH = pmr.epoch().expect("The Fox Kernel requires that the Stivale2 compatible bootloader that you are using contains a UNIX Epoch Timestamp.").epoch};
 	ACPI::AnalyzeRSDP(
 		pmr.rsdp().expect("The Fox Kernel requires that the Stivale2 compatible bootloader that you are using contains a pointer to the ACPI tables."));
-	APIC::EnableHarts(
-		pmr.smp_mut().expect("The Fox Kernel requires that the Stivale2 compatible bootloader that you are using is compatable with the SMP feature."));
+	if !crate::CommandLine::FLAGS.get().unwrap().contains("--nosmp") {
+		APIC::EnableHarts(
+			pmr.smp_mut().expect("The Fox Kernel requires that the Stivale2 compatible bootloader that you are using is compatable with the SMP feature."));
+	} else {
+		log::warn!("Symmetric Multiprocessing was disabled by bootloader!");
+	}
 	let free = crate::PageFrame::FreeMem.load(core::sync::atomic::Ordering::SeqCst);
 	let total = crate::PageFrame::TotalMem.load(core::sync::atomic::Ordering::SeqCst);
 	info!("{} MiB Used out of {} MiB Total", (total-free)/1024/1024, total/1024/1024);

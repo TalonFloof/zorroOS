@@ -32,9 +32,11 @@ impl log::Log for KernelLogger {
 }
 
 static LOGGER: KernelLogger = KernelLogger;
+pub static mut QUIET: bool = false;
 
 impl core::fmt::Write for Writer {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        unsafe {if QUIET {return Ok(());}}
         crate::arch::UART::write_serial(s);
         let mut lock = MainFramebuffer.lock();
         if lock.is_some() {

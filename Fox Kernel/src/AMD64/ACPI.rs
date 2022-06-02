@@ -6,7 +6,7 @@ use crate::arch::{APIC, Timer, PHYSMEM_BEGIN};
 use acpi::AcpiHandler;
 use acpi::hpet::HpetInfo;
 use acpi::madt::Madt;
-use log::{warn,info};
+use log::{warn,debug};
 use spin::Mutex;
 use alloc::vec::Vec;
 
@@ -67,7 +67,7 @@ pub fn AnalyzeRSDP(tag: &StivaleRsdpTag) {
             for j in 0..16 {
                 APIC::IOAPIC_CreateRedirect(0x20+j,j,0,true);
             }
-            info!("Found {} IOAPIC(s)", count);
+            debug!("Found {} IOAPIC(s)", count);
             for i in a.interrupt_source_overrides.iter() {
                 let mut flags = 0;
                 match i.polarity {
