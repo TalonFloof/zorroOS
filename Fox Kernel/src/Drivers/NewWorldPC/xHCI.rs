@@ -38,20 +38,20 @@ impl xHCI_Device {
                 if let Ok(cap) = i {
                     match cap {
                         xhci::extended_capabilities::ExtendedCapability::UsbLegacySupport(mut c) => {
-                            if !c.usblegsup.read_volatile().hc_os_owned_semaphore() {
+                            if c.usblegsup.read_volatile().hc_bios_owned_semaphore() {
                                 c.usblegsup.update_volatile(|u| {
                                     u.set_hc_os_owned_semaphore();
-                                    for _ in 0..1000 {
-                                        if !u.hc_bios_owned_semaphore() {break;}
-                                        crate::arch::Timer::Sleep(1);
-                                    }
                                 });
+                                for _ in 0..1000 {
+                                    if !c.usblegsup.read_volatile().hc_bios_owned_semaphore() {break;}
+                                    crate::arch::Timer::Sleep(1);
+                                }
                                 if c.usblegsup.read_volatile().hc_bios_owned_semaphore() {
                                     log::error!("xHCI Firmware handoff failed (Firmware bug?)");
                                     return;
                                 }
                             } else {
-                                log::warn!("Firmware already released control (Firmware bug?)");
+                                log::debug!("Firmware already handed off xHCI to OS");
                             }
                         }
                         _ => {}
