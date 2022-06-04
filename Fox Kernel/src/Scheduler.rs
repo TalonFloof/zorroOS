@@ -23,33 +23,31 @@ impl Scheduler {
         let mut queue = VecDeque::new();
         queue.push_back(-1i32);
         Self {
-            current_proc_id: AtomicI32::new(0),
+            current_proc_id: AtomicI32::new(-1i32),
             process_queue: Mutex::new(queue),
             idle_thread: state,
         }
     }
     fn FindNextProcess(&self) -> i32 {
-        loop {
         let mut pqlock = self.process_queue.lock();
-        let val = *(pqlock.front().unwrap());
+        loop {
+            let val = *(pqlock.front().unwrap());
             pqlock.rotate_left(1);
-            let plock = PROCESSES.lock();
             if val != -1i32 {
+                let plock = PROCESSES.lock();
                 let proc = plock.get(&val).unwrap();
                 match proc.status {
                     ProcessStatus::RUNNABLE => {
-                        drop(plock);
                         drop(pqlock);
+                        drop(plock);
                         return val;
                     }
                     _ => {
-                        drop(pqlock);
                         drop(plock);
                         continue;
                     }
-                };
+                }
             } else {
-                drop(plock);
                 drop(pqlock);
                 return -1i32;
             }

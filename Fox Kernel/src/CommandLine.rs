@@ -8,6 +8,7 @@ pub static FLAGS: Once<BTreeSet<&str>> = Once::new();
 pub static OPTIONS: Once<BTreeMap<&str,&str>> = Once::new();
 
 pub fn Parse(cmd: String) {
+    unsafe {crate::Console::NO_COLOR = false;}
     if cmd.len() == 0 {
         FLAGS.call_once(|| BTreeSet::new());
         OPTIONS.call_once(|| BTreeMap::new());
@@ -24,8 +25,9 @@ pub fn Parse(cmd: String) {
         } else {
             flags.insert(arg);
             if arg == "--no_debug" {
-                log::warn!("No kernel messages will be seen past this point; You're on your own...");
                 unsafe {crate::Console::QUIET = true;}
+            } else if arg == "--no_color" {
+                unsafe {crate::Console::NO_COLOR = true;}
             }
         }
     }

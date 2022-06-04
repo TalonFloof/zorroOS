@@ -28,7 +28,6 @@ pub mod CommandLine;
 use core::panic::PanicInfo;
 use core::alloc::Layout;
 use crate::arch::CurrentHart;
-use log::info;
 
 #[macro_export]
 macro_rules! print_startup_message {
@@ -42,10 +41,10 @@ macro_rules! print_startup_message {
 pub static mut UNIX_EPOCH: u64 = 0;
 
 fn main() -> ! {
-    FS::Initalize();
+    FS::InitalizeEarly();
     Drivers::Initalize();
+    FS::Initalize();
     if crate::CommandLine::FLAGS.get().unwrap().contains("--break") {panic!("Break");}
-    info!("Starting Init");
     Scheduler::Scheduler::Start(CurrentHart())
 }
 
@@ -71,10 +70,10 @@ fn panic(info: &PanicInfo) -> ! {
     match msg {
         Some(m) => {
             print!("\x1b[31mpanic (hart 0x{}): Fatal Exception\n", CurrentHart());
-            print!("{}\n", m.as_str().unwrap());
+            print!("{:?}\n", m);
             print!("{}\n\x1b[0m", info.location().unwrap());
         }
-        None => {
+        _ => {
             print!("\x1b[31mpanic (hart 0x{}): Unknown Exception\n", CurrentHart());
             print!("{}\n\x1b[0m", info.location().unwrap());
         }

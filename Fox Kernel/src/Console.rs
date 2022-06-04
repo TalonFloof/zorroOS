@@ -33,11 +33,12 @@ impl log::Log for KernelLogger {
 
 static LOGGER: KernelLogger = KernelLogger;
 pub static mut QUIET: bool = false;
+pub static mut NO_COLOR: bool = true;
 
 impl core::fmt::Write for Writer {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
-        unsafe {if QUIET {return Ok(());}}
         crate::arch::UART::write_serial(s);
+        unsafe {if QUIET {return Ok(());}}
         let mut lock = MainFramebuffer.lock();
         if lock.is_some() {
             let fb = lock.as_mut().unwrap();
@@ -48,7 +49,6 @@ impl core::fmt::Write for Writer {
                 if self.cursor_x*(4*2) >= (fb.width/(4*2))*(4*2) || b == b'\n' {
                     self.cursor_x = 0;
                     if self.cursor_y*(6*2) >= console_height-(6*2) {
-                        //unsafe {core::ptr::copy((fb.pointer+((6*2)*fb.stride as u64)) as *const u32, fb.pointer as *mut u32, (fb.width*console_height)-((6*2)*fb.width));}
                         self.cursor_y = 0;
                     } else {
                         self.cursor_y += 1;
@@ -86,6 +86,7 @@ impl core::fmt::Write for Writer {
                                     self.text_color = 0x7F7F7F;
                                 }
                             }
+                            unsafe {if NO_COLOR {self.text_color = 0xFFFFFF;}}
                             parse_ansi = false;
                             ansi_seq.clear();
                         } else {

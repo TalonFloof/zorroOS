@@ -90,6 +90,7 @@ extern "C" fn _start(pmr: &mut StivaleStruct) {
 }
 
 extern "C" fn _Hart_start(smp: &'static StivaleSmpInfo) -> ! {
+	unsafe { asm!("cli"); };
 	unsafe {GDT::HARTS[smp.lapic_id as usize].as_mut().unwrap().init()}
 	unsafe {IDT::Setup();}
 	Syscall::Initialize();

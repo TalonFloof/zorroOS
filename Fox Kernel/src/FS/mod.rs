@@ -5,8 +5,11 @@ pub mod RootFS;
 pub mod DevFS;
 pub mod InitrdFS;
 
-pub fn Initalize() {
-    debug!("Registering filesystems...");
+pub fn InitalizeEarly() {
     RootFS::Initalize();
     DevFS::Initalize();
+}
+
+pub fn Initalize() {
+    debug!("Finding root filesystem");
 }

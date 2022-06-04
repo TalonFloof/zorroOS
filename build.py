@@ -47,15 +47,25 @@ if args[0] == "build":
             "git clone --branch v3.0-branch-binary --depth 1 https://github.com/limine-bootloader/limine /tmp/limine",
             "mkdir -p /tmp/owlos_iso/EFI/BOOT",
             "cp --force /tmp/limine/BOOTX64.EFI /tmp/limine/limine-cd-efi.bin /tmp/limine/limine-cd.bin /tmp/limine/limine.sys out/foxkernel Boot/AMD64/limine.cfg /tmp/owlos_iso",
-            "rm -r --force /tmp/limine",
             "mv /tmp/owlos_iso/BOOTX64.EFI /tmp/owlos_iso/EFI/BOOT/BOOTX64.EFI",
-            "xorriso -as mkisofs -b limine-cd.bin -no-emul-boot -boot-load-size 4 -boot-info-table --efi-boot limine-cd-efi.bin -efi-boot-part --efi-boot-image --protective-msdos-label /tmp/owlos_iso -o owlOS.iso",
+            "xorriso -as mkisofs \
+            -b limine-cd.bin \
+            -no-emul-boot \
+            -boot-load-size 4 \
+            -boot-info-table \
+            --efi-boot limine-cd-efi.bin \
+            -efi-boot-part \
+            --efi-boot-image \
+            --protective-msdos-label \
+            /tmp/owlos_iso -o owlOS.iso",
+            "clang /tmp/limine/limine-deploy.c -o /tmp/limine/limine-deploy",
+            "/tmp/limine/limine-deploy owlOS.iso",
+            "rm -r --force /tmp/limine",
             "rm -r --force /tmp/owlos_iso",    
         ))
 elif args[0] == "run":
     if args[1] == "AMD64":
         os.system("clear")
-        os.system("(udisksctl unmount --block-device /dev/sdb1) 2>/dev/null >/dev/null")
         os.system("qemu-system-x86_64 \
         -cdrom owlOS.iso \
         -m 128M \
@@ -64,6 +74,5 @@ elif args[0] == "run":
         -cpu host \
         -serial stdio \
         -device qemu-xhci \
-        -d cpu_reset \
         -enable-kvm")
 sys.exit(0)

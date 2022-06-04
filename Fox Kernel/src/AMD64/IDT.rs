@@ -168,7 +168,7 @@ pub unsafe fn Setup() {
     kidt.load();
     u8::write_to_port(0x29,0xff);
     u8::write_to_port(0x21,0xff);
-    //x86_64::instructions::interrupts::enable();
+    x86_64::instructions::interrupts::enable();
 }
 #[doc(hidden)]
 fn IDTSetup(inttab: &mut InterruptDescriptorTable) {
