@@ -33,14 +33,17 @@ use crate::arch::CurrentHart;
 macro_rules! print_startup_message {
     () => {
         crate::Console::Initalize();
-        info!("Fox Kernel has awoken...");
-        info!("Copyright (C) 2020-2022 TalonTheRaven");
+        log::info!("Fox Kernel has awoken...");
+        log::info!("Copyright (C) 2020-2022 TalonTheRaven");
     }
 }
 
 pub static mut UNIX_EPOCH: u64 = 0;
 
 fn main() -> ! {
+    let free = PageFrame::FreeMem.load(core::sync::atomic::Ordering::SeqCst);
+	let total = PageFrame::TotalMem.load(core::sync::atomic::Ordering::SeqCst);
+	log::info!("{} MiB Used out of {} MiB Total", (total-free)/1024/1024, total/1024/1024);
     FS::InitalizeEarly();
     Drivers::Initalize();
     FS::Initalize();

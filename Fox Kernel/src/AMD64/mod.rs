@@ -83,9 +83,6 @@ extern "C" fn _start(pmr: &mut StivaleStruct) {
 	} else {
 		log::warn!("Symmetric Multiprocessing was disabled by bootloader!");
 	}
-	let free = crate::PageFrame::FreeMem.load(core::sync::atomic::Ordering::SeqCst);
-	let total = crate::PageFrame::TotalMem.load(core::sync::atomic::Ordering::SeqCst);
-	info!("{} MiB Used out of {} MiB Total", (total-free)/1024/1024, total/1024/1024);
 	crate::main();
 }
 
