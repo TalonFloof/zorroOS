@@ -47,6 +47,7 @@ pub trait TaskFloatState: Send + Sync {
 
 pub struct Process {
     pub id: i32,
+    pub parent_id: i32,
 
     pub task_state: State,
     pub task_fpstate: FloatState,
@@ -68,10 +69,11 @@ pub struct Process {
 pub const USERSPACE_STACK_SIZE: u64 = 0x4000;
 
 impl Process {
-    pub fn new(name: String) -> Self {
+    pub fn new(name: String, parent: i32) -> Self {
         let state = State::new(false);
         Self {
             id: i32::MIN,
+            parent_id: parent,
 
             task_state: state,
             task_fpstate: FloatState::new(),
@@ -166,6 +168,7 @@ impl Process {
         task_state.SetSC0(0);
         Self {
             id: i32::MIN,
+            parent_id: self.id,
 
             task_state,
             task_fpstate: self.task_fpstate.Clone(),

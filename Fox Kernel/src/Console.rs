@@ -44,20 +44,20 @@ impl core::fmt::Write for Writer {
             let fb = lock.as_mut().unwrap();
             let mut ansi_seq: Vec<u8> = Vec::new();
             let mut parse_ansi = false;
-            let console_height = fb.height.div_floor(6*2) * (6*2);
+            let console_height = fb.height.div_floor(16) * 16;
             for b in s.bytes() {
-                if self.cursor_x*(4*2) >= (fb.width/(4*2))*(4*2) || b == b'\n' {
+                if self.cursor_x*8 >= fb.width.div_floor(8)*8 || b == b'\n' {
                     self.cursor_x = 0;
-                    if self.cursor_y*(6*2) >= console_height-(6*2) {
+                    if self.cursor_y*16 >= console_height-16 {
                         self.cursor_y = 0;
                     } else {
                         self.cursor_y += 1;
                     }
-                    fb.DrawRect(0, self.cursor_y*(6*2), fb.width, 6*2, 0x000000);
+                    fb.DrawRect(0, self.cursor_y*16, fb.width, 16, 0x000000);
                 }
                 if b >= 32 && b <= 127 {
                     if !parse_ansi {
-                        fb.DrawSymbol(self.cursor_x*(4*2), self.cursor_y*(6*2), b, self.text_color, 2);
+                        fb.DrawSymbol(self.cursor_x*8, self.cursor_y*16, b, self.text_color, 1);
                         self.cursor_x += 1;
                     } else {
                         if b == b'm' {
