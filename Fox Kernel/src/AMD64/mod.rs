@@ -103,6 +103,7 @@ extern "C" fn _Hart_start(smp: &'static StivaleSmpInfo) -> ! {
 	unsafe { asm!("cli"); };
 	unsafe {GDT::HARTS[smp.lapic_id as usize].as_mut().unwrap().init()}
 	unsafe {IDT::Setup();}
+	unsafe { asm!("cli"); };
 	Syscall::Initialize();
 	Task::SetupFPU();
 	unsafe {(*crate::PageFrame::KernelPageTable.lock()).Switch();}
