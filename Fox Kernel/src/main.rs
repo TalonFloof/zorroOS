@@ -28,6 +28,8 @@ pub mod CommandLine;
 use core::panic::PanicInfo;
 use core::alloc::Layout;
 use crate::arch::CurrentHart;
+use alloc::vec::Vec;
+use alloc::string::String;
 
 #[macro_export]
 macro_rules! print_startup_message {
@@ -40,13 +42,13 @@ macro_rules! print_startup_message {
 
 pub static mut UNIX_EPOCH: u64 = 0;
 
-fn main() -> ! {
+fn main(ramdisks: Vec<(String,&[u8])>) -> ! {
     let free = PageFrame::FreeMem.load(core::sync::atomic::Ordering::SeqCst);
 	let total = PageFrame::TotalMem.load(core::sync::atomic::Ordering::SeqCst);
 	log::info!("{} MiB Used out of {} MiB Total", (total-free)/1024/1024, total/1024/1024);
     FS::InitalizeEarly();
     Drivers::Initalize();
-    FS::Initalize();
+    FS::Initalize(ramdisks);
     if crate::CommandLine::FLAGS.get().unwrap().contains("--break") {panic!("Break");}
     Scheduler::Scheduler::Start(CurrentHart())
 }
@@ -91,4 +93,6 @@ fn oom(_: Layout) -> ! {
 }
 
 #[lang = "eh_personality"]
-extern "C" fn eh_personality() {}
+extern "C" fn eh_personality() {
+    panic!("Poisoned function \"eh_personality\" was unexpectedly called");
+}

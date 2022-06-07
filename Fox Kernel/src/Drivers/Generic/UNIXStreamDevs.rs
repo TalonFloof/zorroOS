@@ -41,7 +41,7 @@ impl VFS::Inode for Null {
     fn Read(&self, _offset: i64, _buffer: &mut [u8]) -> i64 {
         0
     }
-    fn Write(&self, _offset: i64, _buffer: &mut [u8]) -> i64 {
+    fn Write(&self, _offset: i64, _buffer: &[u8]) -> i64 {
         0
     }
 }
@@ -85,7 +85,7 @@ impl VFS::Inode for Zero {
         buffer.fill(0);
         buffer.len() as i64
     }
-    fn Write(&self, _offset: i64, _buffer: &mut [u8]) -> i64 {
+    fn Write(&self, _offset: i64, _buffer: &[u8]) -> i64 {
         0
     }
 }

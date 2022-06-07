@@ -152,7 +152,7 @@ impl VFS::Inode for PTClient {
         drop(lock);
         return i as i64;
     }
-    fn Write(&self, _offset: i64, buffer: &mut [u8]) -> i64 {
+    fn Write(&self, _offset: i64, buffer: &[u8]) -> i64 {
         let plock = PTYS.lock();
         let arc = plock.get(&self.p).unwrap();
         let mut i = 0;
@@ -185,7 +185,7 @@ impl VFS::Inode for PTServer {
         drop(lock);
         return i as i64;
     }
-    fn Write(&self, _offset: i64, buffer: &mut [u8]) -> i64 {
+    fn Write(&self, _offset: i64, buffer: &[u8]) -> i64 {
         let plock = PTYS.lock();
         let arc = plock.get(&self.p).unwrap();
         let mut i = 0;
@@ -246,7 +246,7 @@ impl VFS::Inode for Ptmx {
         drop(lock);
         ret
     }
-    fn Write(&self, offset: i64, buffer: &mut [u8]) -> i64 {
+    fn Write(&self, offset: i64, buffer: &[u8]) -> i64 {
         if self.0.load(Ordering::SeqCst) == usize::MAX {
             return -(Errors::EACCES as i64);
         }

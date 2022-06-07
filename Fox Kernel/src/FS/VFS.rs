@@ -47,7 +47,7 @@ pub trait Inode: Send + Sync {
         -(Errors::ENOSYS as i64)
     }
 
-    fn Write(&self, _offset: i64, _buffer: &mut [u8]) -> i64 {
+    fn Write(&self, _offset: i64, _buffer: &[u8]) -> i64 {
         -(Errors::ENOSYS as i64)
     }
 
@@ -55,7 +55,7 @@ pub trait Inode: Send + Sync {
         -(Errors::ENOSYS as i64)
     }
 
-    fn Creat(&self, _name: &str, _mode: u64) -> Result<Arc<dyn Inode>, i64> { // Creat, Mknod, & Mkdir merged into one system call
+    fn Creat(&self, _name: &str, _mode: i32) -> Result<Arc<dyn Inode>, i64> { // Creat, Mknod, & Mkdir merged into one system call
         Err(Errors::ENOSYS as i64)
     }
 

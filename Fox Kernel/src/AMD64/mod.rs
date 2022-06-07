@@ -19,8 +19,8 @@ use stivale_boot::v2::*;
 use crate::Memory::PageTable;
 use crate::print_startup_message;
 use crate::Scheduler::SCHEDULER_STARTED;
-use log::info;
 use alloc::string::String;
+use alloc::vec::Vec;
 
 pub const PHYSMEM_BEGIN: u64 = 0xFFFF_8000_0000_0000;
 
@@ -40,8 +40,12 @@ macro_rules! halt_other_harts {
 	() => {
 		x86_64::instructions::interrupts::disable();
 		unsafe {crate::Console::WRITER.force_unlock();}
-		if crate::arch::APIC::LAPIC_READY.load(core::sync::atomic::Ordering::SeqCst) {
-			crate::arch::APIC::SendIPI(crate::arch::CurrentHart() as u8,crate::arch::APIC::ICR_DSH_OTHER,crate::arch::APIC::ICR_MESSAGE_TYPE_NMI,0);
+		if let Some(flags) = crate::CommandLine::FLAGS.get() {
+			if matches!(flags.get("--nosmp"),None) {
+				if crate::arch::APIC::LAPIC_READY.load(core::sync::atomic::Ordering::SeqCst) {
+					crate::arch::APIC::SendIPI(crate::arch::CurrentHart() as u8,crate::arch::APIC::ICR_DSH_OTHER,crate::arch::APIC::ICR_MESSAGE_TYPE_NMI,0);
+				}
+			}
 		}
 	}
 }
@@ -83,7 +87,16 @@ extern "C" fn _start(pmr: &mut StivaleStruct) {
 	} else {
 		log::warn!("Symmetric Multiprocessing was disabled by bootloader!");
 	}
-	crate::main();
+	if let Some(mods) = pmr.modules() {
+		let mut mod_list: Vec<(String,&[u8])> = Vec::new();
+		for i in mods.iter() {
+			unsafe {mod_list.push((String::from(i.as_str()),core::slice::from_raw_parts(i.start as *const u8, i.size() as usize)));}
+		}
+		crate::main(mod_list);
+	} else {
+		log::warn!("Stivale2 compatible bootloader doesn't support modules!");
+		crate::main(Vec::new());
+	}
 }
 
 extern "C" fn _Hart_start(smp: &'static StivaleSmpInfo) -> ! {
