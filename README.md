@@ -93,10 +93,10 @@ owlOS practices "optimistic merging." This means that Pull Requests will be merg
 The reasoning behind this is to keep Pull Requests small and focused on a specific part of owlOS.
 
 **In order for a pull request to be merged, it must meet all of the specified criterias:**
-- The commit's name must be short, clear, and be prefixed with the component in owlOS that was changed, for example:<br>
+- The commit's name must be short, clear, and must be prefixed with the component in owlOS that was changed. For Example:<br>
 ```Fox Kernel: Fixed memory leak in AMD64::APIC::EnableHarts```
 - The commit must be able to compile and run sucessfully
-- The commit must focus on a specific part of owlOS and cannot modify multible parts. For example: You can't have a commit that focuses on both code in the Fox Kernel and  on Documentation at the same time.
+- The commit must focus on a specific part of owlOS and cannot modify multiple parts. For example: You can't have a commit that focuses on both code in the Fox Kernel and on Documentation at the same time.
 - The commit cannot contain any executable files in binary form.
 
 Binaries should be reduced to be as small as possible,
