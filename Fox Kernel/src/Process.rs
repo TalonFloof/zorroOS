@@ -8,6 +8,7 @@ use crate::arch::Memory::PageTableImpl;
 use crate::Scheduler::SCHEDULERS;
 use alloc::string::String;
 use alloc::sync::Arc;
+use crate::FS::VFS::FileDescriptor;
 
 pub static PROCESSES: Mutex<BTreeMap<i32,Process>> = Mutex::new(BTreeMap::new());
 pub static NEXTPROCESS: AtomicI32 = AtomicI32::new(0);
@@ -64,6 +65,8 @@ pub struct Process {
 
     pub cwd: String,
     pub status: ProcessStatus,
+
+    pub fds: BTreeMap<i64, FileDescriptor>,
 }
 
 pub const USERSPACE_STACK_SIZE: u64 = 0x4000;
@@ -90,6 +93,8 @@ impl Process {
 
             cwd: String::from("/"),
             status: ProcessStatus::NEW,
+
+            fds: BTreeMap::new(),
         }
     }
     pub fn ContextSwitch(&self) -> ! {
@@ -185,6 +190,8 @@ impl Process {
 
             cwd: self.cwd.clone(),
             status: ProcessStatus::NEW,
+
+            fds: BTreeMap::new(),
         }
     }
 }

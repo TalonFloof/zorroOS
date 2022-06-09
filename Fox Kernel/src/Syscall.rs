@@ -1,3 +1,6 @@
+use crate::arch::Task::State;
+use crate::Scheduler::Scheduler;
+
 pub mod Errors {
     pub const EPERM: i32 = 1;  /* Operation not permitted */
     pub const ENOENT: i32 = 2;  /* No such file or directory */
@@ -130,4 +133,9 @@ pub mod Errors {
     pub const EKEYREJECTED: i32 = 129; /* Key was rejected by service */
     pub const EOWNERDEAD: i32 = 130; /* Owner died */
     pub const ENOTRECOVERABLE: i32 = 131; /* State not recoverable */
+}
+
+pub fn SystemCall(regs: &mut State) {
+    let curproc = Scheduler::CurrentPID();
+    
 }

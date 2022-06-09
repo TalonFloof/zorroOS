@@ -99,6 +99,12 @@ pub trait Filesystem: Send + Sync {
     }
 }
 
+pub struct FileDescriptor {
+    inode: Arc<dyn Inode>,
+    offset: i64,
+    mode: usize,
+}
+
 static MOUNTS: Mutex<Vec<(String,Arc<dyn Filesystem>)>> = Mutex::new(Vec::new());
 
 pub fn Mount(path: &str, filesystem: Arc<dyn Filesystem>) {

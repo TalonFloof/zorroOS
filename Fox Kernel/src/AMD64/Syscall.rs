@@ -66,12 +66,11 @@ unsafe extern "C" fn __syscall() {
 
 #[no_mangle]
 extern "C" fn x86SCall(
-    _cr: &mut State
+    cr: &mut State
 ) {
-    //crate::Syscall::SystemCall(cr);
+    crate::Syscall::SystemCall(cr);
 }
 
-#[allow(unaligned_references)]
 pub fn Initialize() {
     unsafe {
         Efer::write(Efer::read() | EferFlags::NO_EXECUTE_ENABLE | EferFlags::SYSTEM_CALL_EXTENSIONS);

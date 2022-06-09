@@ -10,5 +10,5 @@ pub fn Initalize() {
     PCI::Initalize();
     PS2HID::Initalize();
     ATA::Initalize();
-    xHCI::Initalize();
+    if !crate::CommandLine::FLAGS.get().unwrap().contains("--no_xhci") {xHCI::Initalize();}
 }
