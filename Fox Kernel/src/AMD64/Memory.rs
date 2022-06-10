@@ -73,7 +73,8 @@ pub fn AnalyzeMMAP(mmap: &StivaleMemoryMapTag) {
             array[array_index].base = i.base;
             array[array_index].length = i.length;
             array_index += 1;
-        } else if i.entry_type == StivaleMemoryMapEntryType::Kernel || i.entry_type == StivaleMemoryMapEntryType::BootloaderReclaimable || i.entry_type == StivaleMemoryMapEntryType::AcpiReclaimable {
+        } else if i.entry_type == StivaleMemoryMapEntryType::Kernel {
+            crate::PageFrame::UsedMem.fetch_add(i.length,core::sync::atomic::Ordering::SeqCst);
             crate::PageFrame::TotalMem.fetch_add(i.length,core::sync::atomic::Ordering::SeqCst);
         }
     }

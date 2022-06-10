@@ -8,7 +8,6 @@ license = "Apache-2.0"
 
 [dependencies]
 spin = "0.9"
-buddy_system_allocator = {version="*",features=["use_spin","const_fn"]}
 xmas-elf = "0.8"
 log = "*"
 cstr_core = "*"

@@ -15,7 +15,7 @@ pub struct HeapRange {
 static Bitmap: AtomicU64 = AtomicU64::new(0);
 pub static Pages: AtomicU64 = AtomicU64::new(0);
 static NextPage: AtomicU64 = AtomicU64::new(0);
-pub static FreeMem: AtomicU64 = AtomicU64::new(0);
+pub static UsedMem: AtomicU64 = AtomicU64::new(0);
 pub static TotalMem: AtomicU64 = AtomicU64::new(0);
 static PhysMemLock: Mutex<PhantomData<()>> = Mutex::new(PhantomData);
 lazy_static! {
@@ -85,7 +85,7 @@ pub fn Allocate(Size: u64) -> Option<*mut u8> {
     for i in np..(p - pages) {
         if !TestRange(i * 0x1000, Size) {
             SetRange(i * 0x1000, (i * 0x1000)+Size);
-            FreeMem.fetch_sub(Size,Ordering::SeqCst);
+            UsedMem.fetch_add(Size,Ordering::SeqCst);
             drop(lock);
             unsafe {core::ptr::write_bytes(((i*0x1000)+PHYSMEM_BEGIN) as *mut u8,0x00,Size as usize);}
             return Some(((i*0x1000)+PHYSMEM_BEGIN) as *mut u8);
@@ -101,7 +101,7 @@ pub fn AllocateAlign(Size: u64) -> Option<*mut u8> {
     for i in np..p {
         if !TestRange(i * Size, Size) {
             SetRange(i * Size, (i * Size)+Size);
-            FreeMem.fetch_sub(Size,Ordering::SeqCst);
+            UsedMem.fetch_add(Size,Ordering::SeqCst);
             drop(lock);
             unsafe {core::ptr::write_bytes(((i*Size)+PHYSMEM_BEGIN) as *mut u8,0x00,Size as usize);}
             return Some(((i*Size)+PHYSMEM_BEGIN) as *mut u8);
@@ -115,7 +115,7 @@ pub fn Free(Addr: *mut u8, Size: u64) {
     let lock = PhysMemLock.lock();
     if Addr as u64 != 0 {
         FreeRange(Addr as u64-PHYSMEM_BEGIN, ((Addr as u64)-PHYSMEM_BEGIN) + Size);
-        FreeMem.fetch_add(Size,Ordering::SeqCst);
+        UsedMem.fetch_sub(Size,Ordering::SeqCst);
     }
     drop(lock);
 }
@@ -127,7 +127,7 @@ pub fn Setup(mem: [HeapRange; 64]) {
             max_mem = i.base + i.length;
         }
     }
-    let pages = max_mem / 0x1000;
+    let pages = max_mem.div_ceil(0x1000);
     let bitmap_size = pages.div_ceil(8);
     let bm_pages = bitmap_size.div_ceil(0x1000);
     Pages.store(pages,Ordering::SeqCst);
@@ -143,13 +143,12 @@ pub fn Setup(mem: [HeapRange; 64]) {
     for i in mem.iter() {
         if i.length != 0 {
             FreeRange(i.base,i.base+i.length);
-            FreeMem.fetch_add(i.length,Ordering::SeqCst);
             TotalMem.fetch_add(i.length,Ordering::SeqCst);
         }
     }
     let bitmap = Bitmap.load(Ordering::Relaxed);
     assert_ne!(bitmap, 0);
     SetRange(bitmap-PHYSMEM_BEGIN,(bitmap-PHYSMEM_BEGIN)+(bm_pages*0x1000));
-    FreeMem.fetch_sub(bm_pages*0x1000,Ordering::SeqCst);
+    UsedMem.fetch_add(bm_pages*0x1000,Ordering::SeqCst);
     debug!("Page Frame Bitmap located at 0x{:016x}", bitmap);
 }

@@ -46,9 +46,11 @@ fn main(ramdisks: Vec<(String,&[u8])>) -> ! {
     FS::InitalizeEarly();
     Drivers::Initalize();
     FS::Initalize(ramdisks);
-    let free = PageFrame::FreeMem.load(core::sync::atomic::Ordering::SeqCst);
-	let total = PageFrame::TotalMem.load(core::sync::atomic::Ordering::SeqCst);
-	log::info!("{} MiB Used out of {} MiB Total", (total-free)/1024/1024, total/1024/1024);
+    {
+        let used = PageFrame::UsedMem.load(core::sync::atomic::Ordering::SeqCst);
+	    let total = PageFrame::TotalMem.load(core::sync::atomic::Ordering::SeqCst);
+	    log::info!("{} MiB Used out of {} MiB Total", used/1024/1024, total/1024/1024);
+    }
     if crate::CommandLine::FLAGS.get().unwrap().contains("--break") {panic!("Break");}
     Scheduler::Scheduler::Start(CurrentHart())
 }
@@ -88,8 +90,8 @@ fn panic(info: &PanicInfo) -> ! {
 }
 
 #[lang = "oom"]
-fn oom(_: Layout) -> ! {
-    panic!("Kernel Heap expansion cannot be satisfied: Out of Memory.");
+fn oom(l: Layout) -> ! {
+    panic!("Kernel Heap expansion cannot be satisfied: Out of Memory.\nAttempted Allocation Size: 0x{:016x}", l.size());
 }
 
 #[lang = "eh_personality"]
