@@ -36,7 +36,7 @@ macro_rules! print_startup_message {
     () => {
         crate::Console::Initalize();
         log::info!("Fox Kernel has awoken...");
-        log::info!("Copyright (C) 2020-2022 TalonTheRaven");
+        log::info!("Copyright (C) 2020-2022 Talon396");
     }
 }
 
