@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import sys, os, subprocess
 from xml.etree.ElementTree import TreeBuilder
 
