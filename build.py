@@ -6,8 +6,6 @@ from xml.etree.ElementTree import TreeBuilder
 args = sys.argv.copy()
 del args[0]
 
-termsize = os.get_terminal_size()
-
 if len(args) == 0:
     args.append(input("Action (build, run): "))
 if len(args) == 1:
