@@ -22,7 +22,7 @@ jobs:
     - name: Grab Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get -y nasm
+        sudo apt-get install -y nasm
     - name: Build owlOS
       run: ./build.py build AMD64 NewWorldPC
     - name: Upload ISO as Artifact
