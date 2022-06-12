@@ -11,7 +11,6 @@ kernel known as the **Fox Kernel**.
 
 ---
 - **owlOS** tries to implement clean APIs to allow developers to easily create programs.
-- **owlOS** features modern concepts inside its libraries like **fibers**.
 - **owlOS** is portable.
 - **owlOS** is open.
 

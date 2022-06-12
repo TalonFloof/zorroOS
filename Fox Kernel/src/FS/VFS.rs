@@ -99,10 +99,12 @@ pub trait Filesystem: Send + Sync {
     }
 }
 
+#[derive(Clone)]
 pub struct FileDescriptor {
-    inode: Arc<dyn Inode>,
-    offset: i64,
-    mode: usize,
+    pub inode: Arc<dyn Inode>,
+    pub offset: i64,
+    pub mode: usize,
+    pub is_dir: bool,
 }
 
 static MOUNTS: Mutex<Vec<(String,Arc<dyn Filesystem>)>> = Mutex::new(Vec::new());
@@ -184,4 +186,13 @@ pub fn GetAbsPath(path: &str, cwd: &str) -> String {
         return [String::from("/"),full_path.join("/")].join("");
     }
     return String::from(path);
+}
+
+pub fn HasPermission(data: &Metadata, uid: u32, gid: u32, bits: usize) -> bool {
+    if uid == 0 && bits & 1 == 0 {
+        return true;
+    }
+    let mut my_permission = data.mode & 0b111;
+    if data.uid == uid {my_permission = (data.mode & 0b111000000) >> 6;} else if data.gid == gid {my_permission = (data.mode & 0b000111000) >> 3;}
+    return my_permission as usize & bits == bits;
 }

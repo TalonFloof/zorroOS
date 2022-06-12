@@ -102,8 +102,7 @@ impl Process {
         self.task_state.Enter()
     }
     //////////////////////////////////////////////////////////////
-    #[allow(dead_code)]
-    fn AddProcess(mut proc: Process) -> i32 {
+    pub fn AddProcess(mut proc: Process) -> i32 {
         let mut plock = PROCESSES.lock();
         let start = NEXTPROCESS.load(Ordering::SeqCst);
         let len = *plock.last_key_value().unwrap_or_else(|| (&0, &proc)).0 + 1;
@@ -171,6 +170,10 @@ impl Process {
         let mut task_state = State::new(false);
         task_state.Save(&self.task_state);
         task_state.SetSC0(0);
+        let mut fds = BTreeMap::new();
+        for (i,j) in self.fds.iter() {
+            fds.insert(*i,j.clone());
+        }
         Self {
             id: i32::MIN,
             parent_id: self.id,
@@ -189,9 +192,9 @@ impl Process {
             pagetable: self.pagetable.Clone(is_thread),
 
             cwd: self.cwd.clone(),
-            status: ProcessStatus::NEW,
+            status: ProcessStatus::RUNNABLE,
 
-            fds: BTreeMap::new(),
+            fds,
         }
     }
 }

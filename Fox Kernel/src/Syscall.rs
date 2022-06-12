@@ -1,5 +1,9 @@
 use crate::arch::Task::State;
 use crate::Scheduler::Scheduler;
+use crate::CurrentHart;
+use crate::Process::{Process,TaskState};
+use cstr_core::{c_char,CStr};
+use crate::FS::VFS;
 
 pub mod Errors {
     pub const EPERM: i32 = 1;  /* Operation not permitted */
@@ -135,7 +139,100 @@ pub mod Errors {
     pub const ENOTRECOVERABLE: i32 = 131; /* State not recoverable */
 }
 
+pub mod OpenFlags {
+    pub const O_ACCMODE: usize   = 0x0007;
+    pub const O_EXEC: usize      = 1;
+    pub const O_RDONLY: usize    = 2;
+    pub const O_RDWR: usize      = 3;
+    pub const O_SEARCH: usize    = 4;
+    pub const O_WRONLY: usize    = 5;
+    pub const O_APPEND: usize    = 0x0008;
+    pub const O_CREAT: usize     = 0x0010;
+    pub const O_DIRECTORY: usize = 0x0020;
+    pub const O_EXCL: usize      = 0x0040;
+    pub const O_NOCTTY: usize    = 0x0080;
+    pub const O_NOFOLLOW: usize  = 0x0100;
+    pub const O_TRUNC: usize     = 0x0200;
+    pub const O_NONBLOCK: usize  = 0x0400;
+    pub const O_DSYNC: usize     = 0x0800;
+    pub const O_RSYNC: usize     = 0x1000;
+    pub const O_SYNC: usize      = 0x2000;
+    pub const O_CLOEXEC: usize   = 0x4000;
+    pub const O_PATH: usize      = 0x8000;
+}
+
 pub fn SystemCall(regs: &mut State) {
     let curproc = Scheduler::CurrentPID();
-    
+    match regs.GetSC0() {
+        0x00 => { // yield
+            Scheduler::Tick(CurrentHart(),regs);
+        }
+        0x01 => { // exit
+            unimplemented!();
+        }
+        0x02 => { // fork
+            let mut plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get_mut(&curproc).unwrap();
+            let forked_proc = Process::Fork(proc,regs.GetSC1() == 1);
+            regs.SetSC0(Process::AddProcess(forked_proc) as usize);
+            drop(plock);
+        }
+        0x03 => { // open
+            let mut plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get_mut(&curproc).unwrap();
+            let path = unsafe {CStr::from_ptr(regs.GetSC1() as *const c_char)}.to_str();
+            let mut mode = regs.GetSC2();
+            if path.is_err() {
+                regs.SetSC0((-Errors::EINVAL as isize) as usize);
+                drop(plock);
+                return;
+            }
+            if mode & 7 == 0 || mode & 7 == 1 || mode & 7 == 4 {
+                mode |= OpenFlags::O_RDONLY;
+            }
+            if mode & OpenFlags::O_CREAT != 0 {
+                regs.SetSC0((-Errors::ENOSYS as isize) as usize);
+                drop(plock);
+                return;
+            }
+            let file = VFS::LookupPath(VFS::GetAbsPath(path.ok().unwrap(),proc.cwd.as_str()).as_str());
+            if file.is_err() {
+                regs.SetSC0((-file.err().unwrap() as isize) as usize);
+                drop(plock);
+                return;
+            }
+            let metadata = file.as_ref().ok().unwrap().Stat().ok().unwrap();
+            if mode & OpenFlags::O_DIRECTORY != 0 {
+                if metadata.mode & 0o0040000 == 0 {
+                    regs.SetSC0((-Errors::ENOTDIR as isize) as usize);
+                    drop(plock);
+                    return;
+                }
+            } else {
+                if metadata.mode & 0o0040000 != 0 {
+                    regs.SetSC0((-Errors::EISDIR as isize) as usize);
+                    drop(plock);
+                    return;
+                }
+            }
+            if !VFS::HasPermission(&metadata,proc.euid,proc.egid,if mode & 1 == 1 {0b10} else {0} | if mode & 2 == 2 {0b100} else {0}) {
+                regs.SetSC0((-Errors::EACCES as isize) as usize);
+                drop(plock);
+                return;
+            }
+            // We can finally create the File Descriptor!
+            let len = if proc.fds.keys().last().is_some() {*proc.fds.keys().last().unwrap()} else {0};
+            proc.fds.insert(len,VFS::FileDescriptor {
+                inode: file.ok().unwrap(),
+                offset: 0,
+                mode,
+                is_dir: mode & OpenFlags::O_DIRECTORY != 0,
+            });
+            regs.SetSC0(len as usize);
+            drop(plock);
+        }
+        _ => {
+
+        }
+    }
 }
