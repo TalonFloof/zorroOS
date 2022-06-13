@@ -227,6 +227,7 @@ pub fn SystemCall(regs: &mut State) {
             }
             // We can finally create the File Descriptor!
             let len = if proc.fds.keys().last().is_some() {*proc.fds.keys().last().unwrap()} else {0};
+            file.as_ref().ok().unwrap().Open(mode);
             proc.fds.insert(len,VFS::FileDescriptor {
                 inode: file.ok().unwrap(),
                 offset: 0,
