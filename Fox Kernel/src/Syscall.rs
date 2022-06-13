@@ -523,7 +523,13 @@ pub fn SystemCall(regs: &mut State) {
                 regs.SetSC0((-Errors::EBADF) as usize);
                 return;
             }
-            regs.SetSC0(fd.unwrap().inode.IOCtl(regs.GetSC2(),regs.GetSC3()));
+            let result = fd.unwrap().inode.IOCtl(regs.GetSC2(),regs.GetSC3());
+            if result.is_err() {
+                regs.SetSC0((-result.err().unwrap() as isize) as usize);
+                drop(plock);
+                return;
+            }
+            regs.SetSC0(result.ok().unwrap());
             drop(plock);
         }
         _ => {
