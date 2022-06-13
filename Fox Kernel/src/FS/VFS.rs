@@ -82,7 +82,7 @@ pub trait Inode: Any + Send + Sync {
 
     fn Close(&self) {}
 
-    fn ChOwn(&self, _uid: u32, _gid: u32) -> i64 {
+    fn ChOwn(&self, _uid: i32, _gid: i32) -> i64 {
         Errors::ENOSYS as i64
     }
 

@@ -161,9 +161,9 @@ impl VFS::Inode for RAMInode {
 
     fn Close(&self) {}
 
-    fn ChOwn(&self, uid: u32, gid: u32) -> i64 {
-        self.uid.store(uid,Ordering::SeqCst);
-        self.gid.store(gid,Ordering::SeqCst);
+    fn ChOwn(&self, uid: i32, gid: i32) -> i64 {
+        if uid != -1 {self.uid.store(uid as u32,Ordering::SeqCst);}
+        if gid != -1 {self.gid.store(gid as u32,Ordering::SeqCst);}
         0
     }
 

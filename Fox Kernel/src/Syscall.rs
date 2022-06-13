@@ -204,13 +204,13 @@ pub fn SystemCall(regs: &mut State) {
                         drop(plock);
                         return;
                     }
-                    let inode = parinode.ok().unwrap().Creat(name,((if mode & OpenFlags::O_DIRECTORY != 0 {mode & 0o0040000} else {0}) | 0o777) as i32);
+                    let inode = parinode.ok().unwrap().Creat(name,(if mode & 0x0020 == OpenFlags::O_DIRECTORY {0o0040000 | (0o777 & !proc.umask as usize)} else {0o666 & !proc.umask as usize}) as i32);
                     if inode.is_err() {
                         regs.SetSC0((-inode.err().unwrap() as isize) as usize);
                         drop(plock);
                         return;
                     }
-                    inode.ok().unwrap().ChOwn(proc.euid,proc.egid);
+                    inode.ok().unwrap().ChOwn(proc.euid as i32,proc.egid as i32);
                 }
             }
             let file = VFS::LookupPath(VFS::GetAbsPath(path.ok().unwrap(),proc.cwd.as_str()).as_str());
@@ -220,7 +220,7 @@ pub fn SystemCall(regs: &mut State) {
                 return;
             }
             let metadata = file.as_ref().ok().unwrap().Stat().ok().unwrap();
-            if !VFS::HasPermission(&metadata,proc.euid,proc.egid,if mode & 1 == 1 {0b10} else {0} | if mode & 2 == 2 {0b100} else {0}) && metadata.mode & 0o0040000 == 0 {
+            if !VFS::HasPermission(&metadata,proc.euid,proc.egid,if mode & 1 == 1 {0b10} else {0} | if mode & 2 == 2 {0b100} else {0}) && metadata.mode & 0o0170000 != 0 {
                 regs.SetSC0((-Errors::EACCES as isize) as usize);
                 drop(plock);
                 return;
@@ -242,7 +242,7 @@ pub fn SystemCall(regs: &mut State) {
             let fd = proc.fds.get_mut(&(regs.GetSC1() as i64));
             if fd.is_none() {
                 drop(plock);
-                regs.SetSC0((-Errors::EBADFD) as usize);
+                regs.SetSC0((-Errors::EBADF) as usize);
                 return;
             }
             fd.as_ref().unwrap().inode.Close();
@@ -257,7 +257,12 @@ pub fn SystemCall(regs: &mut State) {
             let buf = unsafe {core::slice::from_raw_parts_mut(regs.GetSC2() as *mut u8, regs.GetSC3())};
             if fd.is_none() {
                 drop(plock);
-                regs.SetSC0((-Errors::EBADFD) as usize);
+                regs.SetSC0((-Errors::EBADF) as usize);
+                return;
+            }
+            if fd.as_ref().unwrap().mode & 7 != 3 && fd.as_ref().unwrap().mode & 7 != 5 {
+                drop(plock);
+                regs.SetSC0((-Errors::EBADF) as usize);
                 return;
             }
             if fd.as_ref().unwrap().is_dir {
@@ -281,7 +286,17 @@ pub fn SystemCall(regs: &mut State) {
             let buf = unsafe {core::slice::from_raw_parts(regs.GetSC2() as *const u8, regs.GetSC3())};
             if fd.is_none() {
                 drop(plock);
-                regs.SetSC0((-Errors::EBADFD) as usize);
+                regs.SetSC0((-Errors::EBADF) as usize);
+                return;
+            }
+            if fd.as_ref().unwrap().mode & 7 != 3 && fd.as_ref().unwrap().mode & 7 != 5 {
+                drop(plock);
+                regs.SetSC0((-Errors::EBADF) as usize);
+                return;
+            }
+            if fd.as_ref().unwrap().is_dir {
+                drop(plock);
+                regs.SetSC0((-Errors::EINVAL) as usize);
                 return;
             }
             let res = fd.as_ref().unwrap().inode.Write(fd.as_ref().unwrap().offset,buf);
@@ -300,7 +315,7 @@ pub fn SystemCall(regs: &mut State) {
             let mut fd = proc.fds.get_mut(&(regs.GetSC1() as i64));
             if fd.is_none() {
                 drop(plock);
-                regs.SetSC0((-Errors::EBADFD) as usize);
+                regs.SetSC0((-Errors::EBADF) as usize);
                 return;
             }
             let max_size = fd.as_ref().unwrap().inode.Stat().ok().unwrap().size;
@@ -337,7 +352,7 @@ pub fn SystemCall(regs: &mut State) {
             let old_fd = proc.fds.get(&(regs.GetSC1() as i64));
             if old_fd.is_none() {
                 drop(plock);
-                regs.SetSC0((-Errors::EBADFD) as usize);
+                regs.SetSC0((-Errors::EBADF) as usize);
                 return;
             }
             if regs.GetSC2() as isize == -1 {
@@ -353,7 +368,7 @@ pub fn SystemCall(regs: &mut State) {
             } else {
                 if proc.fds.contains_key(&(regs.GetSC1() as i64)) {
                     drop(plock);
-                    regs.SetSC0((-Errors::EBADFD) as usize);
+                    regs.SetSC0((-Errors::EBADF) as usize);
                     return;
                 }
                 proc.fds.insert(regs.GetSC1() as i64,VFS::FileDescriptor {
@@ -410,7 +425,7 @@ pub fn SystemCall(regs: &mut State) {
             let fd = proc.fds.get_mut(&(regs.GetSC1() as i64));
             if fd.is_none() {
                 drop(plock);
-                regs.SetSC0((-Errors::EBADFD) as usize);
+                regs.SetSC0((-Errors::EBADF) as usize);
                 return;
             }
             let stat = fd.unwrap().inode.Stat().ok().unwrap();
@@ -419,7 +434,97 @@ pub fn SystemCall(regs: &mut State) {
             regs.SetSC0(0);
         }
         0x0d => { // access
-
+            let mut plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get_mut(&curproc).unwrap();
+            let path = unsafe {CStr::from_ptr(regs.GetSC1() as *const c_char)}.to_str();
+            let mode = regs.GetSC2();
+            if path.is_err() {
+                regs.SetSC0((-Errors::ENOENT as isize) as usize);
+                drop(plock);
+                return;
+            }
+            let file = VFS::LookupPath(VFS::GetAbsPath(path.ok().unwrap(),proc.cwd.as_str()).as_str());
+            if file.is_err() {
+                regs.SetSC0((-file.err().unwrap() as isize) as usize);
+                drop(plock);
+                return;
+            }
+            let metadata = file.as_ref().ok().unwrap().Stat().ok().unwrap();
+            if !VFS::HasPermission(&metadata,proc.euid,proc.egid,if mode & 1 == 1 {0b10} else {0} | if mode & 2 == 2 {0b100} else {0}) && metadata.mode & 0o0770000 != 0o0040000 {
+                regs.SetSC0((-Errors::EACCES as isize) as usize);
+                drop(plock);
+                return;
+            }
+            regs.SetSC0(0);
+            drop(plock);
+        }
+        0x0e => { // chmod
+            let mut plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get_mut(&curproc).unwrap();
+            let path = unsafe {CStr::from_ptr(regs.GetSC1() as *const c_char)}.to_str();
+            if path.is_err() {
+                regs.SetSC0((-Errors::ENOENT as isize) as usize);
+                drop(plock);
+                return;
+            }
+            let file = VFS::LookupPath(VFS::GetAbsPath(path.ok().unwrap(),proc.cwd.as_str()).as_str());
+            if file.is_err() {
+                regs.SetSC0((-file.err().unwrap() as isize) as usize);
+                drop(plock);
+                return;
+            }
+            let metadata = file.as_ref().ok().unwrap().Stat().ok().unwrap();
+            if metadata.uid != proc.euid && proc.euid != 0 {
+                regs.SetSC0((-Errors::EPERM as isize) as usize);
+                drop(plock);
+                return;
+            }
+            regs.SetSC0((file.ok().unwrap().ChMod(regs.GetSC2() as i32) as isize) as usize);
+            drop(plock);
+        }
+        0x0f => { // chown
+            let mut plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get_mut(&curproc).unwrap();
+            let path = unsafe {CStr::from_ptr(regs.GetSC1() as *const c_char)}.to_str();
+            if path.is_err() {
+                regs.SetSC0((-Errors::ENOENT as isize) as usize);
+                drop(plock);
+                return;
+            }
+            let file = VFS::LookupPath(VFS::GetAbsPath(path.ok().unwrap(),proc.cwd.as_str()).as_str());
+            if file.is_err() {
+                regs.SetSC0((-file.err().unwrap() as isize) as usize);
+                drop(plock);
+                return;
+            }
+            let metadata = file.as_ref().ok().unwrap().Stat().ok().unwrap();
+            if metadata.uid != proc.euid && proc.euid != 0 {
+                regs.SetSC0((-Errors::EPERM as isize) as usize);
+                drop(plock);
+                return;
+            }
+            regs.SetSC0((file.ok().unwrap().ChOwn(regs.GetSC2() as i32,regs.GetSC3() as i32) as isize) as usize);
+            drop(plock);
+        }
+        0x10 => { // umask
+            let mut plock = crate::Process::PROCESSES.lock();
+            let mut proc = plock.get_mut(&curproc).unwrap();
+            let ret = proc.umask;
+            proc.umask = regs.GetSC1() as i32;
+            regs.SetSC0(ret as usize);
+            drop(plock);
+        }
+        0x11 => { // ioctl
+            let mut plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get_mut(&curproc).unwrap();
+            let fd = proc.fds.get_mut(&(regs.GetSC1() as i64));
+            if fd.is_none() {
+                drop(plock);
+                regs.SetSC0((-Errors::EBADF) as usize);
+                return;
+            }
+            regs.SetSC0(fd.unwrap().inode.IOCtl(regs.GetSC2(),regs.GetSC3()));
+            drop(plock);
         }
         _ => {
 

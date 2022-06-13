@@ -60,6 +60,7 @@ pub struct Process {
     pub rgid: u32,
     pub euid: u32,
     pub egid: u32,
+    pub umask: i32,
 
     pub pagetable: Arc<dyn PageTable>,
 
@@ -88,6 +89,7 @@ impl Process {
             rgid: 0,
             euid: 0,
             egid: 0,
+            umask: 0o022,
             
             pagetable: Arc::new(PageTableImpl::new()),
 
@@ -188,6 +190,7 @@ impl Process {
             rgid: self.rgid,
             euid: self.euid,
             egid: self.egid,
+            umask: self.umask,
 
             pagetable: self.pagetable.Clone(is_thread),
 
