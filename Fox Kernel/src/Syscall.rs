@@ -370,7 +370,17 @@ pub fn SystemCall(regs: &mut State) {
                 drop(plock);
                 return;
             }
+            let file = VFS::LookupPath(VFS::GetAbsPath(path.ok().unwrap(),proc.cwd.as_str()).as_str());
+            if file.is_err() {
+                regs.SetSC0((-file.err().unwrap() as isize) as usize);
+                drop(plock);
+                return;
+            }
+            regs.SetSC0(file.ok().unwrap().Unlink() as usize);
             drop(plock);
+        }
+        0x0b => { // creat
+
         }
         _ => {
 

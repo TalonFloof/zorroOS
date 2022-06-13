@@ -5,6 +5,7 @@ use alloc::sync::Arc;
 use spin::Mutex;
 use alloc::vec::Vec;
 use alloc::string::String;
+use core::any::Any;
 
 const FTYPE_DIR:  u64 = 0o0040000; /* directory */
 const FTYPE_CSPL: u64 = 0o0020000; /* character special */
@@ -30,7 +31,7 @@ pub struct Metadata {
     pub ctime: i64,
 }
 
-pub trait Inode: Send + Sync {
+pub trait Inode: Any + Send + Sync {
     fn Stat(&self) -> Result<Metadata, i64> {
         Err(Errors::ENOSYS as i64)
     }
@@ -59,7 +60,7 @@ pub trait Inode: Send + Sync {
         Err(Errors::ENOSYS as i64)
     }
 
-    fn Unlink(&self, _name: &str) -> i64 {
+    fn Unlink(&self) -> i64 {
         Errors::ENOSYS as i64
     }
 
