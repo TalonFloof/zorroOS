@@ -211,7 +211,7 @@ impl VFS::Inode for Ptmx {
     fn Stat(&self) -> Result<VFS::Metadata, i64> {
         Ok(VFS::Metadata {
             inode_id: i64::MAX,
-            mode: 0o0020000, // c---------
+            mode: 0o0020666, // crw-rw-rw-
             nlinks: 1,
             uid: 0,
             gid: 0,

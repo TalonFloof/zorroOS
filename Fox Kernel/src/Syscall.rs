@@ -231,6 +231,147 @@ pub fn SystemCall(regs: &mut State) {
             regs.SetSC0(len as usize);
             drop(plock);
         }
+        0x04 => { // close
+            let mut plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get_mut(&curproc).unwrap();
+            let fd = proc.fds.get_mut(&(regs.GetSC1() as i64));
+            if fd.is_none() {
+                drop(plock);
+                regs.SetSC0((-Errors::EBADFD) as usize);
+                return;
+            }
+            fd.as_ref().unwrap().inode.Close();
+            proc.fds.remove(&(regs.GetSC1() as i64));
+            regs.SetSC0(0);
+            drop(plock);
+        }
+        0x05 => { // read
+            let mut plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get_mut(&curproc).unwrap();
+            let fd = proc.fds.get_mut(&(regs.GetSC1() as i64));
+            let buf = unsafe {core::slice::from_raw_parts_mut(regs.GetSC2() as *mut u8, regs.GetSC3())};
+            if fd.is_none() {
+                drop(plock);
+                regs.SetSC0((-Errors::EBADFD) as usize);
+                return;
+            }
+            if fd.as_ref().unwrap().is_dir {
+
+            } else {
+                let res = fd.as_ref().unwrap().inode.Read(fd.as_ref().unwrap().offset,buf);
+                if res < 0 {
+                    drop(plock);
+                    regs.SetSC0(res as usize);
+                    return;
+                }
+                fd.unwrap().offset += res as i64;
+                regs.SetSC0(res as usize);
+                drop(plock);
+            }
+        }
+        0x06 => { // write
+            let mut plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get_mut(&curproc).unwrap();
+            let fd = proc.fds.get_mut(&(regs.GetSC1() as i64));
+            let buf = unsafe {core::slice::from_raw_parts(regs.GetSC2() as *const u8, regs.GetSC3())};
+            if fd.is_none() {
+                drop(plock);
+                regs.SetSC0((-Errors::EBADFD) as usize);
+                return;
+            }
+            let res = fd.as_ref().unwrap().inode.Write(fd.as_ref().unwrap().offset,buf);
+            if res < 0 {
+                drop(plock);
+                regs.SetSC0(res as usize);
+                return;
+            }
+            fd.unwrap().offset += res as i64;
+            regs.SetSC0(res as usize);
+            drop(plock);
+        }
+        0x07 => { // lseek
+            let mut plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get_mut(&curproc).unwrap();
+            let mut fd = proc.fds.get_mut(&(regs.GetSC1() as i64));
+            if fd.is_none() {
+                drop(plock);
+                regs.SetSC0((-Errors::EBADFD) as usize);
+                return;
+            }
+            let max_size = fd.as_ref().unwrap().inode.Stat().ok().unwrap().size;
+            match regs.GetSC3() {
+                1 => { // SEEK_CUR
+                    fd.as_mut().unwrap().offset += (regs.GetSC2() as isize) as i64;
+                }
+                2 => { // SEEK_END
+                    if fd.as_ref().unwrap().is_dir {
+                        drop(plock);
+                        regs.SetSC0((-Errors::EINVAL) as usize);
+                        return;
+                    }
+                    fd.as_mut().unwrap().offset = max_size + ((regs.GetSC2() as isize) as i64);
+                }
+                3 => { // SEEK_SET
+                    fd.as_mut().unwrap().offset = (regs.GetSC2() as isize) as i64;
+                }
+                _ => {
+                    drop(plock);
+                    regs.SetSC0((-Errors::EINVAL) as usize);
+                    return;
+                }
+            }
+            if !fd.as_ref().unwrap().is_dir {
+                if fd.as_ref().unwrap().offset < 0 {fd.as_mut().unwrap().offset = 0;} else if fd.as_ref().unwrap().offset > max_size {fd.as_mut().unwrap().offset = max_size;}
+            }
+            regs.SetSC0(fd.unwrap().offset as usize);
+            drop(plock);
+        }
+        0x08 => { // dup
+            let mut plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get_mut(&curproc).unwrap();
+            let old_fd = proc.fds.get(&(regs.GetSC1() as i64));
+            if old_fd.is_none() {
+                drop(plock);
+                regs.SetSC0((-Errors::EBADFD) as usize);
+                return;
+            }
+            if regs.GetSC2() as isize == -1 {
+                let len = if proc.fds.keys().last().is_some() {*(proc.fds.keys().last().unwrap())} else {0};
+                proc.fds.insert(len,VFS::FileDescriptor {
+                    inode: old_fd.as_ref().unwrap().inode.clone(),
+                    offset: old_fd.as_ref().unwrap().offset,
+                    mode: old_fd.as_ref().unwrap().mode,
+                    is_dir: old_fd.as_ref().unwrap().is_dir,
+                });
+                drop(plock);
+                regs.SetSC0(len as usize);
+            } else {
+                if proc.fds.contains_key(&(regs.GetSC1() as i64)) {
+                    drop(plock);
+                    regs.SetSC0((-Errors::EBADFD) as usize);
+                    return;
+                }
+                proc.fds.insert(regs.GetSC1() as i64,VFS::FileDescriptor {
+                    inode: old_fd.as_ref().unwrap().inode.clone(),
+                    offset: old_fd.as_ref().unwrap().offset,
+                    mode: old_fd.as_ref().unwrap().mode,
+                    is_dir: old_fd.as_ref().unwrap().is_dir,
+                });
+                drop(plock);
+                regs.SetSC0(regs.GetSC2());
+            }
+        }
+        0x0a => { // unlink
+            let mut plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get_mut(&curproc).unwrap();
+            let path = unsafe {CStr::from_ptr(regs.GetSC1() as *const c_char)}.to_str();
+            if path.is_err() {
+                regs.SetSC0((-Errors::EINVAL as isize) as usize);
+                drop(plock);
+                return;
+            }
+            drop(plock);
+        }
         _ => {
 
         }
