@@ -112,7 +112,6 @@ If you are using VirtualBox, these settings are **required** to run owlOS:
 
 ---
 **Although owlOS is capable of running on real hardware, IT IS NOT RECOMMENDED TO USE owlOS AS YOUR DAILY DRIVER.**<br>
-**owlOS is still in early stages of development, backup any important data if you are going to install owlOS on real hardware.**
 
 ---
 
@@ -129,8 +128,6 @@ balenaEtcher is free, easy to use, and is available on Windows, macOS, and Linux
 - Display: At least 1024x768 with 32-bit color depth
 - USB: USB 3.0 or later (USB 2.0 controllers and prior are not supported, USB 2.0 and prior devices are supported)
 - Keyboard & Mouse: PS/2 Keyboard & Mouse (USB Keyboard & Mouse isn't supported yet)
-- Storage: At least 8 GiB (16 GiB recommended)
-- Sound: Not Required
 
 ---
 ## License
