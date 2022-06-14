@@ -60,7 +60,7 @@ pub trait Inode: Any + Send + Sync {
         Err(Errors::ENOSYS as i64)
     }
 
-    fn Unlink(&self) -> i64 {
+    fn Unlink(&self, _name: &str) -> i64 {
         Errors::ENOSYS as i64
     }
 

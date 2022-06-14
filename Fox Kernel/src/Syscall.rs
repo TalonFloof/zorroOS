@@ -391,13 +391,16 @@ pub fn SystemCall(regs: &mut State) {
                 drop(plock);
                 return;
             }
-            let file = VFS::LookupPath(VFS::GetAbsPath(path.ok().unwrap(),proc.cwd.as_str()).as_str());
-            if file.is_err() {
-                regs.SetSC0((-file.err().unwrap() as isize) as usize);
+            let abspath = VFS::GetAbsPath(path.ok().unwrap(),proc.cwd.as_str());
+            let mut parent: Vec<_> = abspath.split("/").filter(|e| *e != "" && *e != ".").collect();
+            let name = parent.pop().unwrap();
+            let parinode = VFS::LookupPath([String::from("/"),parent.join("/")].join("").as_str());
+            if parinode.is_err() {
+                regs.SetSC0((-parinode.err().unwrap() as isize) as usize);
                 drop(plock);
                 return;
             }
-            regs.SetSC0(file.ok().unwrap().Unlink() as usize);
+            regs.SetSC0(parinode.ok().unwrap().Unlink(name) as usize);
             drop(plock);
         }
         0x0b => { // stat

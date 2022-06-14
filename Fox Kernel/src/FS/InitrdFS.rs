@@ -13,7 +13,6 @@ pub struct RAMInode {
     name: String,
     inode: Weak<dyn VFS::Inode>,
     parent: Option<Arc<dyn VFS::Inode>>,
-    parent_cast: Option<Arc<RAMInode>>,
     children: Mutex<Vec<Arc<dyn VFS::Inode>>>,
     content: Mutex<Vec<u8>>,
     pub ctime: AtomicI64,
@@ -29,7 +28,6 @@ impl RAMInode {
         Arc::<Self>::new_cyclic(|inode| Self {
             id,
             name,
-            parent_cast: if parent.is_none() {None} else {unsafe {Some(Arc::from_raw(Arc::into_raw(parent.as_ref().unwrap().clone()) as *const RAMInode))}},
             parent,
             inode: inode.clone(),
             children: Mutex::new(Vec::new()),
@@ -121,13 +119,18 @@ impl VFS::Inode for RAMInode {
         Err(Errors::EEXIST as i64)
     }
 
-    fn Unlink(&self) -> i64 {
-        if self.mode.load(Ordering::SeqCst) & 0o0770000 == 0o0040000 {
+    fn Unlink(&self, name: &str) -> i64 {
+        let file = self.Lookup(name);
+        if file.is_err() {
+            return -file.err().unwrap();
+        }
+        let id = file.as_ref().ok().unwrap().Stat().ok().unwrap().inode_id;
+        if file.as_ref().ok().unwrap().Stat().ok().unwrap().mode & 0o0770000 == 0o0040000 {
             if self.children.lock().len() > 0 {
                 return Errors::ENOTEMPTY as i64;
             }
         }
-        self.parent_cast.as_ref().unwrap().children.lock().retain(|entry| entry.Stat().ok().unwrap().inode_id != self.id);
+        self.children.lock().retain(|entry| entry.Stat().ok().unwrap().inode_id != id);
         return 0;
     }
 
