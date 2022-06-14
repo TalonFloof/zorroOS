@@ -1,7 +1,9 @@
 # <img align="center" height="100" src="Docs/owlOS Light.png"><br>owlOS
 
-[![forthebadge](https://forthebadge.com/images/badges/made-with-rust.svg)](https://forthebadge.com)
-[![forthebadge](https://forthebadge.com/images/badges/open-source.svg)](https://forthebadge.com)
+[![made-with-rust](https://img.shields.io/badge/Made%20with-Rust-1f425f.svg)](https://www.rust-lang.org/)
+[![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FTalon396%2FowlOS&count_bg=%2379C83D&title_bg=%23323232&icon=&icon_color=%23E7E7E7&title=hits&edge_flat=true)](https://hits.seeyoufarm.com)
+[![License](https://img.shields.io/github/license/Talon396/owlOS?logo=apache&style=flat-square)](https://shields.io)
+[![owlOS Developer Builds (AMD64)](https://github.com/Talon396/owlOS/actions/workflows/AMD64_DevBuilds.yml/badge.svg)](https://github.com/Talon396/owlOS/actions/workflows/AMD64_DevBuilds.yml)
 
 ## What is owlOS?
 

@@ -533,6 +533,48 @@ pub fn SystemCall(regs: &mut State) {
             regs.SetSC0(result.ok().unwrap());
             drop(plock);
         }
+        0x12 => { // execve
+            unimplemented!();
+        }
+        0x13 => { // waitpid
+            unimplemented!();
+        }
+        0x14 => { // getuid
+            let mut plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get_mut(&curproc).unwrap();
+            regs.SetSC0(proc.ruid as usize);
+            drop(plock);
+        }
+        0x15 => { // geteuid
+            let mut plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get_mut(&curproc).unwrap();
+            regs.SetSC0(proc.euid as usize);
+            drop(plock);
+        }
+        0x16 => { // getgid
+            let mut plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get_mut(&curproc).unwrap();
+            regs.SetSC0(proc.rgid as usize);
+            drop(plock);
+        }
+        0x17 => { // getegid
+            let mut plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get_mut(&curproc).unwrap();
+            regs.SetSC0(proc.egid as usize);
+            drop(plock);
+        }
+        0x18 => { // getpid
+            let mut plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get_mut(&curproc).unwrap();
+            regs.SetSC0(proc.id as usize);
+            drop(plock);
+        }
+        0x19 => { // getppid
+            let mut plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get_mut(&curproc).unwrap();
+            regs.SetSC0(proc.parent_id as usize);
+            drop(plock);
+        }
         _ => {
 
         }
