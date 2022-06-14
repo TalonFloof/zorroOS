@@ -63,12 +63,15 @@ pub struct Process {
     pub umask: i32,
     pub pgid: i32,
 
-    pub pagetable: Arc<dyn PageTable>,
+    pub pagetable: Arc<PageTableImpl>,
 
     pub cwd: String,
     pub status: ProcessStatus,
 
     pub fds: BTreeMap<i64, FileDescriptor>,
+
+    pub heap_base: usize,
+    pub heap_length: Arc<Mutex<usize>>,
 }
 
 pub const USERSPACE_STACK_SIZE: u64 = 0x4000;
@@ -99,6 +102,9 @@ impl Process {
             status: ProcessStatus::NEW,
 
             fds: BTreeMap::new(),
+
+            heap_base: 0,
+            heap_length: Arc::new(Mutex::new(0)),
         }
     }
     pub fn ContextSwitch(&self) -> ! {
@@ -201,6 +207,9 @@ impl Process {
             status: ProcessStatus::RUNNABLE,
 
             fds,
+
+            heap_base: self.heap_base,
+            heap_length: self.heap_length.clone(),
         }
     }
 }

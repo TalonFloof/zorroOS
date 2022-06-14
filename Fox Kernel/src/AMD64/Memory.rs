@@ -227,7 +227,7 @@ impl PageTable for PageTableImpl {
         }
     }
 
-    fn Clone(&self, is_thread: bool) -> Arc<dyn PageTable> {
+    fn Clone(&self, is_thread: bool) -> Arc<PageTableImpl> {
         let mut pt = PageTableImpl::new();
         let start = if is_thread {255} else {0};
         if is_thread {

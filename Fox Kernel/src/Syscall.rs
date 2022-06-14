@@ -6,6 +6,7 @@ use cstr_core::{c_char,CStr};
 use crate::FS::VFS;
 use alloc::string::String;
 use alloc::vec::Vec;
+use alloc::sync::Arc;
 
 pub mod Errors {
     pub const EPERM: i32 = 1;  /* Operation not permitted */
@@ -629,7 +630,29 @@ pub fn SystemCall(regs: &mut State) {
             unimplemented!();
         }
         0x22 => { // sbrk
-            unimplemented!();
+            let mut plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get_mut(&curproc).unwrap();
+            let expand = regs.GetSC1() as isize;
+            let mut len = proc.heap_length.lock();
+            regs.SetSC0(proc.heap_base+*len);
+            if expand > 0 {
+                if expand & 0xFFF != 0 {
+                    regs.SetSC0((-Errors::EINVAL as isize) as usize);
+                    drop(len);
+                    drop(plock);
+                    return;
+                }
+                let pages = crate::PageFrame::Allocate(expand as u64).unwrap();
+                crate::Memory::MapPages(Arc::get_mut(&mut proc.pagetable).unwrap(),regs.GetSC0(),pages as usize - crate::arch::PHYSMEM_BEGIN as usize,expand as usize,true,false);
+                *len += expand as usize;
+            } else if expand < 0 {
+                regs.SetSC0((-Errors::EINVAL as isize) as usize);
+                drop(len);
+                drop(plock);
+                return;
+            }
+            drop(len);
+            drop(plock);
         }
         0xf0 => { // foxkernel_powerctl
             if curproc > 1 {
