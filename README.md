@@ -87,6 +87,51 @@ possible to use WSL (Windows Subsystem for Linux) to compile it.<br>
 Other environments like MinGW or Cygwin have not been tested but<br>
 should work.
 
+## Running
+
+If building owlOS is too complicated, or you just want to try out owlOS, you can just download the latest ISO
+from the "[owlOS Developer Builds (AMD64)](https://github.com/Talon396/owlOS/actions/workflows/AMD64_DevBuilds.yml)" workflow in GitHub Actions.
+
+---
+
+### Running owlOS with QEMU
+If you are going to use QEMU to run owlOS, we recommend using these settings:
+```sh
+$ qemu-system-x86_64 -M q35 -m 1G -enable-kvm -cpu host -device qemu-xhci -serial stdio -smp 4 -cdrom owlOS.iso
+```
+
+### Running owlOS with VirtualBox
+If you are using VirtualBox, these settings are **required** to run owlOS:
+- IOAPIC Enabled
+- Chipset: ICH9
+- USB: xHCI (USB 3.0+)
+- Type: Other/Unknown (64-bit)
+- EFI (Optional)
+
+### Running owlOS on Real Hardware
+
+---
+**Although owlOS is capable of running on real hardware, IT IS NOT RECOMMENDED TO USE owlOS AS YOUR DAILY DRIVER.**<br>
+**owlOS is still in early stages of development, backup any important data if you are going to install owlOS on real hardware.**
+
+---
+
+The owlOS ISO can be burned onto a CD/DVD, flashed on a USB Flash Drive, or can be flashed onto an SD Card.<br>
+We recommend using [balenaEtcher](https://www.balena.io/etcher/) to flash owlOS onto a USB Flash Drive or SD Card.<br>
+balenaEtcher is free, easy to use, and is available on Windows, macOS, and Linux.
+
+---
+
+**owlOS requires the following minimal specs to run on a PC:**
+- CPU: AMD64 (x86_64) based CPU with at least One Core. (Two Cores recommended)
+- Firmware: ACPI compatible BIOS (UEFI recommended)
+- Memory: At least 128 MiB (1 GiB recommended)
+- Display: At least 1024x768 with 32-bit color depth
+- USB: USB 3.0 or later (USB 2.0 controllers and prior are not supported, USB 2.0 and prior devices are supported)
+- Keyboard & Mouse: PS/2 Keyboard & Mouse (USB Keyboard & Mouse isn't supported yet)
+- Storage: At least 8 GiB (16 GiB recommended)
+- Sound: Not Required
+
 ---
 ## License
 
