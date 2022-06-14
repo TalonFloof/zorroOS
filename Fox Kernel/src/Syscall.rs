@@ -578,6 +578,31 @@ pub fn SystemCall(regs: &mut State) {
             regs.SetSC0(proc.parent_id as usize);
             drop(plock);
         }
+        0x1a => { // setpgid
+            let plock = crate::Process::PROCESSES.lock();
+            let proc_self = plock.get(&curproc).unwrap();
+            let proc = plock.get(&(regs.GetSC1() as i32));
+            if proc.is_none() {
+                regs.SetSC0((-Errors::EPERM as isize) as usize);
+                drop(plock);
+                return;
+            }
+            let pgid = proc.as_ref().unwrap().pgid;
+            if proc_self.pgid != pgid && proc_self.id != proc.as_ref().unwrap().id {
+                regs.SetSC0((-Errors::EPERM as isize) as usize);
+                drop(plock);
+                return;
+            }
+            drop(plock);
+            crate::Process::PROCESSES.lock().get_mut(&(regs.GetSC1() as i32)).unwrap().pgid = regs.GetSC2() as i32;
+            regs.SetSC0(0);
+        }
+        0x1b => { // getpgrp
+            let mut plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get_mut(&curproc).unwrap();
+            regs.SetSC0(proc.pgid as usize);
+            drop(plock);
+        }
         _ => {
 
         }

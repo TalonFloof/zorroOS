@@ -11,7 +11,7 @@ use alloc::sync::Arc;
 use crate::FS::VFS::FileDescriptor;
 
 pub static PROCESSES: Mutex<BTreeMap<i32,Process>> = Mutex::new(BTreeMap::new());
-pub static NEXTPROCESS: AtomicI32 = AtomicI32::new(0);
+pub static NEXTPROCESS: AtomicI32 = AtomicI32::new(1);
 
 pub enum ProcessStatus {
     NEW,
@@ -61,6 +61,7 @@ pub struct Process {
     pub euid: u32,
     pub egid: u32,
     pub umask: i32,
+    pub pgid: i32,
 
     pub pagetable: Arc<dyn PageTable>,
 
@@ -90,6 +91,7 @@ impl Process {
             euid: 0,
             egid: 0,
             umask: 0o022,
+            pgid: 0,
             
             pagetable: Arc::new(PageTableImpl::new()),
 
@@ -191,6 +193,7 @@ impl Process {
             euid: self.euid,
             egid: self.egid,
             umask: self.umask,
+            pgid: self.pgid,
 
             pagetable: self.pagetable.Clone(is_thread),
 
