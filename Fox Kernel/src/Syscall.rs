@@ -603,6 +603,59 @@ pub fn SystemCall(regs: &mut State) {
             regs.SetSC0(proc.pgid as usize);
             drop(plock);
         }
+        0x1c => { // signal
+            unimplemented!();
+        }
+        0x1d => { // kill
+            unimplemented!();
+        }
+        0x1f => { // nanosleep
+            unimplemented!();
+        }
+        0x20 => { // chdir
+            let mut plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get_mut(&curproc).unwrap();
+            let path = unsafe {CStr::from_ptr(regs.GetSC1() as *const c_char)}.to_str();
+            if path.is_err() {
+                regs.SetSC0((-Errors::ENOENT as isize) as usize);
+                drop(plock);
+                return;
+            }
+            proc.cwd = VFS::GetAbsPath(path.ok().unwrap(),proc.cwd.as_str());
+            regs.SetSC0(0);
+            drop(plock);
+        }
+        0x21 => { // pipe
+            unimplemented!();
+        }
+        0x22 => { // sbrk
+            unimplemented!();
+        }
+        0xf0 => { // foxkernel_powerctl
+            if curproc > 1 {
+                regs.SetSC0((-Errors::EACCES as isize) as usize);
+                return;
+            }
+            if regs.GetSC1() as u32 == 3166499024 { // FOXKERNEL_HALT
+                unsafe {crate::Console::QUIET = false;}
+                log::warn!("Fox Kernel will now halt");
+                crate::halt_other_harts!();
+                crate::halt!();
+                unreachable!();
+            } else if regs.GetSC1() as u32 == 926892958 { // FOXKERNEL_SHUTDOWN
+                unsafe {crate::Console::QUIET = true;}
+                log::info!("It is now safe to turn off your computer");
+                if let Some(fb) = crate::Framebuffer::MainFramebuffer.lock().as_mut() {
+                    fb.Clear(0);
+                    let msg = "It is now safe to turn off your computer";
+                    fb.DrawString((fb.width/2)-(msg.len()*8),fb.height/2-16,msg,0xFFFFFF,2);
+                }
+                crate::halt_other_harts!();
+                crate::halt!();
+                unreachable!();
+            }
+            regs.SetSC0((-Errors::EINVAL as isize) as usize);
+        }
         _ => {
 
         }
