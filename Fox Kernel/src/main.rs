@@ -24,6 +24,7 @@ pub mod Syscall;
 pub mod FS;
 pub mod Drivers;
 pub mod CommandLine;
+pub mod ELF;
 
 use core::panic::PanicInfo;
 use core::alloc::Layout;
