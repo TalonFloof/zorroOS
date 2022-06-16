@@ -4,6 +4,7 @@ use alloc::string::String;
 pub mod VFS;
 pub mod DevFS;
 pub mod InitrdFS;
+pub mod TmpFS;
 
 pub fn InitalizeEarly() {
     DevFS::Initalize();
