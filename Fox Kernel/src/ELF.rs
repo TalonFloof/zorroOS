@@ -1,7 +1,9 @@
 use crate::arch::Memory::PageTableImpl;
 use crate::PageFrame::{Allocate,Free};
+use crate::FS::VFS;
+use alloc::vec::Vec;
 
-pub fn LoadELF(data: &[u8], pt: &mut PageTableImpl) -> Result<usize,()> {
+fn LoadELF(data: &[u8], pt: &mut PageTableImpl) -> Result<usize,()> {
     match xmas_elf::ElfFile::new(data) {
         Ok(elf) => {
             for i in elf.program_iter() {
@@ -19,11 +21,40 @@ pub fn LoadELF(data: &[u8], pt: &mut PageTableImpl) -> Result<usize,()> {
                     return Err(());
                 }
             }
-            return Ok(0);
+            crate::Memory::MapPages(pt,0x7FFFFFFFC000,Allocate(0x4000).unwrap() as usize - crate::arch::PHYSMEM_BEGIN as usize,0x4000,true,false);
+            return Ok(elf.header.pt2.entry_point() as usize);
         }
         Err(e) => {
             log::error!("Failed to load ELF: \"{}\"", e);
             return Err(());
+        }
+    }
+}
+
+pub fn LoadELFFromPath(path: &str, pt: &mut PageTableImpl) -> Result<usize,isize> {
+    match VFS::LookupPath(path) {
+        Ok(file) => {
+            let size = file.Stat().ok().unwrap().size;
+            let mut data: Vec<u8> = Vec::new();
+            if size <= 0 {
+                return Err(0)
+            }
+            data.resize(size as usize,0);
+            let result = file.Read(0,data.as_mut_slice());
+            if result < 0 {
+                return Err(result as isize)
+            }
+            match LoadELF(data.as_slice(),pt) {
+                Ok(ret) => {
+                    return Ok(ret)
+                }
+                Err(_) => {
+                    return Err(0)
+                }
+            }
+        }
+        Err(e) => {
+            Err(e.abs() as isize)
         }
     }
 }

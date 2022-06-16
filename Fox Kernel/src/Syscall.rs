@@ -1,12 +1,14 @@
-use crate::arch::Task::State;
+use crate::arch::{Memory::PageTableImpl,Task::State};
 use crate::Scheduler::Scheduler;
 use crate::CurrentHart;
 use crate::Process::{Process,TaskState};
-use cstr_core::{c_char,CStr};
+use cstr_core::{c_char,CStr,CString};
 use crate::FS::VFS;
 use alloc::string::String;
 use alloc::vec::Vec;
 use alloc::sync::Arc;
+use crate::ELF::LoadELFFromPath;
+use crate::PageFrame::Allocate;
 
 pub mod Errors {
     pub const EPERM: i32 = 1;  /* Operation not permitted */
@@ -538,7 +540,59 @@ pub fn SystemCall(regs: &mut State) {
             drop(plock);
         }
         0x12 => { // execve
-            unimplemented!();
+            let mut plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get_mut(&curproc).unwrap();
+            let path = unsafe {CStr::from_ptr(regs.GetSC1() as *const c_char)}.to_str();
+            if path.is_err() {
+                regs.SetSC0((-Errors::ENOENT as isize) as usize);
+                drop(plock);
+                return;
+            }
+            // Parse ARGV
+            let argv_raw: *const *const c_char = regs.GetSC2() as *const *const c_char;
+            let mut argv: Vec<CString> = Vec::new();
+            let mut total_size = 0;
+            unsafe {
+                for i in 0..256 { // There is no reason for us to go beyond 255 arguments
+                    if argv_raw.offset(i).read() as usize == 0 {
+                        break;
+                    }
+                    let arg = CString::from_raw(argv_raw.offset(i).read() as *mut c_char).clone();
+                    total_size += arg.as_bytes_with_nul().len();
+                    argv.push(arg);
+                }
+            }
+            let argv_ptr_slice: &mut [usize] = unsafe {core::slice::from_raw_parts_mut(Allocate(0x1000).unwrap() as *mut usize,256)};
+            let argv_str_slice: &mut [u8] = unsafe {core::slice::from_raw_parts_mut(Allocate((total_size as u64).div_ceil(0x1000)*0x1000).unwrap() as *mut u8,total_size)};
+            let mut cur_pos = 0;
+            for (i,j) in argv.iter().enumerate() {
+                argv_str_slice[cur_pos..cur_pos+j.as_bytes_with_nul().len()].copy_from_slice(j.as_bytes_with_nul());
+                argv_ptr_slice[i] = 0x2000+cur_pos;
+                cur_pos += j.as_bytes_with_nul().len();
+            }
+            let mut pt = PageTableImpl::new();
+            match LoadELFFromPath(path.ok().unwrap(),&mut pt) {
+                Ok(val) => {
+                    crate::Memory::MapPages(&mut pt,0x1000,argv_ptr_slice.as_ptr() as usize - crate::arch::PHYSMEM_BEGIN as usize,0x1000,false,false);
+                    crate::Memory::MapPages(&mut pt,0x2000,argv_str_slice.as_ptr() as usize - crate::arch::PHYSMEM_BEGIN as usize,argv_str_slice.len().div_ceil(0x1000)*0x1000,false,false);
+                    regs.Exit();
+                    proc.pagetable = Arc::new(pt); // Old pagetable will be dropped if all references are gone
+                    proc.task_state.SetIP(val);
+                    proc.task_state.SetSP(0x800000000000);
+                    proc.task_state.SetSC0(0);
+                    proc.task_state.SetSC1(0);
+                    proc.task_state.SetSC2(0);
+                    proc.task_state.SetSC3(0);
+                    let state_ptr = &proc.task_state as *const State as usize;
+                    drop(plock);
+                    Scheduler::Tick(CurrentHart(),unsafe {&*(state_ptr as *const State)});
+                }
+                Err(e) => {
+                    regs.SetSC0(e as usize);
+                    drop(plock);
+                    return;
+                }
+            }
         }
         0x13 => { // waitpid
             unimplemented!();
