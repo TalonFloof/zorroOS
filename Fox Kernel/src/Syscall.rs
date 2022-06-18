@@ -662,10 +662,10 @@ pub fn SystemCall(regs: &mut State) {
             unimplemented!();
         }
         0x1d => { // kill
-            unimplemented!();
+            
         }
         0x1e => { // sigreturn
-            
+            unimplemented!();
         }
         0x1f => { // nanosleep
             unimplemented!();

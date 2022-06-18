@@ -42,8 +42,10 @@ pub enum ProcessStatus {
     NEW,
     RUNNABLE,
     STOPPED,
-    SLEEP_WAIT(i32,usize),
-    SLEEP_SLEEP(i64),
+    SIGNAL(usize,usize),
+    FINISHING(isize),
+    FINISHED(isize),
+    SLEEPING(i64),
 }
 
 pub trait TaskState: Send + Sync {
@@ -100,6 +102,8 @@ pub struct Process {
     pub heap_length: Arc<Mutex<usize>>,
 
     pub signals: [usize; 25],
+    pub sig_old_ip: usize,
+    pub sig_old_arg1: usize,
 }
 
 pub const USERSPACE_STACK_SIZE: u64 = 0x4000;
@@ -135,6 +139,8 @@ impl Process {
             heap_length: Arc::new(Mutex::new(0)),
 
             signals: [0; 25],
+            sig_old_ip: 0,
+            sig_old_arg1: 0,
         }
     }
     pub fn ContextSwitch(&self) -> ! {
@@ -158,25 +164,48 @@ impl Process {
         panic!("Process wasn't added");
     }
     //////////////////////////////////////////////////////////////
-    pub fn DestroyProcess(pid: i32) {
+    pub fn CleanupProcess(pid: i32) {
         let mut lock = PROCESSES.lock();
         let proc = lock.get_mut(&pid).unwrap();
         let slock = SCHEDULERS.lock();
         if slock.get(&CurrentHart()).unwrap().current_proc_id.load(Ordering::SeqCst) == pid {
             proc.task_state.Exit();
         }
-        for i in slock.iter() {
-            let mut pqlock = i.1.process_queue.lock();
-            if pqlock.contains(&pid) {
-                pqlock.retain(|&x| x != pid);
-                drop(pqlock);
-                break;
-            }
-            drop(pqlock);
+        let mut pqlock = slock.get(&proc.hart.load(Ordering::SeqCst)).unwrap().process_queue.lock();
+        if pqlock.contains(&pid) {
+            pqlock.retain(|&x| x != pid);
         }
+        drop(pqlock);
         drop(slock);
-        lock.remove(&pid);
         drop(lock);
+    }
+    pub fn SendSignal(pid: i32, sig: u8) -> isize {
+        let mut lock = PROCESSES.lock();
+        match lock.get_mut(&pid) {
+            Some(proc) => {
+                let sighandle = proc.signals[sig as usize];
+                if sighandle == 0 || sig == Signals::SIGKILL || sig == Signals::SIGSTOP {
+                    if sig >= 0x1 && sig <= 0xf {
+                        proc.status = ProcessStatus::FINISHING(-(sig as isize));
+                    } else if sig >= 0x13 && sig <= 0x16 {
+                        proc.status = ProcessStatus::STOPPED;
+                    }
+                    drop(lock);
+                    return 0;
+                } else {
+                    proc.sig_old_ip = proc.task_state.GetIP();
+                    proc.sig_old_arg1 = proc.task_state.GetSC1();
+                    proc.status = ProcessStatus::SIGNAL(sighandle,sig as usize);
+                    drop(lock);
+                    return 0;
+                }
+            }
+            _ => {
+                drop(lock);
+                return -crate::Syscall::Errors::EINVAL as isize;
+            }
+        }
+
     }
     pub fn StartProcess(pid: i32, ip: usize, sp: usize) {
         let mut lock = PROCESSES.lock();
@@ -242,6 +271,8 @@ impl Process {
             heap_length: self.heap_length.clone(),
 
             signals: self.signals.clone(),
+            sig_old_ip: self.sig_old_ip,
+            sig_old_arg1: self.sig_old_arg1,
         }
     }
 }

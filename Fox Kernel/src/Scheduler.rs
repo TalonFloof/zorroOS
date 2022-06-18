@@ -3,7 +3,7 @@ use alloc::collections::VecDeque;
 use core::sync::atomic::{AtomicBool, AtomicI32, Ordering};
 use spin::mutex::Mutex;
 use crate::arch::Task::State;
-use crate::InitThread;
+use crate::IdleThread;
 use crate::Process::{Process, PROCESSES, TaskState, TaskFloatState, ProcessStatus};
 use crate::arch::CurrentHart;
 
@@ -19,7 +19,7 @@ pub struct Scheduler {
 impl Scheduler {
     pub fn new() -> Self {
         let mut state = State::new(true);
-        state.SetIP((InitThread as *const fn()) as usize);
+        state.SetIP((IdleThread as *const fn()) as usize);
         let mut queue = VecDeque::new();
         queue.push_back(-1i32);
         Self {
@@ -34,13 +34,26 @@ impl Scheduler {
             let val = *(pqlock.front().unwrap());
             pqlock.rotate_left(1);
             if val != -1i32 {
-                let plock = PROCESSES.lock();
-                let proc = plock.get(&val).unwrap();
+                let mut plock = PROCESSES.lock();
+                let proc = plock.get_mut(&val).unwrap();
                 match proc.status {
                     ProcessStatus::RUNNABLE => {
                         drop(pqlock);
                         drop(plock);
                         return val;
+                    }
+                    ProcessStatus::SIGNAL(ip, sig) => {
+                        proc.task_state.SetIP(ip);
+                        proc.task_state.SetSC1(sig);
+                        proc.status = ProcessStatus::RUNNABLE;
+                        drop(pqlock);
+                        drop(plock);
+                        return val;
+                    }
+                    ProcessStatus::FINISHING(status) => {
+                        proc.status = ProcessStatus::FINISHED(status);
+                        drop(plock);
+                        continue;
                     }
                     _ => {
                         drop(plock);

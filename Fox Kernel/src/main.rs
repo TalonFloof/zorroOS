@@ -56,7 +56,7 @@ fn main(ramdisks: Vec<(String,&[u8])>) -> ! {
     Scheduler::Scheduler::Start(CurrentHart())
 }
 
-pub fn InitThread() -> ! {
+pub fn IdleThread() -> ! {
     loop {
         halt!();
     }

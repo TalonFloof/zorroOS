@@ -72,7 +72,7 @@ fn x86Fault(
         if index == 0x0e {
             error!("CR2={:016x}", x86_64::registers::control::Cr2::read().as_u64());
         }
-        crate::Process::Process::DestroyProcess(pid);
+        crate::Process::Process::SendSignal(pid,crate::Process::Signals::SIGSEGV);
         unsafe {(&*ptr).NextContext();}
     } else {
         if let None = err_code {
