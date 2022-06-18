@@ -13,9 +13,35 @@ use crate::FS::VFS::FileDescriptor;
 pub static PROCESSES: Mutex<BTreeMap<i32,Process>> = Mutex::new(BTreeMap::new());
 pub static NEXTPROCESS: AtomicI32 = AtomicI32::new(1);
 
+pub mod Signals {
+    pub const SIGHUP: u8 =  0x01; // Terminate
+    pub const SIGINT: u8 =  0x02; // Terminate
+    pub const SIGQUIT: u8 = 0x03; // Abort
+    pub const SIGILL: u8 =  0x04; // Abort
+    pub const SIGTRAP: u8 = 0x05; // Abort
+    pub const SIGABRT: u8 = 0x06; // Abort (What did you think it would do?)
+    pub const SIGBUS: u8 =  0x07; // Abort
+    pub const SIGFPE: u8 =  0x08; // Abort
+    pub const SIGKILL: u8 = 0x09; // Terminate (Cannot be caught or ignored)
+    pub const SIGUSR1: u8 = 0x0a; // Terminate
+    pub const SIGSEGV: u8 = 0x0b; // Abort
+    pub const SIGUSR2: u8 = 0x0c; // Terminate
+    pub const SIGPIPE: u8 = 0x0d; // Terminate
+    pub const SIGALRM: u8 = 0x0e; // Terminate
+    pub const SIGTERM: u8 = 0x0f; // Terminate (Do I really need to explain why...)
+    pub const SIGCHLD: u8 = 0x11; // Ignored
+    pub const SIGCONT: u8 = 0x12; // Continue
+    pub const SIGSTOP: u8 = 0x13; // Stop (Cannot be caught or ignored)
+    pub const SIGTSTP: u8 = 0x14; // Stop (Sent by Terminal)
+    pub const SIGTTIN: u8 = 0x15; // Stop
+    pub const SIGTTOU: u8 = 0x16; // Stop
+    pub const SIGURG: u8 =  0x17; // Ignored
+}
+
 pub enum ProcessStatus {
     NEW,
     RUNNABLE,
+    STOPPED,
     SLEEP_WAIT(i32,usize),
     SLEEP_SLEEP(i64),
 }
@@ -72,6 +98,8 @@ pub struct Process {
 
     pub heap_base: usize,
     pub heap_length: Arc<Mutex<usize>>,
+
+    pub signals: [usize; 25],
 }
 
 pub const USERSPACE_STACK_SIZE: u64 = 0x4000;
@@ -105,6 +133,8 @@ impl Process {
 
             heap_base: 0,
             heap_length: Arc::new(Mutex::new(0)),
+
+            signals: [0; 25],
         }
     }
     pub fn ContextSwitch(&self) -> ! {
@@ -210,6 +240,8 @@ impl Process {
 
             heap_base: self.heap_base,
             heap_length: self.heap_length.clone(),
+
+            signals: self.signals.clone(),
         }
     }
 }
