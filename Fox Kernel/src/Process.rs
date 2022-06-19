@@ -184,7 +184,7 @@ impl Process {
         match lock.get_mut(&pid) {
             Some(proc) => {
                 let sighandle = proc.signals[sig as usize];
-                if matches!(proc.status,ProcessStatus::SIGNAL(_,_)) {
+                if matches!(proc.status,ProcessStatus::SIGNAL(_,_)) || proc.sig_old_ip != 0 {
                     drop(lock);
                     return -crate::Syscall::Errors::EAGAIN as isize;
                 } else if !matches!(proc.status,ProcessStatus::RUNNABLE) && !matches!(proc.status,ProcessStatus::SLEEPING(_)) {

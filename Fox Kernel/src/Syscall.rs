@@ -665,7 +665,18 @@ pub fn SystemCall(regs: &mut State) {
             regs.SetSC0(crate::Process::Process::SendSignal(regs.GetSC1() as i32,regs.GetSC2() as u8) as usize);
         }
         0x1e => { // sigreturn
-            unimplemented!();
+            let mut plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get_mut(&curproc).unwrap();
+            if proc.sig_old_ip != 0 {
+                regs.SetIP(proc.sig_old_ip);
+                regs.SetSC1(proc.sig_old_arg1);
+                proc.sig_old_ip = 0;
+                proc.sig_old_arg1 = 0;
+                drop(plock);
+                Scheduler::Tick(CurrentHart(),regs);
+                unreachable!();
+            }
+            drop(plock);
         }
         0x1f => { // nanosleep
             unimplemented!();
