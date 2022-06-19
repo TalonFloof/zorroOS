@@ -31,8 +31,8 @@
 | getpgrp (`0x1b`)            |                          |                     |                 | `ProcessGroup, never fails, POSIX.1 ver.` |
 | signal (`0x1c`)             | `SignalID`               | `SigHandler`        |                 | `OldSigHandler on success`                |
 | kill (`0x1d`)               | `PID`                    | `SignalID`          |                 | `0 on success`                            |
-| Reserved (`0x1e`)           |                          |                     |                 |                                           |
-| nanosleep (`0x1f`)          | `Seconds`                | `Microseconds`      |                 | `0 on success (uninterruptible)`          |
+| sigreturn (`0x1e`)          |                          |                     |                 | `Nothing, never fails`                    |
+| nanosleep (`0x1f`)          | `Seconds`                | `Nanoseconds`       |                 | `0 on success (uninterruptible)`          |
 | chdir (`0x20`)              | `Path: CStr`             |                     |                 | `0 on success`                            |
 | pipe (`0x21`)               | `Pipes: &mut [isize; 2]` |                     |                 | `0 on success, Pipes will contain FDs`    |
 | sbrk (`0x22`)               | `Increment`              |                     |                 | `Previous heap end on success`            |

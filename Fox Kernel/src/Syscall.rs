@@ -659,7 +659,14 @@ pub fn SystemCall(regs: &mut State) {
             drop(plock);
         }
         0x1c => { // signal
-            unimplemented!();
+            if regs.GetSC1() > 0x17 || regs.GetSC1() == 0 {
+                regs.SetSC0((-Errors::EINVAL as isize) as usize);
+                return;
+            }
+            let mut plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get_mut(&curproc).unwrap();
+            proc.signals[regs.GetSC1()] = regs.GetSC2();
+            drop(plock);
         }
         0x1d => { // kill
             regs.SetSC0(crate::Process::Process::SendSignal(regs.GetSC1() as i32,regs.GetSC2() as u8) as usize);
