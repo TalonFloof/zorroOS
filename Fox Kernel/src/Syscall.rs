@@ -662,7 +662,7 @@ pub fn SystemCall(regs: &mut State) {
             unimplemented!();
         }
         0x1d => { // kill
-            
+            regs.SetSC0(crate::Process::Process::SendSignal(regs.GetSC1() as i32,regs.GetSC2() as u8) as usize);
         }
         0x1e => { // sigreturn
             unimplemented!();

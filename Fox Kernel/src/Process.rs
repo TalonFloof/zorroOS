@@ -184,6 +184,13 @@ impl Process {
         match lock.get_mut(&pid) {
             Some(proc) => {
                 let sighandle = proc.signals[sig as usize];
+                if matches!(proc.status,ProcessStatus::SIGNAL(_,_)) {
+                    drop(lock);
+                    return -crate::Syscall::Errors::EAGAIN as isize;
+                } else if !matches!(proc.status,ProcessStatus::RUNNABLE) && !matches!(proc.status,ProcessStatus::SLEEPING(_)) {
+                    drop(lock);
+                    return -crate::Syscall::Errors::ESRCH as isize;
+                }
                 if sighandle == 0 || sig == Signals::SIGKILL || sig == Signals::SIGSTOP {
                     if sig >= 0x1 && sig <= 0xf {
                         proc.status = ProcessStatus::FINISHING(-(sig as isize));
@@ -202,7 +209,7 @@ impl Process {
             }
             _ => {
                 drop(lock);
-                return -crate::Syscall::Errors::EINVAL as isize;
+                return -crate::Syscall::Errors::ESRCH as isize;
             }
         }
 
