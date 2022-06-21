@@ -42,10 +42,16 @@ def attempt_package(name,relpath,cmds):
 
 if args[0] == "build":
     attempt_build("Fox Kernel","Fox Kernel","cargo build -Z unstable-options --target targets/"+args[1]+".json --out-dir ../out/")
+    attempt_build("Userspace","Userspace","cargo build -Z unstable-options --target .cargo/"+args[1]+".json --out-dir ../out/bin")
+    os.system("rm out/bin/*.rlib")
     ##################################################################
     with open("out/root.cpio", "wb") as rootcpio:
         attempt_package("Create InitRD","",("",))
-        output = subprocess.run(["rm","-f","out/root.cpio.gz"])
+        subprocess.run(["rm","-f","out/root.cpio.gz"])
+        output = subprocess.run(["cp","-r","out/bin","Meta/bin"])
+        if output.returncode != 0:
+            print("\x1b[1m\x1b[31mFailed\x1b[0m---",output.returncode)
+            sys.exit(output.returncode)
         output = subprocess.run(["find",".","-type","f"],cwd="Meta/",stdout=subprocess.PIPE)
         if output.returncode != 0:
             print("\x1b[1m\x1b[31mFailed\x1b[0m---",output.returncode)
@@ -64,10 +70,14 @@ if args[0] == "build":
     if output.returncode != 0:
         print("\x1b[1m\x1b[31mFailed\x1b[0m---",output.returncode)
         sys.exit(output.returncode)
+    output = subprocess.run(["rm","-r","Meta/bin"])
+    if output.returncode != 0:
+        print("\x1b[1m\x1b[31mFailed\x1b[0m---",output.returncode)
+        sys.exit(output.returncode)
     ##################################################################
     if args[1] == "AMD64":
         attempt_package("Create ISO", "", (
-            "git clone --branch v3.0-branch-binary --depth 1 https://github.com/limine-bootloader/limine /tmp/limine",
+            "git clone --branch v3.6-binary --depth 1 https://github.com/limine-bootloader/limine /tmp/limine",
             "mkdir -p /tmp/owlos_iso/EFI/BOOT",
             "cp --force /tmp/limine/BOOTX64.EFI /tmp/limine/limine-cd-efi.bin /tmp/limine/limine-cd.bin /tmp/limine/limine.sys out/foxkernel out/root.cpio.gz Boot/AMD64/limine.cfg /tmp/owlos_iso",
             "mv /tmp/owlos_iso/BOOTX64.EFI /tmp/owlos_iso/EFI/BOOT/BOOTX64.EFI",

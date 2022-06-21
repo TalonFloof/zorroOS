@@ -674,11 +674,9 @@ pub fn SystemCall(regs: &mut State) {
         0x1e => { // sigreturn
             let mut plock = crate::Process::PROCESSES.lock();
             let proc = plock.get_mut(&curproc).unwrap();
-            if proc.sig_old_ip != 0 {
-                regs.SetIP(proc.sig_old_ip);
-                regs.SetSC1(proc.sig_old_arg1);
-                proc.sig_old_ip = 0;
-                proc.sig_old_arg1 = 0;
+            if proc.sig_state.GetIP() != 0 {
+                regs.Save(&proc.sig_state);
+                proc.sig_state.SetIP(0);
                 drop(plock);
                 Scheduler::Tick(CurrentHart(),regs);
                 unreachable!();

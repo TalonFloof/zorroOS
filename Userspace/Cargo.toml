@@ -1,0 +1,6 @@
+[workspace]
+members = ["Applications/*"]
+
+[profile.dev]
+opt-level = 3
+debug = 0

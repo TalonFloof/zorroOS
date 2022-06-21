@@ -79,6 +79,7 @@ pub struct Process {
     pub parent_id: i32,
 
     pub task_state: State,
+    pub sig_state: State,
     pub task_fpstate: FloatState,
 
     pub hart: AtomicU32,
@@ -102,8 +103,6 @@ pub struct Process {
     pub heap_length: Arc<Mutex<usize>>,
 
     pub signals: [usize; 25],
-    pub sig_old_ip: usize,
-    pub sig_old_arg1: usize,
 }
 
 pub const USERSPACE_STACK_SIZE: u64 = 0x4000;
@@ -116,6 +115,7 @@ impl Process {
             parent_id: parent,
 
             task_state: state,
+            sig_state: State::new(false),
             task_fpstate: FloatState::new(),
 
             hart: AtomicU32::new(u32::MAX),
@@ -139,8 +139,6 @@ impl Process {
             heap_length: Arc::new(Mutex::new(0)),
 
             signals: [0; 25],
-            sig_old_ip: 0,
-            sig_old_arg1: 0,
         }
     }
     pub fn ContextSwitch(&self) -> ! {
@@ -184,7 +182,7 @@ impl Process {
         match lock.get_mut(&pid) {
             Some(proc) => {
                 let sighandle = proc.signals[sig as usize];
-                if matches!(proc.status,ProcessStatus::SIGNAL(_,_)) || proc.sig_old_ip != 0 {
+                if matches!(proc.status,ProcessStatus::SIGNAL(_,_)) || proc.sig_state.GetIP() == 0 {
                     drop(lock);
                     return -crate::Syscall::Errors::EAGAIN as isize;
                 } else if !matches!(proc.status,ProcessStatus::RUNNABLE) && !matches!(proc.status,ProcessStatus::SLEEPING(_)) {
@@ -200,8 +198,7 @@ impl Process {
                     drop(lock);
                     return 0;
                 } else {
-                    proc.sig_old_ip = proc.task_state.GetIP();
-                    proc.sig_old_arg1 = proc.task_state.GetSC1();
+                    proc.sig_state.Save(&proc.task_state);
                     proc.status = ProcessStatus::SIGNAL(sighandle,sig as usize);
                     drop(lock);
                     return 0;
@@ -246,6 +243,8 @@ impl Process {
         let mut task_state = State::new(false);
         task_state.Save(&self.task_state);
         task_state.SetSC0(0);
+        let mut sig_state = State::new(false);
+        sig_state.Save(&self.sig_state);
         let mut fds = BTreeMap::new();
         for (i,j) in self.fds.iter() {
             fds.insert(*i,j.clone());
@@ -255,6 +254,7 @@ impl Process {
             parent_id: self.id,
 
             task_state,
+            sig_state,
             task_fpstate: self.task_fpstate.Clone(),
 
             hart: AtomicU32::new(u32::MAX),
@@ -278,8 +278,6 @@ impl Process {
             heap_length: self.heap_length.clone(),
 
             signals: self.signals.clone(),
-            sig_old_ip: self.sig_old_ip,
-            sig_old_arg1: self.sig_old_arg1,
         }
     }
 }
