@@ -1,7 +1,7 @@
 [package]
 name = "foxkernel"
 version = "0.0.2"
-authors = ["TalonTheRaven"]
+authors = ["Talon396"]
 edition = "2021"
 description = "A UNIX-like Kernel"
 license = "Apache-2.0"

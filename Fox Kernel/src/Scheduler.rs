@@ -81,6 +81,9 @@ impl Scheduler {
     pub fn Start(hartid: u32) -> ! {
         let mut writelock = SCHEDULERS.lock();
         let sched = Scheduler::new();
+        if CurrentHart() == 0 {
+            sched.process_queue.lock().push_front(1);
+        }
         writelock.insert(hartid,sched);
         let ptr = writelock.get(&hartid).unwrap() as *const Scheduler;
         drop(writelock);

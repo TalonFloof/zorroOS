@@ -192,9 +192,16 @@ pub fn SystemCall(regs: &mut State) {
         0x02 => { // fork
             let mut plock = crate::Process::PROCESSES.lock();
             let proc = plock.get_mut(&curproc).unwrap();
-            let forked_proc = Process::Fork(proc,regs.GetSC1() == 1);
-            regs.SetSC0(Process::AddProcess(forked_proc) as usize);
+            proc.task_state.Save(regs);
+            let forked_proc = Process::Fork(proc);
+            let forked_ip = forked_proc.task_state.GetIP();
+            let forked_sp = forked_proc.task_state.GetSP();
             drop(plock);
+            let val = Process::AddProcess(forked_proc);
+            if val > 0 {
+                Process::StartProcess(val,forked_ip,forked_sp);
+            }
+            regs.SetSC0(val as usize);
         }
         0x03 => { // open
             let mut plock = crate::Process::PROCESSES.lock();

@@ -108,9 +108,13 @@ pub fn execv(path: &str, argv: &[&CStr]) -> isize {
 }
 
 pub fn pollpid() {
-    
+
 }
 
 pub fn sbrk(expand: isize) -> isize {
-    Syscall(0x22,expand as usize,0,0) as isize
+    Syscall(0x22,expand as usize,0,0)
+}
+
+pub fn foxkernel_powerctl(cmd: usize) -> isize {
+    Syscall(0xf0,cmd,0,0)
 }

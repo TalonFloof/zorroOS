@@ -161,7 +161,7 @@ impl PageTable for PageTableImpl {
         let pd_index: usize = ((addr >> 21) & 0x1FF) as usize;
         let pt_index: usize = ((addr >> 12) & 0x1FF) as usize;
         let pd_pagetable = (self.page_table.index(pml4_index).frame().unwrap_or_else(|_val| {
-            return AllocateFrameToPT(self.page_table as *mut HWPageTable, 0)
+            return AllocateFrameToPT(self.page_table as *mut HWPageTable, pml4_index as u64)
         }).start_address().as_u64()+PHYSMEM_BEGIN) as *mut HWPageTable;
         unsafe {
             let pagedirectory = ((*pd_pagetable).index(pdpt_index).frame().unwrap_or_else(|_val| {
@@ -233,7 +233,7 @@ impl PageTable for PageTableImpl {
         if is_thread {
             pt.page_table.index_mut(0).set_addr(self.page_table.index(0).addr(), PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::USER_ACCESSIBLE | PageTableFlags::BIT_9);
         }
-        for h in start..256 {
+        for h in start..=255 {
             if self.page_table.index(h).flags().contains(PageTableFlags::PRESENT) {
                 let pd_pagetable = (self.page_table.index(h).addr().as_u64()+PHYSMEM_BEGIN) as *mut HWPageTable;
                 unsafe {
@@ -242,15 +242,16 @@ impl PageTable for PageTableImpl {
                             let pagedirectory = ((*pd_pagetable).index(i).addr().as_u64()+PHYSMEM_BEGIN) as *mut HWPageTable;
                             for j in 0..512 {
                                 if (*pagedirectory).index(j).flags().contains(PageTableFlags::PRESENT) {
-                                    let pagetable = ((*pagedirectory).index(i).addr().as_u64()+PHYSMEM_BEGIN) as *mut HWPageTable;
+                                    let pagetable = ((*pagedirectory).index(j).addr().as_u64()+PHYSMEM_BEGIN) as *mut HWPageTable;
                                     for k in 0..512 {
                                         if (*pagetable).index(k).flags().contains(PageTableFlags::PRESENT) {
                                             let flags = (*pagetable).index(k).flags();
                                             let new_page = Allocate(0x1000).unwrap();
-                                            core::ptr::copy(((*pagetable).index(k).addr().as_u64()+PHYSMEM_BEGIN) as *const usize,new_page as *mut usize,0x1000/usize::BITS as usize);
+                                            core::ptr::copy(((*pagetable).index(k).addr().as_u64()+PHYSMEM_BEGIN) as *const usize,new_page as *mut usize,0x1000/(usize::BITS/8) as usize);
                                             let mut npe = pt.Map(((h << 39) | (i << 30) | (j << 21) | (k << 12)) as u64,new_page as u64-PHYSMEM_BEGIN);
                                             npe.SetWritable(flags.contains(PageTableFlags::WRITABLE));
                                             npe.SetExecutable(!flags.contains(PageTableFlags::NO_EXECUTE));
+                                            npe.SetUser(true);
                                             npe.Update();
                                         }
                                     }

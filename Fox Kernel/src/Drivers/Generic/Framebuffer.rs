@@ -50,7 +50,7 @@ impl VFS::Inode for Framebuffer {
             return -(Errors::ENOSPC as i64);
         }
         let lock = MainFramebuffer.lock();
-        unsafe {core::ptr::copy(((buffer.as_ptr() as u64) + offset as u64) as *const u8, (lock.as_ref().unwrap().pointer+offset as u64) as *mut u8, buffer.len());}
+        unsafe {core::ptr::copy(buffer.as_ptr() as *const u8, (lock.as_ref().unwrap().pointer+offset as u64) as *mut u8, buffer.len());}
         drop(lock);
         buffer.len() as i64
     }

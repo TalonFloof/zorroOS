@@ -91,7 +91,7 @@ impl TaskState for State {
         self.rip as usize
     }
     fn SetSP(&mut self, sp: usize) {
-        self.rsp = (sp-8) as u64;
+        self.rsp = sp as u64;
     }
     fn GetSP(&self) -> usize {
         self.rsp as usize

@@ -182,7 +182,7 @@ impl Process {
         match lock.get_mut(&pid) {
             Some(proc) => {
                 let sighandle = proc.signals[sig as usize];
-                if matches!(proc.status,ProcessStatus::SIGNAL(_,_)) || proc.sig_state.GetIP() == 0 {
+                if matches!(proc.status,ProcessStatus::SIGNAL(_,_)) || proc.sig_state.GetIP() != 0 {
                     drop(lock);
                     return -crate::Syscall::Errors::EAGAIN as isize;
                 } else if !matches!(proc.status,ProcessStatus::RUNNABLE) && !matches!(proc.status,ProcessStatus::SLEEPING(_)) {
@@ -239,7 +239,7 @@ impl Process {
         }
         drop(lock);
     }
-    pub fn Fork(&mut self, is_thread: bool) -> Self {
+    pub fn Fork(&mut self) -> Self {
         let mut task_state = State::new(false);
         task_state.Save(&self.task_state);
         task_state.SetSC0(0);
@@ -267,10 +267,10 @@ impl Process {
             umask: self.umask,
             pgid: self.pgid,
 
-            pagetable: self.pagetable.Clone(is_thread),
+            pagetable: self.pagetable.Clone(true),
 
             cwd: self.cwd.clone(),
-            status: ProcessStatus::RUNNABLE,
+            status: ProcessStatus::NEW,
 
             fds,
 

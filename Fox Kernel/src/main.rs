@@ -31,6 +31,7 @@ use core::alloc::Layout;
 use crate::arch::CurrentHart;
 use alloc::vec::Vec;
 use alloc::string::String;
+use alloc::sync::Arc;
 
 #[macro_export]
 macro_rules! print_startup_message {
@@ -51,6 +52,18 @@ fn main(ramdisks: Vec<(String,&[u8])>) -> ! {
         let used = PageFrame::UsedMem.load(core::sync::atomic::Ordering::SeqCst);
 	    let total = PageFrame::TotalMem.load(core::sync::atomic::Ordering::SeqCst);
 	    log::info!("{} MiB Used out of {} MiB Total", used/1024/1024, total/1024/1024);
+    }
+    // Load /bin/init
+    let mut proc = Process::Process::new(String::from("/bin/init"),-1);
+    match ELF::LoadELFFromPath("/bin/init",Arc::get_mut(&mut proc.pagetable).unwrap()) {
+        Ok((entry,heap_start)) => {
+            proc.heap_base = heap_start;
+            let pid = Process::Process::AddProcess(proc);
+            Process::Process::StartProcess(pid,entry,0x800000000000);
+        }
+        Err(_) => {
+            panic!("No command");
+        }
     }
     if crate::CommandLine::FLAGS.get().unwrap().contains("--break") {panic!("Break");}
     Scheduler::Scheduler::Start(CurrentHart())
