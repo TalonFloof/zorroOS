@@ -166,6 +166,16 @@ pub mod OpenFlags {
     pub const O_PATH: usize      = 0x8000;
 }
 
+#[repr(packed)]
+#[allow(dead_code)]
+pub struct DirEntry {
+    inode_id: i64,
+    offset: i64,
+    length: i64,
+    file_type: i8,
+    name: [u8; 256],
+}
+
 pub fn SystemCall(regs: &mut State) {
     let curproc = Scheduler::CurrentPID();
     match regs.GetSC0() {
@@ -173,7 +183,11 @@ pub fn SystemCall(regs: &mut State) {
             Scheduler::Tick(CurrentHart(),regs);
         }
         0x01 => { // exit
-            unimplemented!();
+            let mut plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get_mut(&curproc).unwrap();
+            proc.status = crate::Process::ProcessStatus::FINISHING((regs.GetSC1() as isize).abs());
+            drop(plock);
+            Scheduler::Tick(CurrentHart(),regs);
         }
         0x02 => { // fork
             let mut plock = crate::Process::PROCESSES.lock();
@@ -257,7 +271,7 @@ pub fn SystemCall(regs: &mut State) {
         0x05 => { // read
             let mut plock = crate::Process::PROCESSES.lock();
             let proc = plock.get_mut(&curproc).unwrap();
-            let fd = proc.fds.get_mut(&(regs.GetSC1() as i64));
+            let mut fd = proc.fds.get_mut(&(regs.GetSC1() as i64));
             let buf = unsafe {core::slice::from_raw_parts_mut(regs.GetSC2() as *mut u8, regs.GetSC3())};
             if fd.is_none() {
                 drop(plock);
@@ -270,7 +284,41 @@ pub fn SystemCall(regs: &mut State) {
                 return;
             }
             if fd.as_ref().unwrap().is_dir {
-
+                if buf.len() < core::mem::size_of::<DirEntry>() {
+                    drop(plock);
+                    regs.SetSC0((-Errors::EINVAL) as usize);
+                    return;
+                }
+                let result = fd.as_ref().unwrap().inode.ReadDir(fd.as_ref().unwrap().offset as usize);
+                if result.is_err() {
+                    regs.SetSC0((-(result.err().unwrap() as isize)) as usize);
+                    drop(plock);
+                    return;
+                }
+                match result.ok().unwrap() {
+                    Some(inode) => {
+                        fd.as_mut().unwrap().offset += 1;
+                        let mut name_buf = [0u8; 256];
+                        let name = CString::new(inode.GetName().ok().unwrap()).ok().unwrap();
+                        name_buf.copy_from_slice(name.as_bytes_with_nul());
+                        let entry = DirEntry {
+                            inode_id: inode.Stat().ok().unwrap().inode_id,
+                            offset: fd.as_ref().unwrap().offset,
+                            length: core::mem::size_of::<DirEntry>() as i64,
+                            file_type: 0,
+                            name: name_buf,
+                        };
+                        unsafe {core::ptr::copy(&entry as *const _ as *const u8, regs.GetSC2() as *mut u8,core::mem::size_of::<DirEntry>());}
+                        regs.SetSC0(core::mem::size_of::<DirEntry>());
+                        drop(plock);
+                        return;
+                    }
+                    _ => {
+                        regs.SetSC0(0);
+                        drop(plock);
+                        return;
+                    }
+                }
             } else {
                 let res = fd.as_ref().unwrap().inode.Read(fd.as_ref().unwrap().offset,buf);
                 if res < 0 {
@@ -572,10 +620,12 @@ pub fn SystemCall(regs: &mut State) {
             }
             let mut pt = PageTableImpl::new();
             match LoadELFFromPath(path.ok().unwrap(),&mut pt) {
-                Ok(val) => {
+                Ok((val,base)) => {
                     crate::Memory::MapPages(&mut pt,0x1000,argv_ptr_slice.as_ptr() as usize - crate::arch::PHYSMEM_BEGIN as usize,0x1000,false,false);
                     crate::Memory::MapPages(&mut pt,0x2000,argv_str_slice.as_ptr() as usize - crate::arch::PHYSMEM_BEGIN as usize,argv_str_slice.len().div_ceil(0x1000)*0x1000,false,false);
                     regs.Exit();
+                    proc.heap_base = base;
+                    *proc.heap_length.lock() = 0;
                     proc.pagetable = Arc::new(pt); // Old pagetable will be dropped if all references are gone
                     proc.task_state.SetIP(val);
                     proc.task_state.SetSP(0x800000000000);
@@ -594,8 +644,11 @@ pub fn SystemCall(regs: &mut State) {
                 }
             }
         }
-        0x13 => { // waitpid
-            unimplemented!();
+        0x13 => { // pollpid
+            let mut plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get_mut(&curproc).unwrap();
+            let opt = regs.GetSC3();
+            
         }
         0x14 => { // getuid
             let mut plock = crate::Process::PROCESSES.lock();
