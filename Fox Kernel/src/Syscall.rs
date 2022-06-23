@@ -257,6 +257,7 @@ pub fn SystemCall(regs: &mut State) {
                 offset: 0,
                 mode,
                 is_dir: metadata.mode & 0o0040000 != 0,
+                close_on_exec: mode & OpenFlags::O_CLOEXEC != 0,
             });
             regs.SetSC0(len as usize);
             drop(plock);
@@ -421,6 +422,7 @@ pub fn SystemCall(regs: &mut State) {
                     offset: old_fd.as_ref().unwrap().offset,
                     mode: old_fd.as_ref().unwrap().mode,
                     is_dir: old_fd.as_ref().unwrap().is_dir,
+                    close_on_exec: old_fd.as_ref().unwrap().close_on_exec,
                 });
                 drop(plock);
                 regs.SetSC0(len as usize);
@@ -435,6 +437,7 @@ pub fn SystemCall(regs: &mut State) {
                     offset: old_fd.as_ref().unwrap().offset,
                     mode: old_fd.as_ref().unwrap().mode,
                     is_dir: old_fd.as_ref().unwrap().is_dir,
+                    close_on_exec: old_fd.as_ref().unwrap().close_on_exec,
                 });
                 drop(plock);
                 regs.SetSC0(regs.GetSC2());
@@ -640,6 +643,7 @@ pub fn SystemCall(regs: &mut State) {
                     proc.task_state.SetSC1(0);
                     proc.task_state.SetSC2(0);
                     proc.task_state.SetSC3(0);
+                    proc.fds.retain(|_,x| !x.close_on_exec);
                     let state_ptr = &proc.task_state as *const State as usize;
                     drop(plock);
                     Scheduler::Tick(CurrentHart(),unsafe {&*(state_ptr as *const State)});
@@ -688,7 +692,7 @@ pub fn SystemCall(regs: &mut State) {
                             unsafe {*wstatus = 0x13ff};
                         }
                     } else {
-                        regs.SetSC0((-Errors::EAGAIN as isize) as usize);
+                        regs.SetSC0(0);
                     }
                     drop(plock);
                     return;
@@ -725,7 +729,7 @@ pub fn SystemCall(regs: &mut State) {
                     }
                 }
             }
-            regs.SetSC0((-Errors::EAGAIN as isize) as usize);
+            regs.SetSC0(0);
             drop(plock);
         }
         0x14 => { // getuid

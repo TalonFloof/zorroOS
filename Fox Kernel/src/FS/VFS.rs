@@ -106,6 +106,7 @@ pub struct FileDescriptor {
     pub offset: i64,
     pub mode: usize,
     pub is_dir: bool,
+    pub close_on_exec: bool,
 }
 
 static MOUNTS: Mutex<Vec<(String,Arc<dyn Filesystem>)>> = Mutex::new(Vec::new());

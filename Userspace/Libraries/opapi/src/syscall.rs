@@ -83,7 +83,7 @@ pub fn chmod(path: &str, mode: usize) -> isize {
     ret
 }
 
-pub fn chown(path: &str, uid: i32, gid: i32,) -> isize {
+pub fn chown(path: &str, uid: i32, gid: i32) -> isize {
     let cpath = CString::new(path).expect("owlOS Programmer API: String conversion failed");
     let ptr = cpath.into_raw();
     let ret = Syscall(0x0f,ptr as usize,uid as usize,gid as usize);
@@ -107,9 +107,27 @@ pub fn execv(path: &str, argv: &[&CStr]) -> isize {
     ret
 }
 
-pub fn waitpid() {
-
+pub fn wait(wstatus: *mut usize) -> isize {
+    loop {
+        let result = Syscall(0x13,-1isize as usize,wstatus as usize,0);
+        if result != 0 {
+            return result;
+        }
+        Syscall(0,0,0,0); // Yield
+    }
 }
+
+pub fn waitpid(pid: i32, wstatus: *mut usize, opt: usize) -> isize {
+    loop {
+        let result = Syscall(0x13,pid as usize,wstatus as usize,0);
+        if result != 0 || opt & 1 == 1 {
+            return result;
+        }
+        Syscall(0,0,0,0); // Yield
+    }
+}
+
+
 
 pub fn sbrk(expand: isize) -> isize {
     Syscall(0x22,expand as usize,0,0)
