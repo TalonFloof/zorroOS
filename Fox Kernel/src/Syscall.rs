@@ -655,6 +655,7 @@ pub fn SystemCall(regs: &mut State) {
             let plock = crate::Process::PROCESSES.lock();
             let proc = plock.get(&curproc).unwrap();
             let pid = regs.GetSC1() as i32;
+            let wstatus = regs.GetSC2() as *mut usize;
             let mut pgrp = -2;
             if proc.children.len() == 0 {
                 regs.SetSC0((-Errors::ECHILD as isize) as usize);
@@ -670,16 +671,22 @@ pub fn SystemCall(regs: &mut State) {
             } else {
                 if let Some(child) = plock.get(&pid) {
                     if let crate::Process::ProcessStatus::FINISHED(status) = child.status {
-                        if status < 0 {
-                            regs.SetSC0(status.abs() as usize & 0xFF);
-                        } else {
-                            regs.SetSC0((status as usize & 0xFF) << 8);
+                        if !wstatus.is_null() {
+                            if status < 0 {
+                                unsafe {*wstatus = status.abs() as usize & 0xFF;}
+                            } else {
+                                unsafe {*wstatus = (status as usize & 0xFF) << 8;}
+                            }
                         }
+                        regs.SetSC0(pid as usize);
                         drop(plock);
                         crate::Process::Process::CleanupProcess(pid);
                         return;
                     } else if let crate::Process::ProcessStatus::STOPPED = child.status {
-                        regs.SetSC0(0x13ff);
+                        regs.SetSC0(pid as usize);
+                        if !wstatus.is_null() {
+                            unsafe {*wstatus = 0x13ff};
+                        }
                     } else {
                         regs.SetSC0((-Errors::EAGAIN as isize) as usize);
                     }
@@ -696,17 +703,23 @@ pub fn SystemCall(regs: &mut State) {
                 if let Some(child) = plock.get(&i) {
                     if child.pgid == pgrp || pgrp == -1 {
                         if let crate::Process::ProcessStatus::FINISHED(status) = child.status {
-                            if status < 0 {
-                                regs.SetSC0(status.abs() as usize & 0xFF);
-                            } else {
-                                regs.SetSC0((status as usize & 0xFF) << 8);
+                            if !wstatus.is_null() {
+                                if status < 0 {
+                                    unsafe {*wstatus = status.abs() as usize & 0xFF;}
+                                } else {
+                                    unsafe {*wstatus = (status as usize & 0xFF) << 8;}
+                                }
                             }
+                            regs.SetSC0(pid as usize);
                             drop(plock);
                             crate::Process::Process::CleanupProcess(pid);
                             return;
                         } else if let crate::Process::ProcessStatus::STOPPED = child.status {
+                            regs.SetSC0(pid as usize);
+                            if !wstatus.is_null() {
+                                unsafe {*wstatus = 0x13ff};
+                            }
                             drop(plock);
-                            regs.SetSC0(0x13ff);
                             return;
                         }
                     }
