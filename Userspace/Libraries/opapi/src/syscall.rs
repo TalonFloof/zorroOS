@@ -107,7 +107,7 @@ pub fn execv(path: &str, argv: &[&CStr]) -> isize {
     ret
 }
 
-pub fn pollpid() {
+pub fn waitpid() {
 
 }
 

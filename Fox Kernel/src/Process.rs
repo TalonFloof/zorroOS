@@ -9,6 +9,7 @@ use crate::Scheduler::SCHEDULERS;
 use alloc::string::String;
 use alloc::sync::Arc;
 use crate::FS::VFS::FileDescriptor;
+use alloc::vec::Vec;
 
 pub static PROCESSES: Mutex<BTreeMap<i32,Process>> = Mutex::new(BTreeMap::new());
 pub static NEXTPROCESS: AtomicI32 = AtomicI32::new(1);
@@ -42,6 +43,7 @@ pub enum ProcessStatus {
     NEW,
     RUNNABLE,
     STOPPED,
+    FORCEKILL(bool), // This is a special status given to child processes after the parent gets cleaned up to prevent orphan processes from being created.
     SIGNAL(usize,usize),
     FINISHING(isize),
     FINISHED(isize),
@@ -77,6 +79,7 @@ pub trait TaskFloatState: Send + Sync {
 pub struct Process {
     pub id: i32,
     pub parent_id: i32,
+    pub children: Vec<i32>,
 
     pub task_state: State,
     pub sig_state: State,
@@ -113,6 +116,7 @@ impl Process {
         Self {
             id: i32::MIN,
             parent_id: parent,
+            children: Vec::new(),
 
             task_state: state,
             sig_state: State::new(false),
@@ -148,18 +152,14 @@ impl Process {
     //////////////////////////////////////////////////////////////
     pub fn AddProcess(mut proc: Process) -> i32 {
         let mut plock = PROCESSES.lock();
-        let start = NEXTPROCESS.load(Ordering::SeqCst);
-        let len = *plock.last_key_value().unwrap_or_else(|| (&0, &proc)).0 + 1;
-        for i in start..=len {
-            if !(plock.contains_key(&i)) {
-                proc.id = i;
-                plock.insert(i,proc);
-                NEXTPROCESS.store(i,Ordering::SeqCst);
-                drop(plock);
-                return i;
-            }
+        let id = NEXTPROCESS.fetch_add(1,Ordering::SeqCst);
+        proc.id = id;
+        if let Some(parent) = plock.get_mut(&proc.parent_id) {
+            parent.children.push(id);
         }
-        panic!("Process wasn't added");
+        plock.insert(id,proc);
+        drop(plock);
+        return id;
     }
     //////////////////////////////////////////////////////////////
     pub fn CleanupProcess(pid: i32) {
@@ -192,6 +192,17 @@ impl Process {
                 if sighandle == 0 || sig == Signals::SIGKILL || sig == Signals::SIGSTOP {
                     if sig >= 0x1 && sig <= 0xf {
                         proc.status = ProcessStatus::FINISHING(-(sig as isize));
+                        let children = proc.children.clone();
+                        drop(lock);
+                        let mut lock = PROCESSES.lock();
+                        for i in children.iter() {
+                            if let Some(child) = lock.get_mut(&i) {
+                                child.status = ProcessStatus::FORCEKILL(false);
+                            }
+                        }
+                        drop(children);
+                        drop(lock);
+                        return 0;
                     } else if sig >= 0x13 && sig <= 0x16 {
                         proc.status = ProcessStatus::STOPPED;
                     }
@@ -252,6 +263,7 @@ impl Process {
         Self {
             id: i32::MIN,
             parent_id: self.id,
+            children: Vec::new(),
 
             task_state,
             sig_state,

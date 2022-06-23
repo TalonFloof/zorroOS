@@ -6,6 +6,7 @@ use crate::arch::Task::State;
 use crate::IdleThread;
 use crate::Process::{Process, PROCESSES, TaskState, TaskFloatState, ProcessStatus};
 use crate::arch::CurrentHart;
+use alloc::vec::Vec;
 
 pub static SCHEDULERS: Mutex<BTreeMap<u32,Scheduler>> = Mutex::new(BTreeMap::new());
 pub static SCHEDULER_STARTED: AtomicBool = AtomicBool::new(false);
@@ -51,9 +52,40 @@ impl Scheduler {
                         return val;
                     }
                     ProcessStatus::FINISHING(status) => {
-                        proc.status = ProcessStatus::FINISHED(status);
+                        if proc.children.len() == 0 {
+                            proc.status = ProcessStatus::FINISHED(status);
+                        }
                         drop(plock);
                         continue;
+                    }
+                    ProcessStatus::FORCEKILL(false) => {
+                        if proc.children.len() > 0 {
+                            proc.status = ProcessStatus::FORCEKILL(true);
+                            let children: Vec<i32> = proc.children.clone();
+                            drop(plock);
+                            let mut plock = PROCESSES.lock();
+                            for i in children.iter() {
+                                if let Some(child) = plock.get_mut(&i) {
+                                    child.status = ProcessStatus::FORCEKILL(false);
+                                }
+                            }
+                            drop(plock);
+                            continue;
+                        }
+                        proc.status = ProcessStatus::FORCEKILL(true);
+                    }
+                    ProcessStatus::FORCEKILL(true) => {
+                        if proc.children.len() == 0 {
+                            let parid = proc.parent_id;
+                            if let Some(parent) = plock.get_mut(&parid) {
+                                parent.children.retain(|&x| x != val);
+                            }
+                            drop(plock);
+                            drop(pqlock);
+                            crate::Process::Process::CleanupProcess(val);
+                            pqlock = self.process_queue.lock();
+                            continue;
+                        }
                     }
                     _ => {
                         drop(plock);

@@ -441,8 +441,8 @@ pub fn SystemCall(regs: &mut State) {
             }
         }
         0x0a => { // unlink
-            let mut plock = crate::Process::PROCESSES.lock();
-            let proc = plock.get_mut(&curproc).unwrap();
+            let plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get(&curproc).unwrap();
             let path = unsafe {CStr::from_ptr(regs.GetSC1() as *const c_char)}.to_str();
             if path.is_err() {
                 regs.SetSC0((-Errors::EINVAL as isize) as usize);
@@ -462,8 +462,8 @@ pub fn SystemCall(regs: &mut State) {
             drop(plock);
         }
         0x0b => { // stat
-            let mut plock = crate::Process::PROCESSES.lock();
-            let proc = plock.get_mut(&curproc).unwrap();
+            let plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get(&curproc).unwrap();
             let path = unsafe {CStr::from_ptr(regs.GetSC1() as *const c_char)}.to_str();
             if path.is_err() {
                 regs.SetSC0((-Errors::EINVAL as isize) as usize);
@@ -482,9 +482,9 @@ pub fn SystemCall(regs: &mut State) {
             regs.SetSC0(0);
         }
         0x0c => { // fstat
-            let mut plock = crate::Process::PROCESSES.lock();
-            let proc = plock.get_mut(&curproc).unwrap();
-            let fd = proc.fds.get_mut(&(regs.GetSC1() as i64));
+            let plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get(&curproc).unwrap();
+            let fd = proc.fds.get(&(regs.GetSC1() as i64));
             if fd.is_none() {
                 drop(plock);
                 regs.SetSC0((-Errors::EBADF) as usize);
@@ -496,8 +496,8 @@ pub fn SystemCall(regs: &mut State) {
             regs.SetSC0(0);
         }
         0x0d => { // access
-            let mut plock = crate::Process::PROCESSES.lock();
-            let proc = plock.get_mut(&curproc).unwrap();
+            let plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get(&curproc).unwrap();
             let path = unsafe {CStr::from_ptr(regs.GetSC1() as *const c_char)}.to_str();
             let mode = regs.GetSC2();
             if path.is_err() {
@@ -521,8 +521,8 @@ pub fn SystemCall(regs: &mut State) {
             drop(plock);
         }
         0x0e => { // chmod
-            let mut plock = crate::Process::PROCESSES.lock();
-            let proc = plock.get_mut(&curproc).unwrap();
+            let plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get(&curproc).unwrap();
             let path = unsafe {CStr::from_ptr(regs.GetSC1() as *const c_char)}.to_str();
             if path.is_err() {
                 regs.SetSC0((-Errors::ENOENT as isize) as usize);
@@ -545,8 +545,8 @@ pub fn SystemCall(regs: &mut State) {
             drop(plock);
         }
         0x0f => { // chown
-            let mut plock = crate::Process::PROCESSES.lock();
-            let proc = plock.get_mut(&curproc).unwrap();
+            let plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get(&curproc).unwrap();
             let path = unsafe {CStr::from_ptr(regs.GetSC1() as *const c_char)}.to_str();
             if path.is_err() {
                 regs.SetSC0((-Errors::ENOENT as isize) as usize);
@@ -577,9 +577,9 @@ pub fn SystemCall(regs: &mut State) {
             drop(plock);
         }
         0x11 => { // ioctl
-            let mut plock = crate::Process::PROCESSES.lock();
-            let proc = plock.get_mut(&curproc).unwrap();
-            let fd = proc.fds.get_mut(&(regs.GetSC1() as i64));
+            let plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get(&curproc).unwrap();
+            let fd = proc.fds.get(&(regs.GetSC1() as i64));
             if fd.is_none() {
                 drop(plock);
                 regs.SetSC0((-Errors::EBADF) as usize);
@@ -652,44 +652,102 @@ pub fn SystemCall(regs: &mut State) {
             }
         }
         0x13 => { // pollpid
-            let mut plock = crate::Process::PROCESSES.lock();
-            let proc = plock.get_mut(&curproc).unwrap();
-            let opt = regs.GetSC3();
-            
+            let plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get(&curproc).unwrap();
+            let pid = regs.GetSC1() as i32;
+            let mut pgrp = -2;
+            if proc.children.len() == 0 {
+                regs.SetSC0((-Errors::ECHILD as isize) as usize);
+                drop(plock);
+                return;
+            }
+            if pid < -1 {
+                pgrp = pid.abs();
+            } else if pid == -1 {
+                pgrp = -1;
+            } else if pid == 0 {
+                pgrp = proc.pgid;
+            } else {
+                if let Some(child) = plock.get(&pid) {
+                    if let crate::Process::ProcessStatus::FINISHED(status) = child.status {
+                        if status < 0 {
+                            regs.SetSC0(status.abs() as usize & 0xFF);
+                        } else {
+                            regs.SetSC0((status as usize & 0xFF) << 8);
+                        }
+                        drop(plock);
+                        crate::Process::Process::CleanupProcess(pid);
+                        return;
+                    } else if let crate::Process::ProcessStatus::STOPPED = child.status {
+                        regs.SetSC0(0x13ff);
+                    } else {
+                        regs.SetSC0((-Errors::EAGAIN as isize) as usize);
+                    }
+                    drop(plock);
+                    return;
+                } else {
+                    regs.SetSC0((-Errors::ECHILD as isize) as usize);
+                    drop(plock);
+                    return;
+                }
+            }
+            // < -1 or 0
+            for i in proc.children.iter() {
+                if let Some(child) = plock.get(&i) {
+                    if child.pgid == pgrp || pgrp == -1 {
+                        if let crate::Process::ProcessStatus::FINISHED(status) = child.status {
+                            if status < 0 {
+                                regs.SetSC0(status.abs() as usize & 0xFF);
+                            } else {
+                                regs.SetSC0((status as usize & 0xFF) << 8);
+                            }
+                            drop(plock);
+                            crate::Process::Process::CleanupProcess(pid);
+                            return;
+                        } else if let crate::Process::ProcessStatus::STOPPED = child.status {
+                            drop(plock);
+                            regs.SetSC0(0x13ff);
+                            return;
+                        }
+                    }
+                }
+            }
+            regs.SetSC0((-Errors::EAGAIN as isize) as usize);
+            drop(plock);
         }
         0x14 => { // getuid
-            let mut plock = crate::Process::PROCESSES.lock();
-            let proc = plock.get_mut(&curproc).unwrap();
+            let plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get(&curproc).unwrap();
             regs.SetSC0(proc.ruid as usize);
             drop(plock);
         }
         0x15 => { // geteuid
-            let mut plock = crate::Process::PROCESSES.lock();
-            let proc = plock.get_mut(&curproc).unwrap();
+            let plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get(&curproc).unwrap();
             regs.SetSC0(proc.euid as usize);
             drop(plock);
         }
         0x16 => { // getgid
-            let mut plock = crate::Process::PROCESSES.lock();
-            let proc = plock.get_mut(&curproc).unwrap();
+            let plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get(&curproc).unwrap();
             regs.SetSC0(proc.rgid as usize);
             drop(plock);
         }
         0x17 => { // getegid
-            let mut plock = crate::Process::PROCESSES.lock();
-            let proc = plock.get_mut(&curproc).unwrap();
+            let plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get(&curproc).unwrap();
             regs.SetSC0(proc.egid as usize);
             drop(plock);
         }
         0x18 => { // getpid
-            let mut plock = crate::Process::PROCESSES.lock();
-            let proc = plock.get_mut(&curproc).unwrap();
+            let plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get(&curproc).unwrap();
             regs.SetSC0(proc.id as usize);
             drop(plock);
         }
         0x19 => { // getppid
-            let mut plock = crate::Process::PROCESSES.lock();
-            let proc = plock.get_mut(&curproc).unwrap();
+            let plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get(&curproc).unwrap();
             regs.SetSC0(proc.parent_id as usize);
             drop(plock);
         }
@@ -713,8 +771,8 @@ pub fn SystemCall(regs: &mut State) {
             regs.SetSC0(0);
         }
         0x1b => { // getpgrp
-            let mut plock = crate::Process::PROCESSES.lock();
-            let proc = plock.get_mut(&curproc).unwrap();
+            let plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get(&curproc).unwrap();
             regs.SetSC0(proc.pgid as usize);
             drop(plock);
         }
