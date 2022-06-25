@@ -28,11 +28,23 @@ pub fn close(fd: isize) -> isize {
 }
 
 pub fn read(fd: isize, buf: &mut [u8]) -> isize {
-    Syscall(0x05,fd as usize,buf.as_mut_ptr() as usize,buf.len())
+    loop {
+        let status = Syscall(0x05,fd as usize,buf.as_mut_ptr() as usize,buf.len());
+        if status != -11 {
+            return status;
+        }
+        Syscall(0,0,0,0); // Yield
+    }
 }
 
 pub fn write(fd: isize, buf: &[u8]) -> isize {
-    Syscall(0x06,fd as usize,buf.as_ptr() as usize,buf.len())
+    loop {
+        let status = Syscall(0x06,fd as usize,buf.as_ptr() as usize,buf.len());
+        if status != -11 {
+            return status;
+        }
+        Syscall(0,0,0,0); // Yield
+    }
 }
 
 pub fn lseek(fd: isize, offset: isize, whence: usize) -> isize {
@@ -127,7 +139,53 @@ pub fn waitpid(pid: i32, wstatus: *mut usize, opt: usize) -> isize {
     }
 }
 
+pub fn getuid() -> u32 {
+    Syscall(0x14,0,0,0) as u32
+}
 
+pub fn geteuid() -> u32 {
+    Syscall(0x15,0,0,0) as u32
+}
+
+pub fn getgid() -> u32 {
+    Syscall(0x16,0,0,0) as u32
+}
+
+pub fn getegid() -> u32 {
+    Syscall(0x17,0,0,0) as u32
+}
+
+pub fn getpid() -> i32 {
+    Syscall(0x18,0,0,0) as i32
+}
+
+pub fn getppid() -> i32 {
+    Syscall(0x19,0,0,0) as i32
+}
+
+pub fn setpgid(pid: i32, group: i32) -> isize {
+    Syscall(0x1a,pid as usize,group as usize,0)
+}
+
+pub fn getpgrp() -> i32 {
+    Syscall(0x1b,0,0,0) as i32
+}
+
+pub fn signal(sig: u8, handler: &fn(u8)) -> isize {
+    Syscall(0x1c,sig as usize,handler as *const _ as usize,0)
+}
+
+pub fn kill(pid: i32, sig: u8) -> isize {
+    Syscall(0x1d,pid as usize,sig as usize,0)
+}
+
+pub fn sigreturn() {
+    Syscall(0x1e,0,0,0);
+}
+
+// nanosleep goes here
+
+//pub fn 
 
 pub fn sbrk(expand: isize) -> isize {
     Syscall(0x22,expand as usize,0,0)

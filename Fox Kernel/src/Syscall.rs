@@ -214,7 +214,7 @@ pub fn SystemCall(regs: &mut State) {
                 return;
             }
             if mode & 7 == 0 || mode & 7 == 1 || mode & 7 == 4 {
-                mode |= OpenFlags::O_RDONLY;
+                mode = (mode & !7) | OpenFlags::O_RDONLY;
             }
             if mode & OpenFlags::O_CREAT != 0 {
                 let abspath = VFS::GetAbsPath(path.ok().unwrap(),proc.cwd.as_str());
@@ -286,7 +286,7 @@ pub fn SystemCall(regs: &mut State) {
                 regs.SetSC0((-Errors::EBADF) as usize);
                 return;
             }
-            if fd.as_ref().unwrap().mode & 7 != 3 && fd.as_ref().unwrap().mode & 7 != 5 {
+            if fd.as_ref().unwrap().mode & 7 != 3 && fd.as_ref().unwrap().mode & 7 != 2 {
                 drop(plock);
                 regs.SetSC0((-Errors::EBADF) as usize);
                 return;
@@ -417,6 +417,7 @@ pub fn SystemCall(regs: &mut State) {
             }
             if regs.GetSC2() as isize == -1 {
                 let len = if proc.fds.keys().last().is_some() {*(proc.fds.keys().last().unwrap())} else {0};
+                old_fd.as_ref().unwrap().inode.Open(!0);
                 proc.fds.insert(len,VFS::FileDescriptor {
                     inode: old_fd.as_ref().unwrap().inode.clone(),
                     offset: old_fd.as_ref().unwrap().offset,
@@ -432,6 +433,7 @@ pub fn SystemCall(regs: &mut State) {
                     regs.SetSC0((-Errors::EBADF) as usize);
                     return;
                 }
+                old_fd.as_ref().unwrap().inode.Open(!0);
                 proc.fds.insert(regs.GetSC1() as i64,VFS::FileDescriptor {
                     inode: old_fd.as_ref().unwrap().inode.clone(),
                     offset: old_fd.as_ref().unwrap().offset,
@@ -835,7 +837,32 @@ pub fn SystemCall(regs: &mut State) {
             drop(plock);
         }
         0x21 => { // pipe
-            unimplemented!();
+            let mut plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get_mut(&curproc).unwrap();
+            let pipes = crate::Drivers::Generic::UNIXPipe::Pipe::new();
+            let mode = regs.GetSC2();
+            let ptr: *mut isize = regs.GetSC1() as *mut isize;
+            let len = if proc.fds.keys().last().is_some() {*(proc.fds.keys().last().unwrap())} else {0};
+            proc.fds.insert(len,VFS::FileDescriptor {
+                inode: pipes.0,
+                offset: 0,
+                mode: 3 | (mode & OpenFlags::O_CLOEXEC),
+                is_dir: false,
+                close_on_exec: mode & OpenFlags::O_CLOEXEC != 0,
+            });
+            proc.fds.insert(len+1,VFS::FileDescriptor {
+                inode: pipes.1,
+                offset: 0,
+                mode: 3 | (mode & OpenFlags::O_CLOEXEC),
+                is_dir: false,
+                close_on_exec: mode & OpenFlags::O_CLOEXEC != 0,
+            });
+            unsafe {
+                *ptr = len as isize;
+                *(ptr.offset(1)) = (len+1) as isize;
+            }
+            drop(proc);
+            regs.SetSC0(0);
         }
         0x22 => { // sbrk
             let mut plock = crate::Process::PROCESSES.lock();

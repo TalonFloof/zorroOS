@@ -14,7 +14,7 @@
         "-T.cargo/AMD64.ld"
       ]
     },
-    "features": "-mmx,-sse,+soft-float",
+    "features": "",
     "panic-strategy": "abort"
   }
   

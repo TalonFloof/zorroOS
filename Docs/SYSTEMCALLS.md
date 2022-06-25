@@ -34,7 +34,7 @@
 | sigreturn (`0x1e`)          |                          |                     |                  | `Nothing, never fails`                    |
 | nanosleep (`0x1f`)          | `Seconds`                | `Nanoseconds`       |                  | `0 on success`                            |
 | chdir (`0x20`)              | `Path: CStr`             |                     |                  | `0 on success`                            |
-| pipe (`0x21`)               | `Pipes: &mut [isize; 2]` |                     |                  | `0 on success, Pipes will contain FDs`    |
+| pipe (`0x21`)               | `Pipes: &mut [isize; 2]` | `Mode`              |                  | `0 on success, Pipes will contain FDs`    |
 | sbrk (`0x22`)               | `Increment`              |                     |                  | `Previous heap end on success`            |
 | Unused (`0x23-0xef`)        |                          |                     |                  |                                           |
 | foxkernel_powerctl (`0xf0`) | `Command`                |                     |                  | `0 on success, ENOENT if not supported`   |
