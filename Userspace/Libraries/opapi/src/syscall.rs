@@ -185,7 +185,22 @@ pub fn sigreturn() {
 
 // nanosleep goes here
 
-//pub fn 
+pub fn chdir(path: &str) -> isize {
+    let cpath = CString::new(path).expect("owlOS Programmer API: String conversion failed");
+    let ptr = cpath.into_raw();
+    let ret = Syscall(0x20,ptr as usize,0,0);
+    let _ = unsafe {CString::from_raw(ptr)}; // This prevents memory leaking from occuring.
+    ret
+}
+
+pub fn pipe() -> Result<(isize,isize),isize> {
+    let mut array = [0isize; 2];
+    let result = Syscall(0x21,array.as_mut_ptr() as usize,0,0);
+    if result == 0 {
+        return Ok((array[0],array[1]));
+    }
+    Err(result)
+}
 
 pub fn sbrk(expand: isize) -> isize {
     Syscall(0x22,expand as usize,0,0)
