@@ -758,19 +758,25 @@ pub fn SystemCall(regs: &mut State) {
             regs.SetSC0(proc.egid as usize);
             drop(plock);
         }
-        0x18 => { // getpid
+        0x18 => { // setgroups
+
+        }
+        0x19 => { // getgroups
+
+        }
+        0x1a => { // getpid
             let plock = crate::Process::PROCESSES.lock();
             let proc = plock.get(&curproc).unwrap();
             regs.SetSC0(proc.id as usize);
             drop(plock);
         }
-        0x19 => { // getppid
+        0x1b => { // getppid
             let plock = crate::Process::PROCESSES.lock();
             let proc = plock.get(&curproc).unwrap();
             regs.SetSC0(proc.parent_id as usize);
             drop(plock);
         }
-        0x1a => { // setpgid
+        0x1c => { // setpgid
             let plock = crate::Process::PROCESSES.lock();
             let proc_self = plock.get(&curproc).unwrap();
             let proc = plock.get(&(regs.GetSC1() as i32));
@@ -789,13 +795,13 @@ pub fn SystemCall(regs: &mut State) {
             crate::Process::PROCESSES.lock().get_mut(&(regs.GetSC1() as i32)).unwrap().pgid = regs.GetSC2() as i32;
             regs.SetSC0(0);
         }
-        0x1b => { // getpgrp
+        0x1d => { // getpgrp
             let plock = crate::Process::PROCESSES.lock();
             let proc = plock.get(&curproc).unwrap();
             regs.SetSC0(proc.pgid as usize);
             drop(plock);
         }
-        0x1c => { // signal
+        0x1e => { // signal
             if regs.GetSC1() > 0x17 || regs.GetSC1() == 0 {
                 regs.SetSC0((-Errors::EINVAL as isize) as usize);
                 return;
@@ -805,10 +811,10 @@ pub fn SystemCall(regs: &mut State) {
             proc.signals[regs.GetSC1()] = regs.GetSC2();
             drop(plock);
         }
-        0x1d => { // kill
+        0x1f => { // kill
             regs.SetSC0(crate::Process::Process::SendSignal(regs.GetSC1() as i32,regs.GetSC2() as u8) as usize);
         }
-        0x1e => { // sigreturn
+        0x20 => { // sigreturn
             let mut plock = crate::Process::PROCESSES.lock();
             let proc = plock.get_mut(&curproc).unwrap();
             if proc.sig_state.GetIP() != 0 {
@@ -820,10 +826,10 @@ pub fn SystemCall(regs: &mut State) {
             }
             drop(plock);
         }
-        0x1f => { // nanosleep
+        0x21 => { // nanosleep
             unimplemented!();
         }
-        0x20 => { // chdir
+        0x22 => { // chdir
             let mut plock = crate::Process::PROCESSES.lock();
             let proc = plock.get_mut(&curproc).unwrap();
             let path = unsafe {CStr::from_ptr(regs.GetSC1() as *const c_char)}.to_str();
@@ -836,7 +842,7 @@ pub fn SystemCall(regs: &mut State) {
             regs.SetSC0(0);
             drop(plock);
         }
-        0x21 => { // pipe
+        0x23 => { // pipe
             let mut plock = crate::Process::PROCESSES.lock();
             let proc = plock.get_mut(&curproc).unwrap();
             let pipes = crate::Drivers::Generic::UNIXPipe::Pipe::new();
@@ -864,7 +870,7 @@ pub fn SystemCall(regs: &mut State) {
             drop(proc);
             regs.SetSC0(0);
         }
-        0x22 => { // sbrk
+        0x24 => { // sbrk
             let mut plock = crate::Process::PROCESSES.lock();
             let proc = plock.get_mut(&curproc).unwrap();
             let expand = regs.GetSC1() as isize;

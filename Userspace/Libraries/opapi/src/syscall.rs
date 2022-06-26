@@ -156,31 +156,31 @@ pub fn getegid() -> u32 {
 }
 
 pub fn getpid() -> i32 {
-    Syscall(0x18,0,0,0) as i32
+    Syscall(0x1a,0,0,0) as i32
 }
 
 pub fn getppid() -> i32 {
-    Syscall(0x19,0,0,0) as i32
-}
-
-pub fn setpgid(pid: i32, group: i32) -> isize {
-    Syscall(0x1a,pid as usize,group as usize,0)
-}
-
-pub fn getpgrp() -> i32 {
     Syscall(0x1b,0,0,0) as i32
 }
 
+pub fn setpgid(pid: i32, group: i32) -> isize {
+    Syscall(0x1c,pid as usize,group as usize,0)
+}
+
+pub fn getpgrp() -> i32 {
+    Syscall(0x1d,0,0,0) as i32
+}
+
 pub fn signal(sig: u8, handler: &fn(u8)) -> isize {
-    Syscall(0x1c,sig as usize,handler as *const _ as usize,0)
+    Syscall(0x1e,sig as usize,handler as *const _ as usize,0)
 }
 
 pub fn kill(pid: i32, sig: u8) -> isize {
-    Syscall(0x1d,pid as usize,sig as usize,0)
+    Syscall(0x1f,pid as usize,sig as usize,0)
 }
 
 pub fn sigreturn() {
-    Syscall(0x1e,0,0,0);
+    Syscall(0x20,0,0,0);
 }
 
 // nanosleep goes here
@@ -188,14 +188,14 @@ pub fn sigreturn() {
 pub fn chdir(path: &str) -> isize {
     let cpath = CString::new(path).expect("owlOS Programmer API: String conversion failed");
     let ptr = cpath.into_raw();
-    let ret = Syscall(0x20,ptr as usize,0,0);
+    let ret = Syscall(0x22,ptr as usize,0,0);
     let _ = unsafe {CString::from_raw(ptr)}; // This prevents memory leaking from occuring.
     ret
 }
 
 pub fn pipe() -> Result<(isize,isize),isize> {
     let mut array = [0isize; 2];
-    let result = Syscall(0x21,array.as_mut_ptr() as usize,0,0);
+    let result = Syscall(0x23,array.as_mut_ptr() as usize,0,0);
     if result == 0 {
         return Ok((array[0],array[1]));
     }
@@ -203,7 +203,7 @@ pub fn pipe() -> Result<(isize,isize),isize> {
 }
 
 pub fn sbrk(expand: isize) -> isize {
-    Syscall(0x22,expand as usize,0,0)
+    Syscall(0x24,expand as usize,0,0)
 }
 
 pub fn foxkernel_powerctl(cmd: usize) -> isize {
