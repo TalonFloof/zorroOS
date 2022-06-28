@@ -106,6 +106,8 @@ pub struct Process {
     pub heap_length: Arc<Mutex<usize>>,
 
     pub signals: [usize; 25],
+
+    pub supgroups: Vec<u32>,
 }
 
 pub const USERSPACE_STACK_SIZE: u64 = 0x4000;
@@ -143,6 +145,8 @@ impl Process {
             heap_length: Arc::new(Mutex::new(0)),
 
             signals: [0; 25],
+
+            supgroups: Vec::new(),
         }
     }
     pub fn ContextSwitch(&self) -> ! {
@@ -290,6 +294,8 @@ impl Process {
             heap_length: self.heap_length.clone(),
 
             signals: self.signals.clone(),
+
+            supgroups: self.supgroups.clone(),
         }
     }
 }

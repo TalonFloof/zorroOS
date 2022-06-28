@@ -759,7 +759,23 @@ pub fn SystemCall(regs: &mut State) {
             drop(plock);
         }
         0x18 => { // setgroups
-
+            let mut plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get_mut(&curproc).unwrap();
+            if proc.ruid != 0 {
+                drop(plock);
+                regs.SetSC0((-Errors::EPERM as isize) as usize);
+                return;
+            }
+            if regs.GetSC1() > 32 { // Not specified in POSIX, but you shouldn't ever exceed this number.
+                drop(plock);
+                regs.SetSC0((-Errors::EINVAL as isize) as usize);
+                return;
+            }
+            let gids = unsafe {core::slice::from_raw_parts_mut(regs.GetSC2() as *mut u32,regs.GetSC1())};
+            proc.supgroups.clear();
+            proc.supgroups.extend_from_slice(gids);
+            drop(plock);
+            regs.SetSC0(0);
         }
         0x19 => { // getgroups
 
