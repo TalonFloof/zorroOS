@@ -12,7 +12,7 @@ unsafe impl GlobalAlloc for GlobAllocator {
         if lock.size() == 0 {
             // Init Heap
             let ptr = crate::syscall::sbrk((layout.size().div_ceil(0x4000) * 0x4000) as isize) as usize;
-            lock.init(ptr,layout.size().div_ceil(0x4000) * 0x4000);
+            lock.init(ptr as *mut u8,layout.size().div_ceil(0x4000) * 0x4000);
         }
         match lock.allocate_first_fit(layout) {
             Ok(ptr) => {
