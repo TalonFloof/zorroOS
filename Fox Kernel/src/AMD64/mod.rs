@@ -33,7 +33,7 @@ macro_rules! halt {
 
 #[inline(always)]
 pub fn CurrentHart() -> u32 {
-	crate::arch::APIC::Read(crate::arch::APIC::LOCAL_APIC_ID) >> 24
+	unsafe {*((x86_64::registers::model_specific::KernelGsBase::read().as_ptr() as *const u64).offset(2)) as u32}
 }
 #[macro_export]
 macro_rules! halt_other_harts {
@@ -101,7 +101,7 @@ extern "C" fn _start(pmr: &mut StivaleStruct) {
 
 extern "C" fn _Hart_start(smp: &'static StivaleSmpInfo) -> ! {
 	unsafe { asm!("cli"); };
-	unsafe {GDT::HARTS[smp.lapic_id as usize].as_mut().unwrap().init()}
+	unsafe {GDT::HARTS[smp.lapic_id as usize].as_mut().unwrap().init();}
 	unsafe {IDT::Setup();}
 	unsafe { asm!("cli"); };
 	Syscall::Initialize();

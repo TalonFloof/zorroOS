@@ -7,7 +7,7 @@ use x86_64::addr::VirtAddr;
 pub struct Hart {
     pub gdt: GlobalDescriptorTable,
     pub tss: TaskStateSegment,
-    scdata: [u64; 2],
+    pub scdata: [u64; 3],
 }
 
 extern "C" {
@@ -26,7 +26,7 @@ impl Hart {
         Hart {
             gdt: GlobalDescriptorTable::new(),
             tss: TaskStateSegment::new(),
-            scdata: [0u64; 2],
+            scdata: [0u64; 3],
         }
     }
     pub unsafe fn init(&'static mut self) {

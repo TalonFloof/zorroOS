@@ -52,6 +52,10 @@ pub trait Inode: Any + Send + Sync {
         -(Errors::ENOSYS as i64)
     }
 
+    fn MMap(&self, _offset: i64, _size: usize, _flags: u8) -> Result<&[u8],i64> {
+        Err(Errors::ENODEV as i64)
+    }
+
     fn Truncate(&self, _size: usize) -> i64 {
         -(Errors::ENOSYS as i64)
     }

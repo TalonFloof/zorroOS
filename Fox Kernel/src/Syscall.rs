@@ -7,6 +7,7 @@ use crate::FS::VFS;
 use alloc::string::String;
 use alloc::vec::Vec;
 use alloc::sync::Arc;
+use spin::Mutex;
 use crate::ELF::LoadELFFromPath;
 use crate::PageFrame::Allocate;
 
@@ -175,6 +176,23 @@ pub struct DirEntry {
     file_type: i8,
     name: [u8; 256],
 }
+
+#[repr(C)]
+pub struct MmapStruct {
+    addr: usize,
+    size: usize,
+    prot: usize,
+    flags: usize,
+    fd: usize,
+    offset: isize,
+}
+
+#[allow(dead_code)]
+const MAP_PRIVATE: usize = 0x1;
+#[allow(dead_code)]
+const MAP_SHARED: usize = 0x2;
+const MAP_FIXED: usize = 0x4;
+const MAP_ANONYOMUS: usize = 0x8;
 
 pub fn SystemCall(regs: &mut State) {
     let curproc = Scheduler::CurrentPID();
@@ -631,19 +649,19 @@ pub fn SystemCall(regs: &mut State) {
                 cur_pos += j.as_bytes_with_nul().len();
             }
             let mut pt = PageTableImpl::new();
-            match LoadELFFromPath(path.ok().unwrap(),&mut pt) {
-                Ok((val,base)) => {
+            let mut segments: Vec<(usize,usize,String,u8)> = Vec::new();
+            match LoadELFFromPath(crate::FS::VFS::GetAbsPath(path.ok().unwrap(),proc.cwd.as_str()),&mut pt,&mut segments) {
+                Ok(val) => {
                     crate::Memory::MapPages(&mut pt,0x1000,argv_ptr_slice.as_ptr() as usize - crate::arch::PHYSMEM_BEGIN as usize,0x1000,false,false);
                     crate::Memory::MapPages(&mut pt,0x2000,argv_str_slice.as_ptr() as usize - crate::arch::PHYSMEM_BEGIN as usize,argv_str_slice.len().div_ceil(0x1000)*0x1000,false,false);
                     regs.Exit();
-                    proc.heap_base = base;
-                    *proc.heap_length.lock() = 0;
+                    proc.memory_segments = Arc::new(Mutex::new(segments));
                     proc.pagetable = Arc::new(pt); // Old pagetable will be dropped if all references are gone
                     proc.task_state.SetIP(val);
                     proc.task_state.SetSP(0x800000000000);
                     proc.task_state.SetSC0(0);
-                    proc.task_state.SetSC1(0);
-                    proc.task_state.SetSC2(0);
+                    proc.task_state.SetSC1(argv.len());
+                    proc.task_state.SetSC2(0x1000);
                     proc.task_state.SetSC3(0);
                     proc.fds.retain(|_,x| !x.close_on_exec);
                     let state_ptr = &proc.task_state as *const State as usize;
@@ -662,7 +680,7 @@ pub fn SystemCall(regs: &mut State) {
             let proc = plock.get(&curproc).unwrap();
             let pid = regs.GetSC1() as i32;
             let wstatus = regs.GetSC2() as *mut usize;
-            let mut pgrp = -2;
+            let pgrp;
             if proc.children.len() == 0 {
                 regs.SetSC0((-Errors::ECHILD as isize) as usize);
                 drop(plock);
@@ -778,7 +796,17 @@ pub fn SystemCall(regs: &mut State) {
             regs.SetSC0(0);
         }
         0x19 => { // getgroups
-
+            let plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get(&curproc).unwrap();
+            if regs.GetSC1() < proc.supgroups.len() {
+                drop(plock);
+                regs.SetSC0((-Errors::EINVAL as isize) as usize);
+                return;
+            }
+            let gids = unsafe {core::slice::from_raw_parts_mut(regs.GetSC2() as *mut u32,proc.supgroups.len())};
+            gids.copy_from_slice(proc.supgroups.as_slice());
+            drop(plock);
+            regs.SetSC0(gids.len());
         }
         0x1a => { // getpid
             let plock = crate::Process::PROCESSES.lock();
@@ -838,7 +866,6 @@ pub fn SystemCall(regs: &mut State) {
                 proc.sig_state.SetIP(0);
                 drop(plock);
                 Scheduler::Tick(CurrentHart(),regs);
-                unreachable!();
             }
             drop(plock);
         }
@@ -886,30 +913,91 @@ pub fn SystemCall(regs: &mut State) {
             drop(proc);
             regs.SetSC0(0);
         }
-        0x24 => { // sbrk
+        0x24 => { // mmap
             let mut plock = crate::Process::PROCESSES.lock();
             let proc = plock.get_mut(&curproc).unwrap();
-            let expand = regs.GetSC1() as isize;
-            let mut len = proc.heap_length.lock();
-            regs.SetSC0(proc.heap_base+*len);
-            if expand > 0 {
-                if expand & 0xFFF != 0 {
-                    regs.SetSC0((-Errors::EINVAL as isize) as usize);
-                    drop(len);
+            let args = unsafe {&*(regs.GetSC1() as *const MmapStruct)};
+            if args.addr & 0xFFF != 0 || args.size == 0 {
+                drop(plock);
+                regs.SetSC0((-Errors::EINVAL as isize) as usize);
+                return;
+            }
+            let mut segs = proc.memory_segments.lock();
+            let mut space: (usize,usize) = (usize::MAX,usize::MAX);
+            if args.flags & MAP_FIXED == 0 {
+                let mut got_space = false;
+                for i in 0..(&segs).len() {
+                    let cur_val = (&segs).get(i).unwrap();
+                    match (&segs).get(i+1) {
+                        Some(next_val) => {
+                            let begin = cur_val.0+cur_val.1;
+                            let size = next_val.0-begin;
+                            if size >= args.size {
+                                space = (begin,i+1);
+                                got_space = true;
+                                break;
+                            }
+                        }
+                        None => {
+                            break;
+                        }
+                    }
+                }
+                if !got_space {
+                    drop(segs);
                     drop(plock);
+                    regs.SetSC0((-Errors::ENOMEM as isize) as usize);
                     return;
                 }
-                let pages = crate::PageFrame::Allocate(expand as u64).unwrap();
-                crate::Memory::MapPages(Arc::get_mut(&mut proc.pagetable).unwrap(),regs.GetSC0(),pages as usize - crate::arch::PHYSMEM_BEGIN as usize,expand as usize,true,false);
-                *len += expand as usize;
-            } else if expand < 0 {
-                regs.SetSC0((-Errors::EINVAL as isize) as usize);
-                drop(len);
+            } else {
+                let prev_val = (&segs).iter()
+                .enumerate()
+                .filter(|x| x.1.0 <= args.addr)
+                .max_by(|x,y| x.1.0.cmp(&(y.1.0)));
+                let next_val = (&segs).iter()
+                .enumerate()
+                .filter(|x| x.1.0 >= args.addr)
+                .min_by(|x,y| x.1.0.cmp(&(y.1.0)));
+                space = (args.addr,if next_val.is_some() {next_val.unwrap().0} else {(&segs).len()});
+                if prev_val.is_some() {
+                    if (prev_val.unwrap().1.0..(prev_val.unwrap().1.0+prev_val.unwrap().1.1)).contains(&args.addr) {
+                        drop(segs);
+                        drop(plock);
+                        regs.SetSC0((-Errors::EEXIST as isize) as usize);
+                        return;
+                    }
+                }
+                if next_val.is_some() {
+                    if (next_val.unwrap().1.0..(next_val.unwrap().1.0+next_val.unwrap().1.1)).contains(&(args.addr+args.size-1)) {
+                        drop(segs);
+                        drop(plock);
+                        regs.SetSC0((-Errors::EEXIST as isize) as usize);
+                        return;
+                    }
+                }
+            }
+            // Now we get to map the memory!
+            if space.0 == usize::MAX {
+                drop(segs);
+                drop(plock);
+                regs.SetSC0((-Errors::ENOMEM as isize) as usize);
+                return;
+            }
+            if args.flags & MAP_ANONYOMUS != 0 {
+                let pages = Allocate((args.size.div_ceil(0x1000)*0x1000) as u64).unwrap() as u64 - crate::arch::PHYSMEM_BEGIN;
+                if !crate::Memory::MapPages(Arc::get_mut(&mut proc.pagetable).unwrap(),space.0,pages as usize,args.size.div_ceil(0x1000)*0x1000,args.prot & 2 != 0,args.prot & 4 != 0) {
+                    drop(segs);
+                    drop(plock);
+                    regs.SetSC0((-Errors::ENOMEM as isize) as usize);
+                    return;
+                }
+                segs.insert(space.1,(space.0,args.size.div_ceil(0x1000)*0x1000,String::from(""),args.prot as u8));
+                regs.SetSC0(space.0);
+                drop(segs);
                 drop(plock);
                 return;
             }
-            drop(len);
-            drop(plock);
+            todo!();
         }
         0xf0 => { // foxkernel_powerctl
             if curproc > 1 {

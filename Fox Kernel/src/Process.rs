@@ -102,8 +102,7 @@ pub struct Process {
 
     pub fds: BTreeMap<i64, FileDescriptor>,
 
-    pub heap_base: usize,
-    pub heap_length: Arc<Mutex<usize>>,
+    pub memory_segments: Arc<Mutex<Vec<(usize,usize,String,u8)>>>,
 
     pub signals: [usize; 25],
 
@@ -141,8 +140,7 @@ impl Process {
 
             fds: BTreeMap::new(),
 
-            heap_base: 0,
-            heap_length: Arc::new(Mutex::new(0)),
+            memory_segments: Arc::new(Mutex::new(Vec::new())),
 
             signals: [0; 25],
 
@@ -290,8 +288,7 @@ impl Process {
 
             fds,
 
-            heap_base: self.heap_base,
-            heap_length: self.heap_length.clone(),
+            memory_segments: self.memory_segments.clone(),
 
             signals: self.signals.clone(),
 

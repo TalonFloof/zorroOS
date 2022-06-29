@@ -12,6 +12,7 @@ xmas-elf = "*"
 log = "*"
 cstr_core = "*"
 cpio_reader = "*"
+tinytga = "*"
 
 [dependencies.lazy_static]
 version = "*"

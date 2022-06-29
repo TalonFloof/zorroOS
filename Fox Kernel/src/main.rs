@@ -45,9 +45,12 @@ macro_rules! print_startup_message {
 pub static mut UNIX_EPOCH: u64 = 0;
 
 fn main(ramdisks: Vec<(String,&[u8])>) -> ! {
+    crate::Framebuffer::Progress(0);
     FS::InitalizeEarly();
     Drivers::Initalize();
+    crate::Framebuffer::Progress(1);
     FS::Initalize(ramdisks);
+    crate::Framebuffer::Progress(2);
     {
         let used = PageFrame::UsedMem.load(core::sync::atomic::Ordering::SeqCst);
 	    let total = PageFrame::TotalMem.load(core::sync::atomic::Ordering::SeqCst);
@@ -55,9 +58,10 @@ fn main(ramdisks: Vec<(String,&[u8])>) -> ! {
     }
     // Load /bin/init
     let mut proc = Process::Process::new(String::from("/bin/init"),-1);
-    match ELF::LoadELFFromPath("/bin/init",Arc::get_mut(&mut proc.pagetable).unwrap()) {
-        Ok((entry,heap_start)) => {
-            proc.heap_base = heap_start;
+    let mut seg = proc.memory_segments.lock();
+    match ELF::LoadELFFromPath(String::from("/bin/init"),Arc::get_mut(&mut proc.pagetable).unwrap(),seg.as_mut()) {
+        Ok(entry) => {
+            drop(seg);
             let pid = Process::Process::AddProcess(proc);
             Process::Process::StartProcess(pid,entry,0x800000000000);
         }
@@ -66,6 +70,7 @@ fn main(ramdisks: Vec<(String,&[u8])>) -> ! {
         }
     }
     if crate::CommandLine::FLAGS.get().unwrap().contains("--break") {panic!("Break");}
+    crate::Framebuffer::Progress(3);
     Scheduler::Scheduler::Start(CurrentHart())
 }
 

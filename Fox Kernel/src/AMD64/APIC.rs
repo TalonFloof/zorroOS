@@ -102,6 +102,7 @@ pub fn EnableHarts(smp: &mut StivaleSmpTag) {
             if i.lapic_id != 0 {
                 LAPIC_HART_WAIT.store(true,Ordering::SeqCst);
                 let mut hart = GDT::Hart::new();
+                hart.scdata[2] = i.lapic_id as u64;
                 let stack = Allocate(0x4000).unwrap() as u64;
                 hart.set_rsp0(stack+0x4000);
                 GDT::HARTS[i.lapic_id as usize] = Some(hart);

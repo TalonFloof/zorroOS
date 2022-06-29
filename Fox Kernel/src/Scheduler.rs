@@ -126,7 +126,7 @@ impl Scheduler {
         }
     }
     #[allow(unreachable_code)]
-    pub fn Tick(hartid: u32, state: &State) { // When a timer interrupt goes off, call this function.
+    pub fn Tick(hartid: u32, state: &State) -> ! { // When a timer interrupt goes off, call this function.
         let l = SCHEDULERS.lock();
         let sched = l.get(&hartid).unwrap();
         let cur_task = sched.current_proc_id.load(Ordering::SeqCst);

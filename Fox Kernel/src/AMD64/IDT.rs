@@ -75,6 +75,28 @@ fn x86Fault(
         crate::Process::Process::SendSignal(pid,crate::Process::Signals::SIGSEGV);
         unsafe {(&*ptr).NextContext();}
     } else {
+        if index != 14 && unsafe {crate::Console::QUIET} {
+            // Page Dump
+            let ptr = stack_frame.instruction_pointer.as_u64() & (!0xFFF);
+            let location = stack_frame.instruction_pointer.as_u64() & 0xFFF;
+            let mut lock = crate::Framebuffer::MainFramebuffer.lock();
+            let width = (*lock).as_ref().unwrap().width;
+            let height = (*lock).as_ref().unwrap().height;
+            for i in 0..4096 {
+                if location == i as u64 {
+                    let color = unsafe {*((ptr as *const u8).offset(i))} as u32;
+                    if color > 127 {
+                        (*lock).as_mut().unwrap().DrawPixel((width-128)+(i as usize)%128,height-(i as usize/128),(255-color)<<16);
+                    } else {
+                        (*lock).as_mut().unwrap().DrawPixel((width-128)+(i as usize)%128,height-(i as usize/128),(color+128)<<8);
+                    }
+                } else {
+                    let color = unsafe {*((ptr as *const u8).offset(i))} as u32;
+                    (*lock).as_mut().unwrap().DrawPixel((width-128)+(i as usize)%128,height-(i as usize/128),(color<<16)|(color<<8)|color);
+                }
+            }
+            drop(lock);
+        }
         if let None = err_code {
             panic!("Unhandled AMD64 Fault: {}\n{:?}", ExceptionMessages[index as usize], stack_frame);
         } else {
@@ -94,6 +116,7 @@ macro_rules! set_irq_handler {
             unsafe {
                 asm!(
                     "cli",
+
                     "push rax",
                     "push rbx",
                     "push rcx",
@@ -109,9 +132,12 @@ macro_rules! set_irq_handler {
                     "push r13",
                     "push r14",
                     "push r15",
+
                     "mov rdi, rsp",
                     concat!("mov rsi, ", $irq),
+                    "cld",
                     "call x86IRQ",
+
                     "pop r15",
                     "pop r14",
                     "pop r13",
@@ -127,9 +153,8 @@ macro_rules! set_irq_handler {
                     "pop rcx",
                     "pop rbx",
                     "pop rax",
-                    "sti",
+                    
                     "iretq",
-                    "nop",
                     options(noreturn)
                 );
             }
@@ -148,9 +173,10 @@ extern "C" fn x86IRQ(
 ) {
     APIC::Write(APIC::LOCAL_APIC_EOI,0);
     if index == 0x20 {
-        if SCHEDULER_STARTED.load(Ordering::Relaxed) {
-            crate::Scheduler::Scheduler::Tick(CurrentHart(), cr);
-            unreachable!("You'll never see this message, isn't that weird?");
+        if SCHEDULER_STARTED.load(Ordering::SeqCst) {
+            if crate::Scheduler::SCHEDULERS.lock().contains_key(&CurrentHart()) {
+                crate::Scheduler::Scheduler::Tick(CurrentHart(), cr);
+            }
         }
     } else if CurrentHart() == 0 {
         let lock = IRQ_HANDLERS.lock();

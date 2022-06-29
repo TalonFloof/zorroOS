@@ -104,8 +104,8 @@ elif args[0] == "run":
         -m 128M \
         -smp 4 \
         -no-reboot \
-        -cpu host \
+        -cpu max \
         -serial stdio \
         -device qemu-xhci \
-        -enable-kvm")
+        -accel kvm")
 sys.exit(0)

@@ -1,4 +1,5 @@
 use spin::mutex::Mutex;
+use tinytga::*;
 
 const FoxScript: &[u8; 4096] = include_bytes!("FoxScript");
 
@@ -63,11 +64,57 @@ impl Framebuffer {
     }
 }
 
+const FOXKERNEL_LOGO: &[u8] = include_bytes!("../Logo.tga");
+const FOXKERNEL_STAGE1: &[u8] = include_bytes!("../Stage1.tga");
+const FOXKERNEL_STAGE2: &[u8] = include_bytes!("../Stage2.tga");
+const FOXKERNEL_STAGE3: &[u8] = include_bytes!("../Stage3.tga");
+const FOXKERNEL_STAGE4: &[u8] = include_bytes!("../Stage4.tga");
+
 pub fn Init(pointer: *mut u32, width: usize, height: usize, stride: usize, bpp: usize) {
     let mut lock = MainFramebuffer.lock();
     *lock = Some(Framebuffer::new(pointer,width,height,stride,bpp));
     if bpp == 32 {
         (*lock).as_mut().unwrap().Clear(0x000000);
+        if unsafe {crate::Console::QUIET} {
+            let tga = RawTga::from_slice(FOXKERNEL_LOGO).unwrap();
+            for pixel in tga.pixels() {
+                (*lock).as_mut().unwrap().DrawPixel((width/2)-(tga.size().width as usize/2)+pixel.position.x as usize-8,(height/2)-(tga.size().height as usize/2)+pixel.position.y as usize,pixel.color);
+            }
+            (*lock).as_mut().unwrap().DrawString((width/2)-(5*16),(height/2)+(tga.size().height as usize/2),"Fox Kernel",0xFFFFFF,2);
+            (*lock).as_mut().unwrap().DrawString(0,0,"In celebration of owlOS's 100th Commit!",0x040404,1);
+        }
     }
     drop(lock);
+}
+
+pub fn Progress(num: u8) {
+    if unsafe {!crate::Console::QUIET} {return;}
+    let mut lock = MainFramebuffer.lock();
+    let width = (*lock).as_ref().unwrap().width;
+    let height = (*lock).as_ref().unwrap().height;
+    if (*lock).as_ref().unwrap().bpp == 32 {
+        let xpos = ((width/2)-(24*4))+(num as usize * 48)+16;
+        let ypos = height/2+64+48;
+        if num == 0 {
+            let tga = RawTga::from_slice(FOXKERNEL_STAGE1).unwrap();
+            for pixel in tga.pixels() {
+                (*lock).as_mut().unwrap().DrawPixel(xpos+pixel.position.x as usize-8,ypos+pixel.position.y as usize,pixel.color);
+            }
+        } else if num == 1 {
+            let tga = RawTga::from_slice(FOXKERNEL_STAGE2).unwrap();
+            for pixel in tga.pixels() {
+                (*lock).as_mut().unwrap().DrawPixel(xpos+pixel.position.x as usize-8,ypos+pixel.position.y as usize,pixel.color);
+            }
+        } else if num == 2 {
+            let tga = RawTga::from_slice(FOXKERNEL_STAGE3).unwrap();
+            for pixel in tga.pixels() {
+                (*lock).as_mut().unwrap().DrawPixel(xpos+pixel.position.x as usize-8,ypos+pixel.position.y as usize,pixel.color);
+            }
+        } else if num == 3 {
+            let tga = RawTga::from_slice(FOXKERNEL_STAGE4).unwrap();
+            for pixel in tga.pixels() {
+                (*lock).as_mut().unwrap().DrawPixel(xpos+pixel.position.x as usize-8,ypos+pixel.position.y as usize,pixel.color);
+            }
+        }
+    }
 }
