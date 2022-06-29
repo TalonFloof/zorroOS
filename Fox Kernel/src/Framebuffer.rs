@@ -81,7 +81,6 @@ pub fn Init(pointer: *mut u32, width: usize, height: usize, stride: usize, bpp: 
                 (*lock).as_mut().unwrap().DrawPixel((width/2)-(tga.size().width as usize/2)+pixel.position.x as usize-8,(height/2)-(tga.size().height as usize/2)+pixel.position.y as usize,pixel.color);
             }
             (*lock).as_mut().unwrap().DrawString((width/2)-(5*16),(height/2)+(tga.size().height as usize/2),"Fox Kernel",0xFFFFFF,2);
-            (*lock).as_mut().unwrap().DrawString(0,0,"In celebration of owlOS's 100th Commit!",0x040404,1);
         }
     }
     drop(lock);

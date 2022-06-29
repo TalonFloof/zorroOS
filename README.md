@@ -16,7 +16,7 @@ kernel known as the **Fox Kernel**.
 - **owlOS** is portable.
 - **owlOS** is open.
 
-<img src="Docs/Screenshot_June_9_22.png" alt="Screenshot of Fox Kernel booting" width="640">
+<img src="Docs/Screenshot_June_29_22.png" alt="Screenshot of Fox Kernel booting" width="640">
 
 ---
 ## Building
