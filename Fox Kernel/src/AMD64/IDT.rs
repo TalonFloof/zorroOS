@@ -86,7 +86,7 @@ fn x86Fault(
                 if location == i as u64 {
                     let color = unsafe {*((ptr as *const u8).offset(i))} as u32;
                     if color > 127 {
-                        (*lock).as_mut().unwrap().DrawPixel((width-128)+(i as usize)%128,height-(i as usize/128),(255-color)<<16);
+                        (*lock).as_mut().unwrap().DrawPixel((width-128)+(i as usize)%128,height-(i as usize/128),color<<16);
                     } else {
                         (*lock).as_mut().unwrap().DrawPixel((width-128)+(i as usize)%128,height-(i as usize/128),(color+128)<<8);
                     }

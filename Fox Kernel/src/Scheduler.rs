@@ -98,10 +98,13 @@ impl Scheduler {
             }
         }
     }
-    fn ContextSwitch(&self, pid: i32) -> ! {
+    fn ContextSwitch(&self, pid: i32) {
         let lock = PROCESSES.lock();
         self.current_proc_id.store(pid, Ordering::SeqCst);
         if pid != -1i32 {
+            if lock.get(&pid).is_none() {
+                panic!("PID: {}, Attempt to Context Switch to unknown process", pid);
+            }
             let task = lock.get(&pid).expect("Attempt to Context Switch to unknown process") as *const Process;
             unsafe { (&*task).task_fpstate.Restore(); }
             drop(lock);
@@ -123,10 +126,11 @@ impl Scheduler {
             let id = (&*ptr).FindNextProcess();
             SCHEDULER_STARTED.store(true,Ordering::SeqCst);
             (&*ptr).ContextSwitch(id);
+            panic!("You'll never see this message, isn't that weird?");
         }
     }
     #[allow(unreachable_code)]
-    pub fn Tick(hartid: u32, state: &State) -> ! { // When a timer interrupt goes off, call this function.
+    pub fn Tick(hartid: u32, state: &State) { // When a timer interrupt goes off, call this function.
         let l = SCHEDULERS.lock();
         let sched = l.get(&hartid).unwrap();
         let cur_task = sched.current_proc_id.load(Ordering::SeqCst);
@@ -144,11 +148,12 @@ impl Scheduler {
         and it protects the SCHEDULERS Mutex from deadlocking.
         */
         unsafe { (&*ptr).NextContext(); }
-        unreachable!("You'll never see this message, isn't that weird?");
+        panic!("You'll never see this message, isn't that weird?");
     }
-    pub fn NextContext(&self) -> ! {
+    pub fn NextContext(&self) {
         let id = self.FindNextProcess();
         self.ContextSwitch(id);
+        panic!("You'll never see this message, isn't that weird?");
     }
     pub fn CurrentPID() -> i32 {
         let l = SCHEDULERS.lock();

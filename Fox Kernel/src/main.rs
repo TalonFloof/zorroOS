@@ -69,8 +69,8 @@ fn main(ramdisks: Vec<(String,&[u8])>) -> ! {
             panic!("No command");
         }
     }
-    if crate::CommandLine::FLAGS.get().unwrap().contains("--break") {panic!("Break");}
     crate::Framebuffer::Progress(3);
+    if crate::CommandLine::FLAGS.get().unwrap().contains("--break") {panic!("Break");}
     Scheduler::Scheduler::Start(CurrentHart())
 }
 

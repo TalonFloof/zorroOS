@@ -52,7 +52,7 @@ pub trait Inode: Any + Send + Sync {
         -(Errors::ENOSYS as i64)
     }
 
-    fn MMap(&self, _offset: i64, _size: usize, _flags: u8) -> Result<&[u8],i64> {
+    fn MMap(&self, _offset: i64, _size: usize, _flags: u8, _is_shared: bool) -> Result<&[u8],i64> {
         Err(Errors::ENODEV as i64)
     }
 
@@ -107,6 +107,7 @@ pub trait Filesystem: Send + Sync {
 #[derive(Clone)]
 pub struct FileDescriptor {
     pub inode: Arc<dyn Inode>,
+    pub path: String,
     pub offset: i64,
     pub mode: usize,
     pub is_dir: bool,
@@ -194,11 +195,11 @@ pub fn GetAbsPath(path: &str, cwd: &str) -> String {
     return String::from(path);
 }
 
-pub fn HasPermission(data: &Metadata, uid: u32, gid: u32, bits: usize) -> bool {
+pub fn HasPermission(data: &Metadata, uid: u32, gid: u32, supgroups: &Vec<u32>, bits: usize) -> bool {
     if uid == 0 && bits & 1 == 0 {
         return true;
     }
     let mut my_permission = data.mode & 0b111;
-    if data.uid == uid {my_permission = (data.mode & 0b111000000) >> 6;} else if data.gid == gid {my_permission = (data.mode & 0b000111000) >> 3;}
+    if data.uid == uid {my_permission = (data.mode & 0b111000000) >> 6;} else if data.gid == gid || supgroups.contains(&gid) {my_permission = (data.mode & 0b000111000) >> 3;}
     return my_permission as usize & bits == bits;
 }

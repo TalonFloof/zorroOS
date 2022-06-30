@@ -199,6 +199,7 @@ pub fn SystemCall(regs: &mut State) {
     match regs.GetSC0() {
         0x00 => { // yield
             Scheduler::Tick(CurrentHart(),regs);
+            panic!("You'll never see this message, isn't that weird?");
         }
         0x01 => { // exit
             let mut plock = crate::Process::PROCESSES.lock();
@@ -262,7 +263,7 @@ pub fn SystemCall(regs: &mut State) {
                 return;
             }
             let metadata = file.as_ref().ok().unwrap().Stat().ok().unwrap();
-            if !VFS::HasPermission(&metadata,proc.euid,proc.egid,if mode & 1 == 1 {0b10} else {0} | if mode & 2 == 2 {0b100} else {0}) && metadata.mode & 0o0170000 != 0 {
+            if !VFS::HasPermission(&metadata,proc.euid,proc.egid,proc.supgroups.as_ref(),if mode & 1 == 1 {0b10} else {0} | if mode & 2 == 2 {0b100} else {0}) && metadata.mode & 0o0170000 != 0 {
                 regs.SetSC0((-Errors::EACCES as isize) as usize);
                 drop(plock);
                 return;
@@ -272,6 +273,7 @@ pub fn SystemCall(regs: &mut State) {
             file.as_ref().ok().unwrap().Open(mode);
             proc.fds.insert(len,VFS::FileDescriptor {
                 inode: file.ok().unwrap(),
+                path: VFS::GetAbsPath(path.ok().unwrap(),proc.cwd.as_str()),
                 offset: 0,
                 mode,
                 is_dir: metadata.mode & 0o0040000 != 0,
@@ -438,6 +440,7 @@ pub fn SystemCall(regs: &mut State) {
                 old_fd.as_ref().unwrap().inode.Open(!0);
                 proc.fds.insert(len,VFS::FileDescriptor {
                     inode: old_fd.as_ref().unwrap().inode.clone(),
+                    path: old_fd.as_ref().unwrap().path.clone(),
                     offset: old_fd.as_ref().unwrap().offset,
                     mode: old_fd.as_ref().unwrap().mode,
                     is_dir: old_fd.as_ref().unwrap().is_dir,
@@ -454,6 +457,7 @@ pub fn SystemCall(regs: &mut State) {
                 old_fd.as_ref().unwrap().inode.Open(!0);
                 proc.fds.insert(regs.GetSC1() as i64,VFS::FileDescriptor {
                     inode: old_fd.as_ref().unwrap().inode.clone(),
+                    path: old_fd.as_ref().unwrap().path.clone(),
                     offset: old_fd.as_ref().unwrap().offset,
                     mode: old_fd.as_ref().unwrap().mode,
                     is_dir: old_fd.as_ref().unwrap().is_dir,
@@ -535,7 +539,7 @@ pub fn SystemCall(regs: &mut State) {
                 return;
             }
             let metadata = file.as_ref().ok().unwrap().Stat().ok().unwrap();
-            if !VFS::HasPermission(&metadata,proc.euid,proc.egid,if mode & 1 == 1 {0b10} else {0} | if mode & 2 == 2 {0b100} else {0}) && metadata.mode & 0o0770000 != 0o0040000 {
+            if !VFS::HasPermission(&metadata,proc.euid,proc.egid,proc.supgroups.as_ref(),if mode & 1 == 1 {0b10} else {0} | if mode & 2 == 2 {0b100} else {0}) && metadata.mode & 0o0770000 != 0o0040000 {
                 regs.SetSC0((-Errors::EACCES as isize) as usize);
                 drop(plock);
                 return;
@@ -866,6 +870,7 @@ pub fn SystemCall(regs: &mut State) {
                 proc.sig_state.SetIP(0);
                 drop(plock);
                 Scheduler::Tick(CurrentHart(),regs);
+                panic!("You'll never see this message, isn't that weird?");
             }
             drop(plock);
         }
@@ -894,6 +899,7 @@ pub fn SystemCall(regs: &mut State) {
             let len = if proc.fds.keys().last().is_some() {*(proc.fds.keys().last().unwrap())} else {0};
             proc.fds.insert(len,VFS::FileDescriptor {
                 inode: pipes.0,
+                path: String::from(""),
                 offset: 0,
                 mode: 3 | (mode & OpenFlags::O_CLOEXEC),
                 is_dir: false,
@@ -901,6 +907,7 @@ pub fn SystemCall(regs: &mut State) {
             });
             proc.fds.insert(len+1,VFS::FileDescriptor {
                 inode: pipes.1,
+                path: String::from(""),
                 offset: 0,
                 mode: 3 | (mode & OpenFlags::O_CLOEXEC),
                 is_dir: false,
@@ -996,8 +1003,42 @@ pub fn SystemCall(regs: &mut State) {
                 drop(segs);
                 drop(plock);
                 return;
+            } else {
+                match proc.fds.get_mut(&(args.fd as i64)) {
+                    Some(fd) => {
+                        match (&fd).inode.MMap(args.offset as i64,args.size,args.prot as u8,args.flags & MAP_SHARED != 0) {
+                            Ok(data) => {
+                                if !crate::Memory::MapPages(Arc::get_mut(&mut proc.pagetable).unwrap(),space.0,data.as_ptr() as usize - crate::arch::PHYSMEM_BEGIN as usize,args.size.div_ceil(0x1000)*0x1000,args.prot & 2 != 0,args.prot & 4 != 0) {
+                                    drop(segs);
+                                    drop(plock);
+                                    regs.SetSC0((-Errors::ENOMEM as isize) as usize);
+                                    return;
+                                }
+                                segs.insert(space.1,(space.0,args.size.div_ceil(0x1000)*0x1000,fd.path.clone(),args.prot as u8));
+                                regs.SetSC0(space.0);
+                                drop(segs);
+                                drop(plock);
+                                return;
+                            }
+                            Err(e) => {
+                                regs.SetSC0(e as usize);
+                                drop(segs);
+                                drop(plock);
+                                return;
+                            }
+                        }
+                    }
+                    None => {
+                        regs.SetSC0((-Errors::EBADF as isize) as usize);
+                        drop(segs);
+                        drop(plock);
+                        return;
+                    }
+                }
             }
-            todo!();
+        }
+        0x25 => { // munmap
+
         }
         0xf0 => { // foxkernel_powerctl
             if curproc > 1 {
