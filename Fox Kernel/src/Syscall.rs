@@ -990,7 +990,7 @@ pub fn SystemCall(regs: &mut State) {
                 regs.SetSC0((-Errors::ENOMEM as isize) as usize);
                 return;
             }
-            if args.flags & MAP_ANONYOMUS != 0 {
+            if args.flags & MAP_ANONYOMUS != 0 || (args.fd as isize) < 0 {
                 let pages = Allocate((args.size.div_ceil(0x1000)*0x1000) as u64).unwrap() as u64 - crate::arch::PHYSMEM_BEGIN;
                 if !crate::Memory::MapPages(Arc::get_mut(&mut proc.pagetable).unwrap(),space.0,pages as usize,args.size.div_ceil(0x1000)*0x1000,args.prot & 2 != 0,args.prot & 4 != 0) {
                     drop(segs);
@@ -1038,7 +1038,31 @@ pub fn SystemCall(regs: &mut State) {
             }
         }
         0x25 => { // munmap
+            let mut plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get_mut(&curproc).unwrap();
+            let segs = proc.memory_segments.lock();
+            let addr = regs.GetSC1();
+            let length = regs.GetSC2().div_ceil(0x1000)*0x1000;
+            let mut conflicts = Vec::new();
+            for i in 0..(&segs).len() {
+                let val = (&segs).get(i).unwrap();
+                if addr >= val.0 && addr < val.0+val.1 {
+                    conflicts.push((i,val.clone()));
+                }
+            }
+            conflicts.sort_by(|a,b| a.1.0.partial_cmp(&b.1.0).unwrap());
+            for segment in conflicts.iter() {
+                if addr == segment.1.0 && length == segment.1.1 { // Complete Delete
+                    //segment
+                } else if addr <= segment.1.0 { // Partial Left Delete
 
+                } else if segment.1.0 <= addr+length { // Partial Right Delete
+
+                }
+            }
+        }
+        0x26 => { // msync
+            
         }
         0xf0 => { // foxkernel_powerctl
             if curproc > 1 {
