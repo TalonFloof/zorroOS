@@ -61,6 +61,7 @@ pub static TIMESTAMP: LimineBootTimeRequest = LimineBootTimeRequest::new(0);
 pub static STACK: LimineStackSizeRequest = LimineStackSizeRequest::new(0).stack_size(65536); // 64 KiB
 pub static KERNEL_FILE: LimineKernelFileRequest = LimineKernelFileRequest::new(0);
 pub static MODULES: LimineModuleRequest = LimineModuleRequest::new(0);
+pub static TERMINAL: LimineTerminalRequest = LimineTerminalRequest::new(0);
 
 #[naked]
 #[no_mangle]

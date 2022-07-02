@@ -74,7 +74,7 @@ extern "C" fn x86SCall(
 pub fn Initialize() {
     unsafe {
         Efer::write(Efer::read() | EferFlags::NO_EXECUTE_ENABLE | EferFlags::SYSTEM_CALL_EXTENSIONS);
-        Star::write(SegmentSelector::new(4,PrivilegeLevel::Ring3),SegmentSelector::new(3,PrivilegeLevel::Ring3),SegmentSelector::new(1,PrivilegeLevel::Ring0),SegmentSelector::new(2,PrivilegeLevel::Ring0)).unwrap();
+        Star::write(SegmentSelector::new(8,PrivilegeLevel::Ring3),SegmentSelector::new(7,PrivilegeLevel::Ring3),SegmentSelector::new(5,PrivilegeLevel::Ring0),SegmentSelector::new(6,PrivilegeLevel::Ring0)).unwrap();
         LStar::write(VirtAddr::new(__syscall as u64));
         SFMask::write(RFlags::from_bits_truncate(0xfffffffe));
     }

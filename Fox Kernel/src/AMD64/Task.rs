@@ -32,10 +32,10 @@ impl State {
     pub fn new(idle_task: bool) -> Self {
         Self {
             rip: 0,
-            cs: if idle_task {0x8} else {0x23},
+            cs: if idle_task {0x28} else {0x43},
             rflags: 0x200,
             rsp: if idle_task {unsafe {HARTS[CurrentHart() as usize].as_ref().unwrap().tss.privilege_stack_table[0].as_u64()}} else {0},
-            ss: if idle_task {0x10} else {0x1B},
+            ss: if idle_task {0x30} else {0x3B},
             rax: 0,
             rbx: 0,
             rcx: 0,

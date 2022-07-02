@@ -1,6 +1,4 @@
 use spin::Mutex;
-use crate::Framebuffer::MainFramebuffer;
-use alloc::vec::Vec;
 use log::{Record, Metadata, Level};
 
 pub static WRITER: Mutex<Writer> = Mutex::new(Writer {cursor_x:0,cursor_y:0,text_color: 0xFFFFFF});
@@ -36,7 +34,32 @@ pub static mut QUIET: bool = false;
 pub static mut NO_COLOR: bool = true;
 
 impl core::fmt::Write for Writer {
+    #[cfg(any(target_arch="x86_64"))]
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        use limine::*;
+        static mut CACHED: Option<&'static LimineTerminalResponse> = None;
+        crate::arch::UART::write_serial(s);
+        unsafe {if QUIET {return Ok(());}}
+        unsafe {
+            if let Some(writer) = CACHED {
+                let terminal = writer.terminals().unwrap().first().unwrap();
+                writer.write().unwrap()(terminal, s);
+            } else {
+                let response = crate::arch::TERMINAL.get_response().get().unwrap();
+                let terminal = response.terminals().unwrap().first().unwrap();
+                let writer = response.write().unwrap();
+
+                writer(&terminal, s);
+
+                CACHED = Some(response);
+            }
+        }
+        Ok(())
+    }
+    #[cfg(not(target_arch="x86_64"))]
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        use crate::Framebuffer::MainFramebuffer;
+        use alloc::vec::Vec;
         crate::arch::UART::write_serial(s);
         unsafe {if QUIET {return Ok(());}}
         let mut lock = MainFramebuffer.lock();
@@ -55,7 +78,7 @@ impl core::fmt::Write for Writer {
                     }
                     fb.DrawRect(0, self.cursor_y*16, fb.width, 16, 0x000000);
                 }
-                if b >= 32 && b <= 127 {
+                if b >= 32 && b < 127 {
                     if !parse_ansi {
                         fb.DrawSymbol(self.cursor_x*8, self.cursor_y*16, b, self.text_color, 1);
                         self.cursor_x += 1;

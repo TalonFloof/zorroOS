@@ -104,6 +104,7 @@ elif args[0] == "run":
         -m 128M \
         -smp 12 \
         -no-reboot \
+        -no-shutdown \
         -cpu max \
         -serial stdio \
         -device qemu-xhci \

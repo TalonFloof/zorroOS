@@ -18,6 +18,7 @@ pub fn Parse(cmd: String) {
     RAW_CMDLINE.call_once(|| cmd);
     let mut options: BTreeMap<&str,&str> = BTreeMap::new();
     let mut flags: BTreeSet<&str> = BTreeSet::new();
+    unsafe {crate::Console::QUIET = false;}
     for arg in RAW_CMDLINE.get().unwrap().trim().split_whitespace() {
         if arg.contains("=") {
             let keyval: Vec<&str> = arg.splitn(2,'=').collect();

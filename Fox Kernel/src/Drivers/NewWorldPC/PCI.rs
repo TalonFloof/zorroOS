@@ -424,17 +424,17 @@ pub fn Initalize() {
                         if msixcap.is_ok() {
                             let irq = EnableMSIX(bus,slot,func,msixcap.ok().unwrap());
                             irql = IRQ::Msix(irq);
-                            print!("├─[bus: 0x{:02x} slot: 0x{:02x} func: 0x{:02x}]\n│ vendor: 0x{:04x}\n│ device: 0x{:04x}\n│ msix-irq: 0x{:02x}\n│ type: {}\n", bus,slot,func,vendor,device,irq,PCIDevToString(class,subclass,progif));
+                            print!("+-[bus: 0x{:02x} slot: 0x{:02x} func: 0x{:02x}]\n| vendor: 0x{:04x}\n| device: 0x{:04x}\n| msix-irq: 0x{:02x}\n| type: {}\n", bus,slot,func,vendor,device,irq,PCIDevToString(class,subclass,progif));
                         } else if msicap.is_ok() {
                             let irq = EnableMSI(bus,slot,func,msicap.ok().unwrap());
                             irql = IRQ::Msi(irq);
-                            print!("├─[bus: 0x{:02x} slot: 0x{:02x} func: 0x{:02x}]\n│ vendor: 0x{:04x}\n│ device: 0x{:04x}\n│ msi-irq: 0x{:02x}\n│ type: {}\n", bus,slot,func,vendor,device,irq,PCIDevToString(class,subclass,progif));
+                            print!("+-[bus: 0x{:02x} slot: 0x{:02x} func: 0x{:02x}]\n| vendor: 0x{:04x}\n| device: 0x{:04x}\n| msi-irq: 0x{:02x}\n| type: {}\n", bus,slot,func,vendor,device,irq,PCIDevToString(class,subclass,progif));
                         } else if ReadU8(bus,slot,func,PCI_INTERRUPT_LINE) != 0xFF && ReadU8(bus,slot,func,PCI_INTERRUPT_LINE) != 0x00 {
                             let irq = ReadU8(bus,slot,func,PCI_INTERRUPT_LINE) + 0x20;
                             irql = IRQ::Irql(irq);
-                            print!("├─[bus: 0x{:02x} slot: 0x{:02x} func: 0x{:02x}]\n│ vendor: 0x{:04x}\n│ device: 0x{:04x}\n│ isa-irq: 0x{:02x}\n│ type: {}\n", bus,slot,func,vendor,device,irq,PCIDevToString(class,subclass,progif));
+                            print!("+-[bus: 0x{:02x} slot: 0x{:02x} func: 0x{:02x}]\n| vendor: 0x{:04x}\n| device: 0x{:04x}\n| isa-irq: 0x{:02x}\n| type: {}\n", bus,slot,func,vendor,device,irq,PCIDevToString(class,subclass,progif));
                         } else {
-                            print!("├─[bus: 0x{:02x} slot: 0x{:02x} func: 0x{:02x}]\n│ vendor: 0x{:04x}\n│ device: 0x{:04x}\n│ no-irq-support\n│ type: {}\n", bus,slot,func,vendor,device,PCIDevToString(class,subclass,progif));
+                            print!("+-[bus: 0x{:02x} slot: 0x{:02x} func: 0x{:02x}]\n| vendor: 0x{:04x}\n| device: 0x{:04x}\n| no-irq-support\n| type: {}\n", bus,slot,func,vendor,device,PCIDevToString(class,subclass,progif));
                         }
                         lock.push(PCIDevice {
                             bus,

@@ -1,7 +1,6 @@
 use core::sync::atomic::{AtomicBool, Ordering};
 use x86_64::registers::model_specific::Msr;
 use crate::arch::{GDT, Timer, PHYSMEM_BEGIN};
-use crate::PageFrame::Allocate;
 use spin::Mutex;
 use log::debug;
 

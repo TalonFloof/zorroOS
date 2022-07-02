@@ -80,6 +80,9 @@ pub fn AnalyzeMMAP() {
         }
     }
     Setup(array);
+    let mut pt = crate::PageFrame::KernelPageTable.lock();
+    unsafe {pt.page_table.index_mut(0).set_addr((*pml4).index(256).addr(),(*pml4).index(256).flags());}
+    drop(pt);
     unsafe { KernelPageTable.lock().Switch(); }
 }
 

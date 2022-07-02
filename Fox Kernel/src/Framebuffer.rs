@@ -73,7 +73,7 @@ const FOXKERNEL_STAGE4: &[u8] = include_bytes!("../Stage4.tga");
 pub fn Init(pointer: *mut u32, width: usize, height: usize, stride: usize, bpp: usize) {
     let mut lock = MainFramebuffer.lock();
     *lock = Some(Framebuffer::new(pointer,width,height,stride,bpp));
-    if bpp == 32 {
+    if bpp == 32 && crate::CommandLine::FLAGS.get().unwrap().contains("--no_debug") {
         (*lock).as_mut().unwrap().Clear(0x000000);
         if unsafe {crate::Console::QUIET} {
             let tga = RawTga::from_slice(FOXKERNEL_LOGO).unwrap();
