@@ -147,7 +147,6 @@ extern "C" fn _Hart_start_entry() {
 extern "C" fn _Hart_start(smp: &'static LimineSmpInfo, stack_top: u64) -> ! {
 	unsafe {GDT::HARTS[smp.lapic_id as usize].as_mut().unwrap().init(stack_top);}
 	unsafe {IDT::Setup();}
-	unsafe { asm!("cli"); };
 	Syscall::Initialize();
 	Task::SetupFPU();
 	unsafe {(*crate::PageFrame::KernelPageTable.lock()).Switch();}

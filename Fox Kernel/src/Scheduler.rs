@@ -36,59 +36,69 @@ impl Scheduler {
             pqlock.rotate_left(1);
             if val != -1i32 {
                 let mut plock = PROCESSES.lock();
-                let proc = plock.get_mut(&val).unwrap();
-                match proc.status {
-                    ProcessStatus::RUNNABLE => {
-                        drop(pqlock);
-                        drop(plock);
-                        return val;
-                    }
-                    ProcessStatus::SIGNAL(ip, sig) => {
-                        proc.task_state.SetIP(ip);
-                        proc.task_state.SetSC1(sig);
-                        proc.status = ProcessStatus::RUNNABLE;
-                        drop(pqlock);
-                        drop(plock);
-                        return val;
-                    }
-                    ProcessStatus::FINISHING(status) => {
-                        if proc.children.len() == 0 {
-                            proc.status = ProcessStatus::FINISHED(status);
-                        }
-                        drop(plock);
-                        continue;
-                    }
-                    ProcessStatus::FORCEKILL(false) => {
-                        if proc.children.len() > 0 {
-                            proc.status = ProcessStatus::FORCEKILL(true);
-                            let children: Vec<i32> = proc.children.clone();
-                            drop(plock);
-                            let mut plock = PROCESSES.lock();
-                            for i in children.iter() {
-                                if let Some(child) = plock.get_mut(&i) {
-                                    child.status = ProcessStatus::FORCEKILL(false);
+                match plock.get_mut(&val) {
+                    Some(proc) => {
+                        match proc.status {
+                            ProcessStatus::RUNNABLE => {
+                                drop(pqlock);
+                                drop(plock);
+                                return val;
+                            }
+                            ProcessStatus::SIGNAL(ip, sig) => {
+                                proc.task_state.SetIP(ip);
+                                proc.task_state.SetSC1(sig);
+                                proc.status = ProcessStatus::RUNNABLE;
+                                drop(pqlock);
+                                drop(plock);
+                                return val;
+                            }
+                            ProcessStatus::FINISHING(status) => {
+                                if proc.children.len() == 0 {
+                                    proc.status = ProcessStatus::FINISHED(status);
+                                }
+                                drop(plock);
+                                continue;
+                            }
+                            ProcessStatus::FORCEKILL(false) => {
+                                if proc.children.len() > 0 {
+                                proc.status = ProcessStatus::FORCEKILL(true);
+                                let children: Vec<i32> = proc.children.clone();
+                                drop(plock);
+                                    let mut plock = PROCESSES.lock();
+                                    for i in children.iter() {
+                                        if let Some(child) = plock.get_mut(&i) {
+                                            child.status = ProcessStatus::FORCEKILL(false);
+                                        }
+                                    }
+                                    drop(plock);
+                                    continue;
+                                }
+                                proc.status = ProcessStatus::FORCEKILL(true);
+                            }
+                            ProcessStatus::FORCEKILL(true) => {
+                                if proc.children.len() == 0 {
+                                    let parid = proc.parent_id;
+                                    if let Some(parent) = plock.get_mut(&parid) {
+                                        parent.children.retain(|&x| x != val);
+                                    }
+                                    drop(plock);
+                                    drop(pqlock);
+                                    crate::Process::Process::CleanupProcess(val);
+                                    pqlock = self.process_queue.lock();
+                                    continue;
                                 }
                             }
-                            drop(plock);
-                            continue;
-                        }
-                        proc.status = ProcessStatus::FORCEKILL(true);
-                    }
-                    ProcessStatus::FORCEKILL(true) => {
-                        if proc.children.len() == 0 {
-                            let parid = proc.parent_id;
-                            if let Some(parent) = plock.get_mut(&parid) {
-                                parent.children.retain(|&x| x != val);
+                            _ => {
+                                drop(plock);
+                                continue;
                             }
-                            drop(plock);
-                            drop(pqlock);
-                            crate::Process::Process::CleanupProcess(val);
-                            pqlock = self.process_queue.lock();
-                            continue;
                         }
                     }
-                    _ => {
+                    None => {
                         drop(plock);
+                        drop(pqlock);
+                        log::error!("(hart 0x{:x}) Bad PID {} on queue", CurrentHart(), val);
+                        pqlock = self.process_queue.lock();
                         continue;
                     }
                 }
@@ -136,8 +146,10 @@ impl Scheduler {
         let cur_task = sched.current_proc_id.load(Ordering::SeqCst);
         if cur_task != -1i32 {
             let mut pl = PROCESSES.lock();
-            pl.get_mut(&cur_task).unwrap().task_state.Save(&state);
-            pl.get_mut(&cur_task).unwrap().task_fpstate.Save();
+            if pl.contains_key(&cur_task) {
+                pl.get_mut(&cur_task).unwrap().task_state.Save(&state);
+                pl.get_mut(&cur_task).unwrap().task_fpstate.Save();
+            }
             drop(pl);
         }
         let ptr = sched as *const Scheduler;
@@ -147,12 +159,10 @@ impl Scheduler {
         the schedulers aren't deleted after creation, and the values are immutable, this is actually safe,
         and it protects the SCHEDULERS Mutex from deadlocking.
         */
-        unsafe { (&*ptr).NextContext(); }
-        panic!("You'll never see this message, isn't that weird?");
-    }
-    pub fn NextContext(&self) {
-        let id = self.FindNextProcess();
-        self.ContextSwitch(id);
+        unsafe { 
+            let id = (&*ptr).FindNextProcess();
+            (&*ptr).ContextSwitch(id);
+        }
         panic!("You'll never see this message, isn't that weird?");
     }
     pub fn CurrentPID() -> i32 {

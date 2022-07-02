@@ -56,7 +56,7 @@ impl State {
     #[doc(hidden)]
     #[cold]
     #[naked]
-    extern "C" fn _state_internal_enter(state: u64) -> ! {
+    extern "C" fn _state_internal_enter(state: u64) {
         unsafe {
             asm!(
             "cli",
@@ -78,7 +78,7 @@ impl State {
             "pop rax",
             "iretq",
             options(noreturn)
-            )
+            );
         }
     }
 }
@@ -131,7 +131,8 @@ impl TaskState for State {
         self.r15 = state.r15;
     }
     fn Enter(&self) -> ! {
-        State::_state_internal_enter(((self as &State) as *const State) as u64)
+        State::_state_internal_enter(((self as &State) as *const State) as u64);
+        unreachable!();
     }
     fn Exit(&self) {
         unsafe { crate::PageFrame::KernelPageTable.lock().Switch(); }

@@ -61,9 +61,8 @@ fn x86Fault(
     }
     if stack_frame.code_segment == 0x23 && index != 0x08 {
         let l = SCHEDULERS.lock();
-        let ptr = l.get(&(CurrentHart())).unwrap() as *const Scheduler;
+        let pid = l.get(&(CurrentHart())).unwrap().current_proc_id.load(Ordering::SeqCst);
         drop(l);
-        let pid = unsafe{(&*ptr).current_proc_id.load(Ordering::SeqCst)};
         error!("(hart 0x{}) Process #{} Exception {}", CurrentHart(), pid, ExceptionMessages[index as usize]);
         error!("{:?}", stack_frame);
         if let None = err_code {} else {
@@ -73,7 +72,7 @@ fn x86Fault(
             error!("CR2=0x{:016x}", x86_64::registers::control::Cr2::read().as_u64());
         }
         crate::Process::Process::SendSignal(pid,crate::Process::Signals::SIGSEGV);
-        unsafe {(&*ptr).NextContext();}
+        crate::Scheduler::Scheduler::Tick(CurrentHart(),unsafe {&*(core::ptr::null() as *const State)});
     } else {
         if index != 14 && unsafe {crate::Console::QUIET} {
             // Page Dump
@@ -118,6 +117,47 @@ macro_rules! set_irq_handler {
                     "cli",
 
                     "push rax",
+                    "push rcx",
+                    "push rdx",
+                    "push rdi",
+                    "push rsi",
+                    "push r8",
+                    "push r9",
+                    "push r10",
+                    "push r11",
+
+                    concat!("mov rdi, ", $irq),
+                    "cld",
+                    "call x86IRQ",
+
+                    "pop r11",
+                    "pop r10",
+                    "pop r9",
+                    "pop r8",
+                    "pop rsi",
+                    "pop rdi",
+                    "pop rdx",
+                    "pop rcx",
+                    "pop rax",
+
+                    "iretq",
+                    options(noreturn)
+                );
+            }
+        }
+        unsafe {
+            let opt = kidt[$irq as usize].set_handler_addr(VirtAddr::new(wrapper as u64));
+            opt.set_privilege_level($priv);
+        }
+    }};
+    (thread_save $irq:expr, $priv:expr) => {{
+        #[naked]
+        extern "C" fn wrapper() {
+            unsafe {
+                asm!(
+                    "cli",
+
+                    "push rax",
                     "push rbx",
                     "push rcx",
                     "push rdx",
@@ -136,25 +176,9 @@ macro_rules! set_irq_handler {
                     "mov rdi, rsp",
                     concat!("mov rsi, ", $irq),
                     "cld",
-                    "call x86IRQ",
-
-                    "pop r15",
-                    "pop r14",
-                    "pop r13",
-                    "pop r12",
-                    "pop r11",
-                    "pop r10",
-                    "pop r9",
-                    "pop r8",
-                    "pop rbp",
-                    "pop rdi",
-                    "pop rsi",
-                    "pop rdx",
-                    "pop rcx",
-                    "pop rbx",
-                    "pop rax",
-                    
-                    "iretq",
+                    "call x86Timer",
+                    "nop",
+                    "ud2",
                     options(noreturn)
                 );
             }
@@ -168,40 +192,36 @@ macro_rules! set_irq_handler {
 
 #[no_mangle]
 extern "C" fn x86IRQ(
-    cr: &mut State,
     index: u64,
 ) {
-    APIC::Write(APIC::LOCAL_APIC_EOI,0);
-    if index == 0x20 {
-        if SCHEDULER_STARTED.load(Ordering::SeqCst) {
-            if crate::Scheduler::SCHEDULERS.lock().contains_key(&CurrentHart()) {
-                crate::Scheduler::Scheduler::Tick(CurrentHart(), cr);
-            }
-        }
-    } else if CurrentHart() == 0 {
-        let lock = IRQ_HANDLERS.lock();
-        if lock[(index as usize)-0x20].is_some() {
-            (lock[index as usize-0x20].unwrap())();
-        }
-        drop(lock);
+    let lock = IRQ_HANDLERS.lock();
+    if lock[(index as usize)-0x20].is_some() {
+        (lock[index as usize-0x20].unwrap())();
     }
+    drop(lock);
+    APIC::Write(APIC::LOCAL_APIC_EOI,0);
 }
 
-/* 
-This bit of code actually tricks the Rust compiler to allow me
-to pass a mutable static into the set_general_handler! macro.
-*/
+#[no_mangle]
+extern "C" fn x86Timer(
+    cr: &mut State,
+    index: u64,
+) -> ! {
+    APIC::Write(APIC::LOCAL_APIC_EOI,0);
+    crate::Scheduler::Scheduler::Tick(CurrentHart(), cr);
+    panic!("You'll never see this message, isn't that weird?");
+}
+
 pub unsafe fn Setup() {
     IDTSetup(&mut kidt);
     kidt.load();
     u8::write_to_port(0x29,0xff);
     u8::write_to_port(0x21,0xff);
-    x86_64::instructions::interrupts::enable();
 }
 #[doc(hidden)]
 fn IDTSetup(inttab: &mut InterruptDescriptorTable) {
     set_general_handler!(inttab, x86Fault, 0x00..0x1f);
-    set_irq_handler!(0x20,PrivilegeLevel::Ring0);
+    set_irq_handler!(thread_save 0x20,PrivilegeLevel::Ring0);
     set_irq_handler!(0x21,PrivilegeLevel::Ring0);
     set_irq_handler!(0x22,PrivilegeLevel::Ring0);
     set_irq_handler!(0x23,PrivilegeLevel::Ring0);

@@ -22,6 +22,10 @@ features = ["spin_no_std"]
 opt-level = 3
 debug = 0
 
+[profile.dev.package."*"]
+opt-level = 3
+debug = 0
+
 [target.'cfg(target_arch = "x86_64")'.dependencies]
 x86_64 = {version="*",features=["nightly"]}
 limine = "*"
