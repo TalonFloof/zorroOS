@@ -1,7 +1,7 @@
 use alloc::boxed::Box;
 use alloc::sync::Arc;
 use core::ops::{Index, IndexMut};
-use stivale_boot::v2::*;
+use limine::*;
 use crate::PageFrame::{Setup,HeapRange};
 use x86_64::structures::paging::{frame::PhysFrame as PageFrame, page::Size4KiB, page_table::{PageTable as HWPageTable, PageTableEntry, PageTableFlags}};
 use crate::arch::PHYSMEM_BEGIN;
@@ -19,7 +19,8 @@ fn GetStartPageTable() -> *mut HWPageTable {
     (*Startup_PageTable.lock()).unwrap() as *mut HWPageTable
 }
 
-pub fn AnalyzeMMAP(mmap: &StivaleMemoryMapTag) {
+pub fn AnalyzeMMAP() {
+    let mmap = crate::arch::MMAP.get_response().get().unwrap().mmap().unwrap();
     *Startup_PageTable.lock() = Some(x86_64::registers::control::Cr3::read().0.start_address().as_u64()+PHYSMEM_BEGIN);
     let pml4: *mut HWPageTable = GetStartPageTable();
     unsafe {
@@ -57,25 +58,25 @@ pub fn AnalyzeMMAP(mmap: &StivaleMemoryMapTag) {
     let mut array_index = 0;
     for i in mmap.iter() {
         let base = (i.base as usize) + (PHYSMEM_BEGIN as usize);
-        let end = (base as u64) + i.length;
-        let entry_type = match i.entry_type {
-            StivaleMemoryMapEntryType::Usable => "Usable",
-            StivaleMemoryMapEntryType::Reserved => "Reserved",
-            StivaleMemoryMapEntryType::AcpiReclaimable => "ACPI Table Data (Reclaimable)",
-            StivaleMemoryMapEntryType::AcpiNvs => "ACPI Non-volatile Storage",
-            StivaleMemoryMapEntryType::BadMemory => "Damaged/Bad Memory",
-            StivaleMemoryMapEntryType::BootloaderReclaimable => "Usable (Bootloader Data)",
-            StivaleMemoryMapEntryType::Kernel => "Fox Kernel/InitRD",
-            StivaleMemoryMapEntryType::Framebuffer => "GPU Framebuffer",
+        let end = (base as u64) + i.len;
+        let entry_type = match i.typ {
+            LimineMemoryMapEntryType::Usable => "Usable",
+            LimineMemoryMapEntryType::Reserved => "Reserved",
+            LimineMemoryMapEntryType::AcpiReclaimable => "ACPI Table Data (Reclaimable)",
+            LimineMemoryMapEntryType::AcpiNvs => "ACPI Non-volatile Storage",
+            LimineMemoryMapEntryType::BadMemory => "Damaged/Bad Memory",
+            LimineMemoryMapEntryType::BootloaderReclaimable => "Usable (Bootloader Data)",
+            LimineMemoryMapEntryType::KernelAndModules => "Fox Kernel/InitRD",
+            LimineMemoryMapEntryType::Framebuffer => "GPU Framebuffer",
         };
         debug!("[mem 0x{:016x}-0x{:016x}] {}", base, end, entry_type);
-        if i.entry_type == StivaleMemoryMapEntryType::Usable {
+        if i.typ == LimineMemoryMapEntryType::Usable {
             array[array_index].base = i.base;
-            array[array_index].length = i.length;
+            array[array_index].length = i.len;
             array_index += 1;
-        } else if i.entry_type == StivaleMemoryMapEntryType::Kernel {
-            crate::PageFrame::UsedMem.fetch_add(i.length,core::sync::atomic::Ordering::SeqCst);
-            crate::PageFrame::TotalMem.fetch_add(i.length,core::sync::atomic::Ordering::SeqCst);
+        } else if i.typ == LimineMemoryMapEntryType::KernelAndModules {
+            crate::PageFrame::UsedMem.fetch_add(i.len,core::sync::atomic::Ordering::SeqCst);
+            crate::PageFrame::TotalMem.fetch_add(i.len,core::sync::atomic::Ordering::SeqCst);
         }
     }
     Setup(array);

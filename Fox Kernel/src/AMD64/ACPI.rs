@@ -1,7 +1,6 @@
 use alloc::borrow::ToOwned;
 use core::ptr::NonNull;
 use acpi::{AcpiTables, PhysicalMapping};
-use stivale_boot::v2::StivaleRsdpTag;
 use crate::arch::{APIC, Timer, PHYSMEM_BEGIN};
 use acpi::AcpiHandler;
 use acpi::hpet::HpetInfo;
@@ -9,6 +8,7 @@ use acpi::madt::Madt;
 use log::{warn,debug};
 use spin::Mutex;
 use alloc::vec::Vec;
+use crate::arch::RSDP;
 
 extern crate acpi;
 
@@ -25,12 +25,13 @@ impl AcpiHandler for ACPIMapping {
 pub static AML_TABLES: Mutex<Vec<&[u8]>> = Mutex::new(Vec::new());
 pub static ACPI_TABLES: Mutex<Option<AcpiTables<ACPIMapping>>> = Mutex::new(None);
 
-pub fn AnalyzeRSDP(tag: &StivaleRsdpTag) {
-    if tag.rsdp == 0 {
+pub fn AnalyzeRSDP() {
+    let tag = RSDP.get_response().get().expect("The Fox Kernel requires that the Limine compatible bootloader that you are using contains a pointer to the ACPI tables.");
+    if tag.address.as_ptr().is_none() {
         panic!("Your Firmware is not ACPI-Compliant");
     }
     unsafe {
-        *ACPI_TABLES.lock() = Some(acpi::AcpiTables::from_rsdp(ACPIMapping {}, (tag.rsdp-PHYSMEM_BEGIN) as usize).expect("Your Firmware is not ACPI-Compliant"));
+        *ACPI_TABLES.lock() = Some(acpi::AcpiTables::from_rsdp(ACPIMapping {}, (tag.address.as_ptr().unwrap() as u64-PHYSMEM_BEGIN) as usize).expect("Your Firmware is not ACPI-Compliant"));
     }
     let mut acpilock = ACPI_TABLES.lock();
     let tables = acpilock.as_mut().unwrap();

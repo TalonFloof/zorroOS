@@ -10,10 +10,6 @@ pub struct Hart {
     pub scdata: [u64; 3],
 }
 
-extern "C" {
-    fn __stack_high();
-}
-static mut FIRST_HART: bool = true;
 pub static mut HARTS: [Option<Hart>; 64] = [
     None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
     None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
@@ -29,11 +25,9 @@ impl Hart {
             scdata: [0u64; 3],
         }
     }
-    pub unsafe fn init(&'static mut self) {
-        if FIRST_HART {
-            self.tss.privilege_stack_table[0] = VirtAddr::new(__stack_high as u64);
-            self.scdata[0] = __stack_high as u64;
-        }
+    pub unsafe fn init(&'static mut self, stack_top: u64) {
+        self.tss.privilege_stack_table[0] = VirtAddr::new(stack_top);
+        self.scdata[0] = stack_top;
         self.gdt.add_entry(KCODE);
         self.gdt.add_entry(KDATA);
         self.gdt.add_entry(UDATA);
@@ -52,11 +46,10 @@ impl Hart {
     }
 }
 
-pub fn Setup() {
+pub fn Setup(stack_top: u64) {
     unsafe {
         HARTS[0] = Some(Hart::new());
-        HARTS[0].as_mut().unwrap().init();
-        FIRST_HART = false;
+        HARTS[0].as_mut().unwrap().init(stack_top);
     }
 }
 

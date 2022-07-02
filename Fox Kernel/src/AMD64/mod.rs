@@ -10,12 +10,12 @@ pub mod Timer;
 pub mod Task;
 pub mod Syscall;
 
-extern crate stivale_boot;
+extern crate limine;
 extern crate x86_64;
 
 use core::arch::asm;
 use core::sync::atomic::Ordering;
-use stivale_boot::v2::*;
+use limine::*;
 use crate::Memory::PageTable;
 use crate::print_startup_message;
 use crate::Scheduler::SCHEDULER_STARTED;
@@ -50,58 +50,99 @@ macro_rules! halt_other_harts {
 	}
 }
 
+// LIMINE BOOT REQUESTS
+pub static BOOTLOADER: LimineBootInfoRequest = LimineBootInfoRequest::new(0);
+pub static HIGHER_HALF_DIRECT_MAPPINGS: LimineHhdmRequest = LimineHhdmRequest::new(0);
+pub static FRAMEBUFFER: LimineFramebufferRequest = LimineFramebufferRequest::new(0);
+pub static MMAP: LimineMmapRequest = LimineMmapRequest::new(0);
+pub static RSDP: LimineRsdpRequest = LimineRsdpRequest::new(0);
+pub static SMP: LimineSmpRequest = LimineSmpRequest::new(0).flags(0);
+pub static TIMESTAMP: LimineBootTimeRequest = LimineBootTimeRequest::new(0);
+pub static STACK: LimineStackSizeRequest = LimineStackSizeRequest::new(0).stack_size(65536); // 64 KiB
+pub static KERNEL_FILE: LimineKernelFileRequest = LimineKernelFileRequest::new(0);
+pub static MODULES: LimineModuleRequest = LimineModuleRequest::new(0);
+
+#[naked]
 #[no_mangle]
-extern "C" fn _start(pmr: &mut StivaleStruct) {
-    unsafe { asm!("cli"); };
+extern "C" fn _start_entry() {
+	unsafe {
+		asm!(
+			"cli",
+			"mov rdi, rsp",
+			"add rdi, 8",
+			"call _start",
+			"nop",
+			"2:",
+			"hlt",
+			"jmp 2b",
+			options(noreturn)
+		)
+	}
+}
+
+#[no_mangle]
+extern "C" fn _start(stack_top: u64) {
     UART::Setup();
 	print_startup_message!();
-	GDT::Setup();
+	GDT::Setup(stack_top);
 	unsafe { IDT::Setup(); }
 	Syscall::Initialize();
 	Task::SetupFPU();
-	Memory::AnalyzeMMAP(
-		pmr.memory_map().expect("The Fox Kernel requires that the Stivale2 compatible bootloader that you are using contains a memory map."));
-	unsafe {
-		if let Some(cmdtag) = pmr.command_line() {
-			let cmdstr = String::from(cstr_core::CStr::from_ptr(cmdtag.command_line as *const cstr_core::c_char).to_str().unwrap());
-			if cmdstr.len() == 0 {
-				log::warn!("Kernel Command Line is empty!");
-			} else {
-				log::info!("Kernel Command Line: \"{}\"", cmdstr.as_str());
-			}
-			crate::CommandLine::Parse(cmdstr);
+	Memory::AnalyzeMMAP();
+	if KERNEL_FILE.get_response().get().is_some() {
+		let cmdstr = String::from(KERNEL_FILE.get_response().get().unwrap().kernel_file.get().unwrap().cmdline.to_string().unwrap());
+		if cmdstr.len() == 0 {
+			log::warn!("Kernel Command Line is empty!");
 		} else {
-			log::error!("Bootloader didn't specify Kernel Command Line!");
+			log::info!("Kernel Command Line: \"{}\"", cmdstr.as_str());
 		}
+		crate::CommandLine::Parse(cmdstr);
+	} else {
+		log::error!("Bootloader didn't specify Kernel Command Line!");
 	}
-	if pmr.framebuffer().is_some() {
-		let fb_tag = pmr.framebuffer().unwrap();
-		crate::Framebuffer::Init(fb_tag.framebuffer_addr as *mut u32,fb_tag.framebuffer_width as usize,fb_tag.framebuffer_height as usize,fb_tag.framebuffer_pitch as usize,fb_tag.framebuffer_bpp as usize);
+	if FRAMEBUFFER.get_response().get().is_some() {
+		let fb_tag = &FRAMEBUFFER.get_response().get().unwrap().framebuffers().unwrap()[0];
+		crate::Framebuffer::Init(fb_tag.address.as_mut_ptr().unwrap() as *mut u32,fb_tag.width as usize,fb_tag.height as usize,fb_tag.pitch as usize,fb_tag.bpp as usize);
 	}
-	unsafe {crate::UNIX_EPOCH = pmr.epoch().expect("The Fox Kernel requires that the Stivale2 compatible bootloader that you are using contains a UNIX Epoch Timestamp.").epoch};
-	ACPI::AnalyzeRSDP(
-		pmr.rsdp().expect("The Fox Kernel requires that the Stivale2 compatible bootloader that you are using contains a pointer to the ACPI tables."));
+	unsafe {crate::UNIX_EPOCH = TIMESTAMP.get_response().get().expect("The Fox Kernel requires that the Limine compatible bootloader that you are using contains a UNIX Epoch Timestamp.").boot_time as u64};
+	ACPI::AnalyzeRSDP();
 	if !crate::CommandLine::FLAGS.get().unwrap().contains("--nosmp") {
-		APIC::EnableHarts(
-			pmr.smp_mut().expect("The Fox Kernel requires that the Stivale2 compatible bootloader that you are using is compatable with the SMP feature."));
+		APIC::EnableHarts();
 	} else {
 		log::warn!("Symmetric Multiprocessing was disabled by bootloader!");
 	}
-	if let Some(mods) = pmr.modules() {
+	if let Some(mods) = MODULES.get_response().get() {
 		let mut mod_list: Vec<(String,&[u8])> = Vec::new();
-		for i in mods.iter() {
-			unsafe {mod_list.push((String::from(i.as_str()),core::slice::from_raw_parts(i.start as *const u8, i.size() as usize)));}
+		for i in mods.modules().unwrap().iter() {
+			unsafe {mod_list.push((String::from(i.cmdline.to_string().unwrap()),core::slice::from_raw_parts(i.base.as_ptr().unwrap(), i.length as usize)));}
 		}
 		crate::main(mod_list);
 	} else {
-		log::warn!("Stivale2 compatible bootloader doesn't support modules!");
+		log::warn!("Limine compatible bootloader doesn't support modules!");
 		crate::main(Vec::new());
 	}
 }
 
-extern "C" fn _Hart_start(smp: &'static StivaleSmpInfo) -> ! {
-	unsafe { asm!("cli"); };
-	unsafe {GDT::HARTS[smp.lapic_id as usize].as_mut().unwrap().init();}
+#[naked]
+extern "C" fn _Hart_start_entry() {
+	unsafe {
+		asm!(
+			"cli",
+			"mov rsi, rsp",
+			"add rsi, 8",
+			"call _Hart_start",
+			"nop",
+			"2:",
+			"hlt",
+			"jmp 2b",
+			options(noreturn)
+		)
+	}
+}
+
+#[no_mangle]
+extern "C" fn _Hart_start(smp: &'static LimineSmpInfo, stack_top: u64) -> ! {
+	unsafe {GDT::HARTS[smp.lapic_id as usize].as_mut().unwrap().init(stack_top);}
 	unsafe {IDT::Setup();}
 	unsafe { asm!("cli"); };
 	Syscall::Initialize();

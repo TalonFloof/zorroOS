@@ -1,5 +1,4 @@
 use core::sync::atomic::{AtomicBool, Ordering};
-use stivale_boot::v2::StivaleSmpTag;
 use x86_64::registers::model_specific::Msr;
 use crate::arch::{GDT, Timer, PHYSMEM_BEGIN};
 use crate::PageFrame::Allocate;
@@ -96,19 +95,17 @@ pub fn SendIPIWait(dest: u8, dsh: u32, Type: u32, vector: u8) {
     while Read(LOCAL_APIC_ICR_LOW) & (1 << 12) == 1 << 12 { core::hint::spin_loop(); }
 }
 
-pub fn EnableHarts(smp: &mut StivaleSmpTag) {
+pub fn EnableHarts() {
+    let smp = unsafe {crate::arch::SMP.get_response().as_mut_ptr().expect("The Fox Kernel requires that the Limine compatible bootloader that you are using is compatable with the SMP feature.").as_mut().unwrap().cpus().unwrap()};
     unsafe {
-        for i in smp.as_slice_mut() {
+        for i in smp.iter_mut() {
             if i.lapic_id != 0 {
                 LAPIC_HART_WAIT.store(true,Ordering::SeqCst);
                 let mut hart = GDT::Hart::new();
                 hart.scdata[2] = i.lapic_id as u64;
-                let stack = Allocate(0x4000).unwrap() as u64;
-                hart.set_rsp0(stack+0x4000);
                 GDT::HARTS[i.lapic_id as usize] = Some(hart);
-                debug!("hart 0x{:02x} rip=0x{:016x},rsp=0x{:016x}", i.lapic_id,(crate::arch::_Hart_start as *mut u8) as u64,stack+0x4000);
-                i.target_stack = stack+0x4000;
-                i.goto_address = (crate::arch::_Hart_start as *mut u8) as u64;
+                debug!("hart 0x{:02x}, limine startup triggered", i.lapic_id);
+                i.goto_address = (crate::arch::_Hart_start_entry as *mut u8) as u64;
                 while LAPIC_HART_WAIT.load(Ordering::SeqCst) {
                     core::hint::spin_loop();
                 }
