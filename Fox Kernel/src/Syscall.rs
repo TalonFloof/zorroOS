@@ -202,6 +202,9 @@ pub fn SystemCall(regs: &mut State) {
             panic!("You'll never see this message, isn't that weird?");
         }
         0x01 => { // exit
+            if curproc == 1 {
+                panic!("Init Died. If execution continued, all processess would be killed anyway.\nStatus Code: 0x{:02x}", regs.GetSC1());
+            }
             let mut plock = crate::Process::PROCESSES.lock();
             let proc = plock.get_mut(&curproc).unwrap();
             proc.status = crate::Process::ProcessStatus::FINISHING((regs.GetSC1() as isize).abs());
@@ -269,7 +272,7 @@ pub fn SystemCall(regs: &mut State) {
                 return;
             }
             // We can finally create the File Descriptor!
-            let len = if proc.fds.keys().last().is_some() {*proc.fds.keys().last().unwrap()} else {0};
+            let len = if proc.fds.keys().last().is_some() {(*proc.fds.keys().last().unwrap())+1} else {0};
             file.as_ref().ok().unwrap().Open(mode);
             proc.fds.insert(len,VFS::FileDescriptor {
                 inode: file.ok().unwrap(),
@@ -449,13 +452,13 @@ pub fn SystemCall(regs: &mut State) {
                 drop(plock);
                 regs.SetSC0(len as usize);
             } else {
-                if proc.fds.contains_key(&(regs.GetSC1() as i64)) {
+                if proc.fds.contains_key(&(regs.GetSC2() as i64)) {
                     drop(plock);
                     regs.SetSC0((-Errors::EBADF) as usize);
                     return;
                 }
                 old_fd.as_ref().unwrap().inode.Open(!0);
-                proc.fds.insert(regs.GetSC1() as i64,VFS::FileDescriptor {
+                proc.fds.insert(regs.GetSC2() as i64,VFS::FileDescriptor {
                     inode: old_fd.as_ref().unwrap().inode.clone(),
                     path: old_fd.as_ref().unwrap().path.clone(),
                     offset: old_fd.as_ref().unwrap().offset,
@@ -1070,6 +1073,7 @@ pub fn SystemCall(regs: &mut State) {
                 return;
             }
             if regs.GetSC1() as u32 == 3166499024 { // FOXKERNEL_HALT
+                regs.Exit();
                 unsafe {crate::Console::QUIET = false;}
                 log::warn!("Fox Kernel will now halt");
                 crate::halt_other_harts!();

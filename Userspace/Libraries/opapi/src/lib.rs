@@ -1,26 +1,22 @@
 #![allow(non_snake_case,unused_must_use,non_upper_case_globals,non_camel_case_types)]
 #![no_std]
-#![feature(lang_items,int_roundings)]
+#![feature(lang_items,int_roundings,allow_internal_unstable,const_mut_refs)]
 
 use core::panic::PanicInfo;
 
 extern crate alloc;
 
 pub mod syscall;
+pub mod io;
 pub mod allocator;
+
+#[macro_use]
+pub mod macros;
 
 #[cfg(target_arch="x86_64")]
 #[path = "arch/AMD64.rs"]
 pub mod arch;
 
-////////////////////////////////////////////////
-#[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
-    syscall::exit(255);
-}
-
-#[lang = "eh_personality"]
-extern "C" fn eh_personality() {}
 ////////////////////////////////////////////////
 pub struct Stat {
     pub inode_id: i64,
@@ -38,3 +34,22 @@ pub struct Stat {
     pub ctime: i64,
 }
 ////////////////////////////////////////////////
+#[panic_handler]
+fn panic(info: &PanicInfo) -> ! {
+    print!("owlOS Programmer API: Rust Runtime Panic!\n{:?}\n", info);
+    syscall::exit(255);
+}
+
+#[lang = "eh_personality"]
+#[doc(hidden)]
+extern "C" fn eh_personality() {}
+
+extern "Rust" {
+    fn main() -> u8;
+}
+
+#[no_mangle]
+#[doc(hidden)]
+extern "C" fn _start() -> ! {
+    syscall::exit(unsafe {main()});
+}

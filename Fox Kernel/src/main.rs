@@ -58,6 +58,7 @@ fn main(ramdisks: Vec<(String,&[u8])>) -> ! {
     }
     // Load /bin/init
     let mut proc = Process::Process::new(String::from("/bin/init"),-1);
+    proc.hart.store(CurrentHart(),core::sync::atomic::Ordering::SeqCst);
     let mut seg = proc.memory_segments.lock();
     match ELF::LoadELFFromPath(String::from("/bin/init"),Arc::get_mut(&mut proc.pagetable).unwrap(),seg.as_mut()) {
         Ok(entry) => {
@@ -71,6 +72,7 @@ fn main(ramdisks: Vec<(String,&[u8])>) -> ! {
     }
     crate::Framebuffer::Progress(3);
     if crate::CommandLine::FLAGS.get().unwrap().contains("--break") {panic!("Break");}
+    //unsafe {crate::Console::QUIET = true;}
     Scheduler::Scheduler::Start(CurrentHart())
 }
 

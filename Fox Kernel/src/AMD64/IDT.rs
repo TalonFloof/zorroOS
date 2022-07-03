@@ -6,7 +6,7 @@ use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
 use crate::arch::APIC;
 use crate::arch::Task::State;
 use crate::{CurrentHart, halt};
-use crate::Scheduler::{Scheduler, SCHEDULER_STARTED, SCHEDULERS};
+use crate::Scheduler::SCHEDULERS;
 use log::error;
 use spin::Mutex;
 
@@ -49,6 +49,7 @@ static ExceptionMessages: [&str; 32] = [
 
 pub static IRQ_HANDLERS: Mutex<[Option<fn()>; 0xE0]> = Mutex::new([None; 0xE0]);
 
+#[allow(deref_nullptr)]
 fn x86Fault(
     stack_frame: InterruptStackFrame,
     index: u8,
@@ -59,7 +60,9 @@ fn x86Fault(
         halt!();
         loop {};
     }
-    if stack_frame.code_segment == 0x23 && index != 0x08 {
+    if stack_frame.code_segment == 0x43 && index != 0x08 {
+        use crate::Memory::PageTable;
+        unsafe { crate::PageFrame::KernelPageTable.lock().Switch(); }
         let l = SCHEDULERS.lock();
         let pid = l.get(&(CurrentHart())).unwrap().current_proc_id.load(Ordering::SeqCst);
         drop(l);
@@ -174,7 +177,6 @@ macro_rules! set_irq_handler {
                     "push r15",
 
                     "mov rdi, rsp",
-                    concat!("mov rsi, ", $irq),
                     "cld",
                     "call x86Timer",
                     "nop",
@@ -204,8 +206,7 @@ extern "C" fn x86IRQ(
 
 #[no_mangle]
 extern "C" fn x86Timer(
-    cr: &mut State,
-    index: u64,
+    cr: &mut State
 ) -> ! {
     APIC::Write(APIC::LOCAL_APIC_EOI,0);
     crate::Scheduler::Scheduler::Tick(CurrentHart(), cr);

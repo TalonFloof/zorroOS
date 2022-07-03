@@ -243,6 +243,7 @@ impl Process {
                         drop(tqlock);
                     }
                     let mut pqlock = slock.get_mut(&smallest.0).unwrap().process_queue.lock();
+                    proc.hart.store(smallest.0,Ordering::SeqCst);
                     pqlock.push_front(pid);
                     drop(pqlock);
                 }
@@ -260,6 +261,7 @@ impl Process {
         sig_state.Save(&self.sig_state);
         let mut fds = BTreeMap::new();
         for (i,j) in self.fds.iter() {
+            j.inode.Open(usize::MAX);
             fds.insert(*i,j.clone());
         }
         Self {

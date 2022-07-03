@@ -7,4 +7,4 @@ edition = "2021"
 
 [dependencies]
 cstr_core = "*"
-linked_list_allocator = "*"
+spin = "*"

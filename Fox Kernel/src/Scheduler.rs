@@ -38,6 +38,13 @@ impl Scheduler {
                 let mut plock = PROCESSES.lock();
                 match plock.get_mut(&val) {
                     Some(proc) => {
+                        if proc.hart.load(Ordering::SeqCst) != CurrentHart() {
+                            drop(plock);
+                            drop(pqlock);
+                            log::error!("(hart 0x{:x}) Bad PID {} on queue", CurrentHart(), val);
+                            pqlock = self.process_queue.lock();
+                            continue;
+                        }
                         match proc.status {
                             ProcessStatus::RUNNABLE => {
                                 drop(pqlock);

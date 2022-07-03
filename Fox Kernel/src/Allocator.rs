@@ -5,27 +5,6 @@ use spin::Mutex;
 // This allocator is adapted from Philipp Oppermann's "Writing an OS in Rust"
 // https://os.phil-opp.com/allocator-designs/#linked-list-allocator
 
-/*#[global_allocator]
-static GLOBAL_ALLOCATOR: LockedHeapWithRescue<64> = LockedHeapWithRescue::<64>::new(|heap: &mut Heap<64>, layout: &Layout| {
-    let extend_size = if layout.size().next_power_of_two() <= 1048576 {1048576} else {layout.size().next_power_of_two()};
-    let heapspace = Allocate(extend_size as u64);
-    if heapspace.is_some() {
-        let old_size = heap.stats_total_bytes();
-        unsafe {heap.init(heapspace.unwrap() as usize,extend_size);}
-        assert!(old_size < heap.stats_total_bytes());
-        let result = heap.alloc(*layout);
-        if result.is_err() {
-            print!("Heap Allocation Test Failed!");
-            loop {};
-        } else {
-            print!("Success\n");
-        }
-        heap.dealloc(result.ok().unwrap(),*layout);
-    } else {
-        crate::oom(*layout);
-    }
-});*/
-
 pub struct Locked<A> {
     inner: spin::Mutex<A>,
 }

@@ -19,8 +19,8 @@ impl log::Log for KernelLogger {
     fn log(&self, record: &Record) {
         match record.level() {
             Level::Trace => {},
-            Level::Debug => crate::print!("{}:{} \x1b[2mdebug\x1b[0m {}\n", record.file().unwrap(), record.line().unwrap(), record.args()),
-            Level::Info => crate::print!("{}:{} \x1b[34minfo\x1b[0m {}\n", record.file().unwrap(), record.line().unwrap(), record.args()),
+            Level::Debug => crate::print!("{}:{} \x1b[37m\x1b[2mdebug\x1b[0m {}\n", record.file().unwrap(), record.line().unwrap(), record.args()),
+            Level::Info => crate::print!("{}:{} \x1b[1m\x1b[34minfo\x1b[0m {}\n", record.file().unwrap(), record.line().unwrap(), record.args()),
             Level::Warn => crate::print!("{}:{} \x1b[35mwarn\x1b[0m {}\n", record.file().unwrap(), record.line().unwrap(), record.args()),
             Level::Error => crate::print!("{}:{} \x1b[31merror\x1b[0m {}\n", record.file().unwrap(), record.line().unwrap(), record.args()),
         }

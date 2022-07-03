@@ -202,8 +202,26 @@ pub fn pipe() -> Result<(isize,isize),isize> {
     Err(result)
 }
 
-pub fn sbrk(expand: isize) -> isize {
-    Syscall(0x24,expand as usize,0,0)
+#[repr(C)]
+pub struct MmapStruct {
+    addr: usize,
+    size: usize,
+    prot: usize,
+    flags: usize,
+    fd: usize,
+    offset: isize,
+}
+
+pub fn mmap(addr: usize, size: usize, prot: usize, flags: usize, fd: isize, offset: isize) -> isize {
+    let args = MmapStruct {
+        addr,
+        size,
+        prot,
+        flags,
+        fd: fd as usize,
+        offset,
+    };
+    Syscall(0x24,&args as *const _ as usize,0,0)
 }
 
 pub fn foxkernel_powerctl(cmd: usize) -> isize {
