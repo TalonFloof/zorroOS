@@ -1,6 +1,6 @@
 #![allow(non_snake_case,unused_must_use,non_upper_case_globals,non_camel_case_types)]
 #![no_std]
-#![feature(lang_items,int_roundings,allow_internal_unstable,const_mut_refs)]
+#![feature(lang_items,int_roundings,allow_internal_unstable,const_mut_refs,start)]
 
 use core::panic::PanicInfo;
 
@@ -44,12 +44,17 @@ fn panic(info: &PanicInfo) -> ! {
 #[doc(hidden)]
 extern "C" fn eh_personality() {}
 
+pub trait ExitCode {
+    fn GetCode(&self) -> u8 {unimplemented!();}
+}
+
 extern "Rust" {
     fn main() -> u8;
 }
 
-#[no_mangle]
 #[doc(hidden)]
-extern "C" fn _start() -> ! {
+#[no_mangle]
+fn _start(_argc: isize, _argv: *const *const u8, _envp: *const *const u8) -> ! {
     syscall::exit(unsafe {main()});
 }
+

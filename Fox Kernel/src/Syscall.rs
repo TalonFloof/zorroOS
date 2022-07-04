@@ -1,4 +1,4 @@
-use crate::arch::{Memory::PageTableImpl,Task::State};
+use crate::arch::Task::State;
 use crate::Scheduler::Scheduler;
 use crate::CurrentHart;
 use crate::Process::{Process,TaskState};
@@ -7,8 +7,6 @@ use crate::FS::VFS;
 use alloc::string::String;
 use alloc::vec::Vec;
 use alloc::sync::Arc;
-use spin::Mutex;
-use crate::ELF::LoadELFFromPath;
 use crate::PageFrame::Allocate;
 
 pub mod Errors {
@@ -625,62 +623,12 @@ pub fn SystemCall(regs: &mut State) {
             drop(plock);
         }
         0x12 => { // execve
-            let mut plock = crate::Process::PROCESSES.lock();
-            let proc = plock.get_mut(&curproc).unwrap();
             let path = unsafe {CStr::from_ptr(regs.GetSC1() as *const c_char)}.to_str();
             if path.is_err() {
                 regs.SetSC0((-Errors::ENOENT as isize) as usize);
-                drop(plock);
                 return;
             }
-            // Parse ARGV
-            let argv_raw: *const *const c_char = regs.GetSC2() as *const *const c_char;
-            let mut argv: Vec<CString> = Vec::new();
-            let mut total_size = 0;
-            unsafe {
-                for i in 0..256 { // There is no reason for us to go beyond 255 arguments
-                    if argv_raw.offset(i).read() as usize == 0 {
-                        break;
-                    }
-                    let arg = CString::from_raw(argv_raw.offset(i).read() as *mut c_char).clone();
-                    total_size += arg.as_bytes_with_nul().len();
-                    argv.push(arg);
-                }
-            }
-            let argv_ptr_slice: &mut [usize] = unsafe {core::slice::from_raw_parts_mut(Allocate(0x1000).unwrap() as *mut usize,256)};
-            let argv_str_slice: &mut [u8] = unsafe {core::slice::from_raw_parts_mut(Allocate((total_size as u64).div_ceil(0x1000)*0x1000).unwrap() as *mut u8,total_size)};
-            let mut cur_pos = 0;
-            for (i,j) in argv.iter().enumerate() {
-                argv_str_slice[cur_pos..cur_pos+j.as_bytes_with_nul().len()].copy_from_slice(j.as_bytes_with_nul());
-                argv_ptr_slice[i] = 0x2000+cur_pos;
-                cur_pos += j.as_bytes_with_nul().len();
-            }
-            let mut pt = PageTableImpl::new();
-            let mut segments: Vec<(usize,usize,String,u8)> = Vec::new();
-            match LoadELFFromPath(crate::FS::VFS::GetAbsPath(path.ok().unwrap(),proc.cwd.as_str()),&mut pt,&mut segments) {
-                Ok(val) => {
-                    crate::Memory::MapPages(&mut pt,0x1000,argv_ptr_slice.as_ptr() as usize - crate::arch::PHYSMEM_BEGIN as usize,0x1000,false,false);
-                    crate::Memory::MapPages(&mut pt,0x2000,argv_str_slice.as_ptr() as usize - crate::arch::PHYSMEM_BEGIN as usize,argv_str_slice.len().div_ceil(0x1000)*0x1000,false,false);
-                    regs.Exit();
-                    proc.memory_segments = Arc::new(Mutex::new(segments));
-                    proc.pagetable = Arc::new(pt); // Old pagetable will be dropped if all references are gone
-                    proc.task_state.SetIP(val);
-                    proc.task_state.SetSP(0x800000000000);
-                    proc.task_state.SetSC0(0);
-                    proc.task_state.SetSC1(argv.len());
-                    proc.task_state.SetSC2(0x1000);
-                    proc.task_state.SetSC3(0);
-                    proc.fds.retain(|_,x| !x.close_on_exec);
-                    let state_ptr = &proc.task_state as *const State as usize;
-                    drop(plock);
-                    Scheduler::Tick(CurrentHart(),unsafe {&*(state_ptr as *const State)});
-                }
-                Err(e) => {
-                    regs.SetSC0(e as usize);
-                    drop(plock);
-                    return;
-                }
-            }
+            regs.SetSC0(crate::Process::Process::Exec(curproc,path.ok().unwrap(),None,None));
         }
         0x13 => { // pollpid
             let plock = crate::Process::PROCESSES.lock();
@@ -893,7 +841,24 @@ pub fn SystemCall(regs: &mut State) {
             regs.SetSC0(0);
             drop(plock);
         }
-        0x23 => { // pipe
+        0x23 => { // getcwd
+            let mut plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get_mut(&curproc).unwrap();
+            if proc.cwd.as_bytes().len() > regs.GetSC2() {
+                regs.SetSC0((-Errors::ENAMETOOLONG as isize) as usize);
+                drop(plock);
+                return;
+            }
+            if regs.GetSC2() == usize::MAX {
+                regs.SetSC0(proc.cwd.as_bytes().len());
+                drop(plock);
+                return;
+            }
+            unsafe {core::ptr::copy(proc.cwd.as_ptr(),regs.GetSC1() as *mut u8,proc.cwd.as_bytes().len());}
+            drop(plock);
+            regs.SetSC0(regs.GetSC1());
+        }
+        0x24 => { // pipe
             let mut plock = crate::Process::PROCESSES.lock();
             let proc = plock.get_mut(&curproc).unwrap();
             let pipes = crate::Drivers::Generic::UNIXPipe::Pipe::new();
@@ -923,7 +888,7 @@ pub fn SystemCall(regs: &mut State) {
             drop(proc);
             regs.SetSC0(0);
         }
-        0x24 => { // mmap
+        0x25 => { // mmap
             let mut plock = crate::Process::PROCESSES.lock();
             let proc = plock.get_mut(&curproc).unwrap();
             let args = unsafe {&*(regs.GetSC1() as *const MmapStruct)};
@@ -1040,7 +1005,7 @@ pub fn SystemCall(regs: &mut State) {
                 }
             }
         }
-        0x25 => { // munmap
+        0x26 => { // munmap
             let mut plock = crate::Process::PROCESSES.lock();
             let proc = plock.get_mut(&curproc).unwrap();
             let segs = proc.memory_segments.lock();
@@ -1064,9 +1029,10 @@ pub fn SystemCall(regs: &mut State) {
                 }
             }
         }
-        0x26 => { // msync
+        0x27 => { // msync
             
         }
+
         0xf0 => { // foxkernel_powerctl
             if curproc > 1 {
                 regs.SetSC0((-Errors::EACCES as isize) as usize);

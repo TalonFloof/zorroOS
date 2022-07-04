@@ -10,6 +10,7 @@ use alloc::string::String;
 use alloc::sync::Arc;
 use crate::FS::VFS::FileDescriptor;
 use alloc::vec::Vec;
+use alloc::boxed::Box;
 
 pub static PROCESSES: Mutex<BTreeMap<i32,Process>> = Mutex::new(BTreeMap::new());
 pub static NEXTPROCESS: AtomicI32 = AtomicI32::new(1);
@@ -296,5 +297,108 @@ impl Process {
 
             supgroups: self.supgroups.clone(),
         }
+    }
+    pub fn Exec(pid: i32, path: &str, argv: Option<&[Box<[u8]>]>, envp: Option<&[Box<[u8]>]>) -> usize {
+        use crate::Scheduler::Scheduler;
+        use crate::ELF::LoadELFFromPath;
+        let mut plock = PROCESSES.lock();
+        let proc = (&mut plock).get_mut(&pid).unwrap();
+        /*let argv_raw: *const *const c_char = regs.GetSC2() as *const *const c_char;
+        let envp_raw: *const *const c_char = regs.GetSC3() as *const *const c_char;
+        let mut argv: Vec<CString> = Vec::new();
+        let mut envp: Vec<CString> = Vec::new();
+        let mut total_size = 0;
+        unsafe {
+            for i in 0..256 { // There is no reason for us to go beyond 255 arguments
+                if argv_raw.offset(i).read() as usize == 0 {
+                    break;
+                }
+                let arg = CString::from_raw(argv_raw.offset(i).read() as *mut c_char).clone();
+                total_size += arg.as_bytes_with_nul().len();
+                argv.push(arg);
+            }
+            if regs.GetSC3() != 0 {
+                for i in 0..256 {
+                    if envp_raw.offset(i).read() as usize == 0 {
+                        break;
+                    }
+                    let arg = CString::from_raw(envp_raw.offset(i).read() as *mut c_char).clone();
+                    total_size += arg.as_bytes_with_nul().len();
+                    envp.push(arg);
+                }
+            }
+        }
+        let argv_ptr_slice: &mut [usize] = unsafe {core::slice::from_raw_parts_mut(Allocate(0x1000).unwrap() as *mut usize,256)};
+        let envp_ptr_slice: &mut [usize] = unsafe {core::slice::from_raw_parts_mut(Allocate(0x1000).unwrap() as *mut usize,256)};
+        let argv_str_slice: &mut [u8] = unsafe {core::slice::from_raw_parts_mut(Allocate((total_size as u64).div_ceil(0x1000)*0x1000).unwrap() as *mut u8,total_size)};
+        let mut cur_pos = 0;
+        for (i,j) in argv.iter().enumerate() {
+            argv_str_slice[cur_pos..cur_pos+j.as_bytes_with_nul().len()].copy_from_slice(j.as_bytes_with_nul());
+            argv_ptr_slice[i] = 0x3000+cur_pos;
+            cur_pos += j.as_bytes_with_nul().len();
+        }
+        for (i,j) in envp.iter().enumerate() {
+            argv_str_slice[cur_pos..cur_pos+j.as_bytes_with_nul().len()].copy_from_slice(j.as_bytes_with_nul());
+            envp_ptr_slice[i] = 0x3000+cur_pos;
+            cur_pos += j.as_bytes_with_nul().len();
+        }*/
+        let mut pt = PageTableImpl::new();
+        let mut segments: Vec<(usize,usize,String,u8)> = Vec::new();
+        match LoadELFFromPath(crate::FS::VFS::GetAbsPath(path,proc.cwd.as_str()),&mut pt,&mut segments) {
+            Ok(val) => {
+                /*crate::Memory::MapPages(&mut pt,0x1000,argv_ptr_slice.as_ptr() as usize - crate::arch::PHYSMEM_BEGIN as usize,0x1000,false,false);
+                crate::Memory::MapPages(&mut pt,0x2000,envp_ptr_slice.as_ptr() as usize - crate::arch::PHYSMEM_BEGIN as usize,0x1000,false,false);
+                crate::Memory::MapPages(&mut pt,0x3000,argv_str_slice.as_ptr() as usize - crate::arch::PHYSMEM_BEGIN as usize,argv_str_slice.len().div_ceil(0x1000)*0x1000,false,false);*/
+                proc.task_state.Exit();
+                proc.memory_segments = Arc::new(Mutex::new(segments));
+                proc.pagetable = Arc::new(pt); // Old pagetable will be dropped if all references are gone
+                unsafe {proc.pagetable.Switch();}
+                proc.task_state.SetIP(val);
+                unsafe {
+                    let mut ptr = crate::Stack::Stack::new(&mut *(0x800000000000 as *mut u64));
+                    ptr.Write::<u64>(0);
+                    ptr.Write::<u64>(0x2000);
+                    ptr.Write::<u64>(0);
+                    ptr.Write::<u64>(0x1000);
+                    ptr.Write::<u64>(if argv.is_some() {argv.unwrap().len() as u64} else {0});
+                    proc.task_state.SetSP(0x800000000000);
+                }
+                proc.fds.retain(|_,x| !x.close_on_exec);
+                let state_ptr = &proc.task_state as *const State as usize;
+                drop(plock);
+                drop(argv);
+                drop(envp);
+                Scheduler::Tick(CurrentHart(),unsafe {&*(state_ptr as *const State)});
+                unreachable!();
+            }
+            Err(e) => {
+                drop(argv);
+                drop(envp);
+                drop(plock);
+                return e as usize;
+            }
+        }
+    }
+}
+
+pub fn PageFault(pid: i32, location: usize) -> bool {
+    let mut lock = PROCESSES.lock();
+    let proc = lock.get_mut(&pid).unwrap();
+    if (0x7f8000000000..0x800000000000).contains(&(location)) { // Stack Allocation
+        if proc.pagetable.GetEntry((location.div_floor(0x1000) * 0x1000) as u64).is_none() {
+            log::debug!("Allocated Stack Page Frame via Page Fault.");
+            let mut page = Arc::get_mut(&mut proc.pagetable).unwrap().Map((location.div_floor(0x1000) * 0x1000) as u64,crate::PageFrame::Allocate(0x1000).unwrap() as u64-crate::arch::PHYSMEM_BEGIN);
+            page.SetUser(true);
+            page.SetWritable(true);
+            page.SetExecutable(false);
+            page.Update();
+            drop(lock);
+            return true;
+        }
+        drop(lock);
+        return false;
+    } else {
+        drop(lock);
+        return false;
     }
 }

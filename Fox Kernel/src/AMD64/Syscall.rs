@@ -19,7 +19,8 @@ unsafe extern "C" fn __syscall() {
     "push r11",
     "push qword ptr 0x18",
     "push rcx",
-    "",
+
+    "push 0",
     "push rax",
     "push rbx",
     "push rcx",
@@ -35,7 +36,7 @@ unsafe extern "C" fn __syscall() {
     "push r13",
     "push r14",
     "push r15",
-    "",
+
     "mov rdi, rsp",
     "mov rbp, 0",
     "swapgs",
@@ -56,7 +57,8 @@ unsafe extern "C" fn __syscall() {
     "pop rcx",
     "pop rbx",
     "pop rax",
-    "",
+    "add rsp, 8",
+    
     "mov rsp, gs:[0x8]",
     "swapgs",
     "sysretq",

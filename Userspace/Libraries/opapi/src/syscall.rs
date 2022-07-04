@@ -1,6 +1,8 @@
 use crate::arch::Syscall;
 use cstr_core::{CStr,CString};
 use crate::Stat;
+use alloc::string::String;
+use alloc::vec;
 
 pub fn sched_yield() {
     Syscall(0x00,0,0,0);
@@ -193,9 +195,20 @@ pub fn chdir(path: &str) -> isize {
     ret
 }
 
+pub fn getcwd() -> Result<String,isize> {
+    let size = Syscall(0x23,0,usize::MAX,0) as usize;
+    let mut path = String::from_utf8(vec![0; size]).ok().unwrap();
+    let ret = Syscall(0x23,path.as_mut_ptr() as usize,size,0);
+    if ret.is_negative() {
+        return Err(ret);
+    } else {
+        return Ok(path);
+    }
+}
+
 pub fn pipe() -> Result<(isize,isize),isize> {
     let mut array = [0isize; 2];
-    let result = Syscall(0x23,array.as_mut_ptr() as usize,0,0);
+    let result = Syscall(0x24,array.as_mut_ptr() as usize,0,0);
     if result == 0 {
         return Ok((array[0],array[1]));
     }
@@ -221,7 +234,7 @@ pub fn mmap(addr: usize, size: usize, prot: usize, flags: usize, fd: isize, offs
         fd: fd as usize,
         offset,
     };
-    Syscall(0x24,&args as *const _ as usize,0,0)
+    Syscall(0x25,&args as *const _ as usize,0,0)
 }
 
 pub fn foxkernel_powerctl(cmd: usize) -> isize {

@@ -25,6 +25,7 @@ pub mod FS;
 pub mod Drivers;
 pub mod CommandLine;
 pub mod ELF;
+pub mod Stack;
 
 use core::panic::PanicInfo;
 use core::alloc::Layout;
@@ -64,7 +65,7 @@ fn main(ramdisks: Vec<(String,&[u8])>) -> ! {
         Ok(entry) => {
             drop(seg);
             let pid = Process::Process::AddProcess(proc);
-            Process::Process::StartProcess(pid,entry,0x800000000000);
+            Process::Process::StartProcess(pid,entry,0x800000000000-(8*5));
         }
         Err(_) => {
             panic!("No command");
@@ -73,6 +74,7 @@ fn main(ramdisks: Vec<(String,&[u8])>) -> ! {
     crate::Framebuffer::Progress(3);
     if crate::CommandLine::FLAGS.get().unwrap().contains("--break") {panic!("Break");}
     //unsafe {crate::Console::QUIET = true;}
+    crate::arch::Timer::Sleep(500);
     Scheduler::Scheduler::Start(CurrentHart())
 }
 

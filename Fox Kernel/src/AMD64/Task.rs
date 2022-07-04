@@ -5,6 +5,7 @@ use crate::Memory::PageTable;
 use crate::Process::{TaskState,TaskFloatState};
 
 #[repr(C, align(8))]
+#[derive(Debug)]
 pub struct State {
     pub r15: u64,
     pub r14: u64,
@@ -21,6 +22,7 @@ pub struct State {
     pub rcx: u64,
     pub rbx: u64,
     pub rax: u64, // syscall0
+    pub err_code: u64,
     pub rip: u64, // ip
     pub cs: u64,
     pub rflags: u64, // flags
@@ -36,6 +38,7 @@ impl State {
             rflags: 0x200,
             rsp: if idle_task {unsafe {HARTS[CurrentHart() as usize].as_ref().unwrap().tss.privilege_stack_table[0].as_u64()}} else {0},
             ss: if idle_task {0x30} else {0x3B},
+            err_code: 0,
             rax: 0,
             rbx: 0,
             rcx: 0,
@@ -76,6 +79,7 @@ impl State {
             "pop rcx",
             "pop rbx",
             "pop rax",
+            "add rsp, 8",
             "iretq",
             options(noreturn)
             );

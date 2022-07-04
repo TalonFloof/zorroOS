@@ -1,8 +1,8 @@
 use core::arch::asm;
 use core::sync::atomic::Ordering;
-use x86_64::{PrivilegeLevel, set_general_handler, VirtAddr};
+use x86_64::{PrivilegeLevel, VirtAddr};
 use x86_64::instructions::port::PortWrite;
-use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
+use x86_64::structures::idt::InterruptDescriptorTable;
 use crate::arch::APIC;
 use crate::arch::Task::State;
 use crate::{CurrentHart, halt};
@@ -49,38 +49,44 @@ static ExceptionMessages: [&str; 32] = [
 
 pub static IRQ_HANDLERS: Mutex<[Option<fn()>; 0xE0]> = Mutex::new([None; 0xE0]);
 
-#[allow(deref_nullptr)]
-fn x86Fault(
-    stack_frame: InterruptStackFrame,
-    index: u8,
-    err_code: Option<u64>
+#[no_mangle]
+extern "C" fn x86Fault(
+    index: u64,
+    regs: &State,
 ) {
-    x86_64::instructions::interrupts::disable();
     if index == 0x02 {
         halt!();
         loop {};
     }
-    if stack_frame.code_segment == 0x43 && index != 0x08 {
+    let cr2 = x86_64::registers::control::Cr2::read().as_u64();
+    if index == 0x0e {
+        if (0x7f8000000000..0x800000000000).contains(&cr2) {
+            let l = SCHEDULERS.lock();
+            let pid = l.get(&(CurrentHart())).unwrap().current_proc_id.load(Ordering::SeqCst);
+            drop(l);
+            if crate::Process::PageFault(pid,cr2 as usize) {
+                return;
+            }
+        }
+    }
+    if regs.cs == 0x43 && index != 0x08 {
         use crate::Memory::PageTable;
         unsafe { crate::PageFrame::KernelPageTable.lock().Switch(); }
         let l = SCHEDULERS.lock();
         let pid = l.get(&(CurrentHart())).unwrap().current_proc_id.load(Ordering::SeqCst);
         drop(l);
         error!("(hart 0x{}) Process #{} Exception {}", CurrentHart(), pid, ExceptionMessages[index as usize]);
-        error!("{:?}", stack_frame);
-        if let None = err_code {} else {
-            error!("AMD64_ERR_CODE=0x{:x}", err_code.unwrap());
-        }
+        error!("{:?}", regs);
         if index == 0x0e {
-            error!("CR2=0x{:016x}", x86_64::registers::control::Cr2::read().as_u64());
+            error!("CR2=0x{:016x}", cr2);
         }
         crate::Process::Process::SendSignal(pid,crate::Process::Signals::SIGSEGV);
-        crate::Scheduler::Scheduler::Tick(CurrentHart(),unsafe {&*(core::ptr::null() as *const State)});
+        crate::Scheduler::Scheduler::Tick(CurrentHart(),regs);
     } else {
         if index != 14 && unsafe {crate::Console::QUIET} {
             // Page Dump
-            let ptr = stack_frame.instruction_pointer.as_u64() & (!0xFFF);
-            let location = stack_frame.instruction_pointer.as_u64() & 0xFFF;
+            let ptr = regs.rip & (!0xFFF);
+            let location = regs.rip & 0xFFF;
             let mut lock = crate::Framebuffer::MainFramebuffer.lock();
             let width = (*lock).as_ref().unwrap().width;
             let height = (*lock).as_ref().unwrap().height;
@@ -99,14 +105,10 @@ fn x86Fault(
             }
             drop(lock);
         }
-        if let None = err_code {
-            panic!("Unhandled AMD64 Fault: {}\n{:?}", ExceptionMessages[index as usize], stack_frame);
+        if index == 0xE {
+            panic!("Unhandled AMD64 Fault: {}\nCR2=0x{:016x}\n{:?}", ExceptionMessages[index as usize], x86_64::registers::control::Cr2::read().as_u64(), regs);
         } else {
-            if index == 0xE {
-                panic!("Unhandled AMD64 Fault: {} AMD64_ERR_CODE=0x{:x}\nCR2=0x{:016x}\n{:?}", ExceptionMessages[index as usize], err_code.unwrap(), x86_64::registers::control::Cr2::read().as_u64(), stack_frame);
-            } else {
-                panic!("Unhandled AMD64 Fault: {} AMD64_ERR_CODE=0x{:x}\n{:?}", ExceptionMessages[index as usize], err_code.unwrap(), stack_frame);
-            }
+             panic!("Unhandled AMD64 Fault: {}\n{:?}", ExceptionMessages[index as usize], regs);
         }
     }
 }
@@ -153,12 +155,165 @@ macro_rules! set_irq_handler {
             opt.set_privilege_level($priv);
         }
     }};
+    (exception_errcode $irq:expr, $priv:expr) => {{
+        #[naked]
+        extern "C" fn wrapper() {
+            unsafe {
+                asm!(
+                    "cli",
+
+                    "push rax",
+                    "push rbx",
+                    "push rcx",
+                    "push rdx",
+                    "push rsi",
+                    "push rdi",
+                    "push rbp",
+                    "push r8",
+                    "push r9",
+                    "push r10",
+                    "push r11",
+                    "push r12",
+                    "push r13",
+                    "push r14",
+                    "push r15",
+
+                    concat!("mov rdi, ", $irq),
+                    "mov rsi, rsp",
+                    "cld",
+                    "call x86Fault",
+                    "add rsp, 8",
+
+                    "pop r15",
+                    "pop r14",
+                    "pop r13",
+                    "pop r12",
+                    "pop r11",
+                    "pop r10",
+                    "pop r9",
+                    "pop r8",
+                    "pop rbp",
+                    "pop rdi",
+                    "pop rsi",
+                    "pop rdx",
+                    "pop rcx",
+                    "pop rbx",
+                    "pop rax",
+
+                    "iretq",
+                    options(noreturn)
+                );
+            }
+        }
+        unsafe {
+            let opt;
+            match $irq {
+                0x08 => {
+                    opt = kidt.double_fault.set_handler_addr(VirtAddr::new(wrapper as u64));
+                }
+                0x0a => {
+                    opt = kidt.invalid_tss.set_handler_addr(VirtAddr::new(wrapper as u64));
+                }
+                0x0b => {
+                    opt = kidt.segment_not_present.set_handler_addr(VirtAddr::new(wrapper as u64));
+                }
+                0x0c => {
+                    opt = kidt.stack_segment_fault.set_handler_addr(VirtAddr::new(wrapper as u64));
+                }
+                0x0d => {
+                    opt = kidt.general_protection_fault.set_handler_addr(VirtAddr::new(wrapper as u64));
+                }
+                0x0e => {
+                    opt = kidt.page_fault.set_handler_addr(VirtAddr::new(wrapper as u64));
+                }
+                0x11 => {
+                    opt = kidt.alignment_check.set_handler_addr(VirtAddr::new(wrapper as u64));
+                }
+                0x1d => {
+                    opt = kidt.vmm_communication_exception.set_handler_addr(VirtAddr::new(wrapper as u64));
+                }
+                0x1e => {
+                    opt = kidt.security_exception.set_handler_addr(VirtAddr::new(wrapper as u64));
+                }
+                _ => {
+                    opt = kidt[$irq as usize].set_handler_addr(VirtAddr::new(wrapper as u64));
+                }
+            }
+            opt.set_privilege_level($priv);
+        }
+    }};
+    (exception_noerrcode $irq:expr, $priv:expr) => {{
+        #[naked]
+        extern "C" fn wrapper() {
+            unsafe {
+                asm!(
+                    "cli",
+                    "cld",
+                    "push 0",
+
+                    "push rax",
+                    "push rbx",
+                    "push rcx",
+                    "push rdx",
+                    "push rsi",
+                    "push rdi",
+                    "push rbp",
+                    "push r8",
+                    "push r9",
+                    "push r10",
+                    "push r11",
+                    "push r12",
+                    "push r13",
+                    "push r14",
+                    "push r15",
+
+                    concat!("mov rdi, ", $irq),
+                    "mov rsi, rsp",
+                    "cld",
+                    "call x86Fault",
+                    "add rsp, 8",
+
+                    "pop r15",
+                    "pop r14",
+                    "pop r13",
+                    "pop r12",
+                    "pop r11",
+                    "pop r10",
+                    "pop r9",
+                    "pop r8",
+                    "pop rbp",
+                    "pop rdi",
+                    "pop rsi",
+                    "pop rdx",
+                    "pop rcx",
+                    "pop rbx",
+                    "pop rax",
+
+                    "iretq",
+                    options(noreturn)
+                );
+            }
+        }
+        unsafe {
+            let opt;
+            match $irq {
+                0x12 => {
+                    opt = kidt.machine_check.set_handler_addr(VirtAddr::new(wrapper as u64));
+                }
+                _ => {
+                    opt = kidt[$irq as usize].set_handler_addr(VirtAddr::new(wrapper as u64));
+                }
+            }
+            opt.set_privilege_level($priv);
+        }
+    }};
     (thread_save $irq:expr, $priv:expr) => {{
         #[naked]
         extern "C" fn wrapper() {
             unsafe {
                 asm!(
                     "cli",
+                    "push 0",
 
                     "push rax",
                     "push rbx",
@@ -214,14 +369,36 @@ extern "C" fn x86Timer(
 }
 
 pub unsafe fn Setup() {
-    IDTSetup(&mut kidt);
+    IDTSetup();
     kidt.load();
     u8::write_to_port(0x29,0xff);
     u8::write_to_port(0x21,0xff);
 }
 #[doc(hidden)]
-fn IDTSetup(inttab: &mut InterruptDescriptorTable) {
-    set_general_handler!(inttab, x86Fault, 0x00..0x1f);
+fn IDTSetup() {
+    set_irq_handler!(exception_noerrcode 0x00,PrivilegeLevel::Ring0);
+    set_irq_handler!(exception_noerrcode 0x01,PrivilegeLevel::Ring0);
+    set_irq_handler!(exception_noerrcode 0x02,PrivilegeLevel::Ring0);
+    set_irq_handler!(exception_noerrcode 0x03,PrivilegeLevel::Ring0);
+    set_irq_handler!(exception_noerrcode 0x04,PrivilegeLevel::Ring0);
+    set_irq_handler!(exception_noerrcode 0x05,PrivilegeLevel::Ring0);
+    set_irq_handler!(exception_noerrcode 0x06,PrivilegeLevel::Ring0);
+    set_irq_handler!(exception_noerrcode 0x07,PrivilegeLevel::Ring0);
+    set_irq_handler!(exception_errcode 0x08,PrivilegeLevel::Ring0);
+    set_irq_handler!(exception_errcode 0x0a,PrivilegeLevel::Ring0);
+    set_irq_handler!(exception_errcode 0x0b,PrivilegeLevel::Ring0);
+    set_irq_handler!(exception_errcode 0x0c,PrivilegeLevel::Ring0);
+    set_irq_handler!(exception_errcode 0x0d,PrivilegeLevel::Ring0);
+    set_irq_handler!(exception_errcode 0x0e,PrivilegeLevel::Ring0);
+
+    set_irq_handler!(exception_noerrcode 0x10,PrivilegeLevel::Ring0);
+    set_irq_handler!(exception_errcode 0x11,PrivilegeLevel::Ring0);
+    set_irq_handler!(exception_noerrcode 0x12,PrivilegeLevel::Ring0);
+    set_irq_handler!(exception_noerrcode 0x13,PrivilegeLevel::Ring0);
+    set_irq_handler!(exception_noerrcode 0x14,PrivilegeLevel::Ring0);
+    set_irq_handler!(exception_errcode 0x1d,PrivilegeLevel::Ring0);
+    set_irq_handler!(exception_errcode 0x1e,PrivilegeLevel::Ring0);
+
     set_irq_handler!(thread_save 0x20,PrivilegeLevel::Ring0);
     set_irq_handler!(0x21,PrivilegeLevel::Ring0);
     set_irq_handler!(0x22,PrivilegeLevel::Ring0);

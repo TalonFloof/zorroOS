@@ -41,7 +41,7 @@ macro_rules! halt_other_harts {
 		use crate::Memory::PageTable;
 		x86_64::instructions::interrupts::disable();
 		unsafe {crate::Console::WRITER.force_unlock();}
-		unsafe { crate::PageFrame::KernelPageTable.lock().Switch(); }
+		if crate::PageFrame::TotalMem.load(core::sync::atomic::Ordering::SeqCst) > 0 { unsafe { crate::PageFrame::KernelPageTable.lock().Switch(); } }
 		if let Some(flags) = crate::CommandLine::FLAGS.get() {
 			if matches!(flags.get("--nosmp"),None) {
 				if crate::arch::APIC::LAPIC_READY.load(core::sync::atomic::Ordering::SeqCst) {

@@ -28,8 +28,7 @@ fn LoadELF(path: &str, data: &[u8], pt: &mut PageTableImpl, seg: &mut Vec<(usize
                     return Err(());
                 }
             }
-            seg.push((0x7FFFFFFFC000,0x4000,String::from("[stack]"),3));
-            crate::Memory::MapPages(pt,0x7FFFFFFFC000,Allocate(0x4000).unwrap() as usize - crate::arch::PHYSMEM_BEGIN as usize,0x4000,true,false);
+            seg.push((0x7f8000000000,0x8000000000,String::from("[stack]"),3));
             seg.sort_by(|a,b| a.0.partial_cmp(&b.0).unwrap());
             return Ok(elf.header.pt2.entry_point() as usize);
         }
