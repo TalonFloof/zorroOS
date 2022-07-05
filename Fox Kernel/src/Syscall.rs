@@ -1008,7 +1008,7 @@ pub fn SystemCall(regs: &mut State) {
         0x26 => { // munmap
             let mut plock = crate::Process::PROCESSES.lock();
             let proc = plock.get_mut(&curproc).unwrap();
-            let segs = proc.memory_segments.lock();
+            let mut segs = proc.memory_segments.lock();
             let addr = regs.GetSC1();
             let length = regs.GetSC2().div_ceil(0x1000)*0x1000;
             let mut conflicts = Vec::new();
@@ -1021,18 +1021,32 @@ pub fn SystemCall(regs: &mut State) {
             conflicts.sort_by(|a,b| a.1.0.partial_cmp(&b.1.0).unwrap());
             for segment in conflicts.iter() {
                 if addr == segment.1.0 && length == segment.1.1 { // Complete Delete
-                    //segment
+                    segs.remove(segment.0);
                 } else if addr <= segment.1.0 { // Partial Left Delete
-
+                    segs.get_mut(segment.0).unwrap().0 = addr + length;
+                    segs.get_mut(segment.0).unwrap().1 = segment.1.0 + segment.1.1 - (addr+length);
                 } else if segment.1.0 <= addr+length { // Partial Right Delete
-
+                    segs.get_mut(segment.0).unwrap().1 -= segment.1.0 + segment.1.1 - addr;
+                } else if segment.1.0 < addr && addr + length - segment.1.0 <= segment.1.1 { // Split Delete
+                    let right_segment: (usize, usize, String, u8) = (addr + length,segment.1.0 + segment.1.1 - (addr + length),segment.1.2.clone(),segment.1.3);
+                    segs.get_mut(segment.0).unwrap().1 = addr - segment.1.0;
+                    segs.insert(segment.0+1,right_segment);
+                } else {
+                    panic!("Invalid Segment Conflict");
                 }
             }
+            drop(conflicts);
+            crate::Memory::UnmapPages(Arc::get_mut(&mut proc.pagetable).unwrap(),addr,length);
+            drop(segs);
+            drop(plock);
+            regs.SetSC0(0);
         }
-        0x27 => { // msync
-            
-        }
+        0x27 => { // futex_wait
 
+        }
+        0x28 => { // futex_wake
+
+        }
         0xf0 => { // foxkernel_powerctl
             if curproc > 1 {
                 regs.SetSC0((-Errors::EACCES as isize) as usize);
