@@ -12,7 +12,7 @@ PHDRS
 }
 
 SECTIONS {
-    . = 0x400000;
+    . = 0x1000;
     .text : ALIGN(4096) {
         *(.text .text.*)
     } : text
@@ -27,5 +27,4 @@ SECTIONS {
         *(.bss .bss.*)
     } : bss
     . = ALIGN(4096);
-    __heapbase = .;
 }

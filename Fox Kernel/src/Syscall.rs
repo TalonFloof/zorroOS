@@ -966,7 +966,7 @@ pub fn SystemCall(regs: &mut State) {
                     regs.SetSC0((-Errors::ENOMEM as isize) as usize);
                     return;
                 }
-                segs.insert(space.1,(space.0,args.size.div_ceil(0x1000)*0x1000,String::from(""),args.prot as u8));
+                segs.insert(space.1,(space.0,args.size.div_ceil(0x1000)*0x1000,String::from(""),args.prot as u8,0,0));
                 regs.SetSC0(space.0);
                 drop(segs);
                 drop(plock);
@@ -982,7 +982,7 @@ pub fn SystemCall(regs: &mut State) {
                                     regs.SetSC0((-Errors::ENOMEM as isize) as usize);
                                     return;
                                 }
-                                segs.insert(space.1,(space.0,args.size.div_ceil(0x1000)*0x1000,fd.path.clone(),args.prot as u8));
+                                segs.insert(space.1,(space.0,args.size.div_ceil(0x1000)*0x1000,fd.path.clone(),args.prot as u8,fd.inode.Stat().ok().unwrap().inode_id,args.offset as usize));
                                 regs.SetSC0(space.0);
                                 drop(segs);
                                 drop(plock);
@@ -1028,7 +1028,7 @@ pub fn SystemCall(regs: &mut State) {
                 } else if segment.1.0 <= addr+length { // Partial Right Delete
                     segs.get_mut(segment.0).unwrap().1 -= segment.1.0 + segment.1.1 - addr;
                 } else if segment.1.0 < addr && addr + length - segment.1.0 <= segment.1.1 { // Split Delete
-                    let right_segment: (usize, usize, String, u8) = (addr + length,segment.1.0 + segment.1.1 - (addr + length),segment.1.2.clone(),segment.1.3);
+                    let right_segment: (usize,usize,String,u8,i64,usize) = (addr + length,segment.1.0 + segment.1.1 - (addr + length),segment.1.2.clone(),segment.1.3,segment.1.4,segment.1.5);
                     segs.get_mut(segment.0).unwrap().1 = addr - segment.1.0;
                     segs.insert(segment.0+1,right_segment);
                 } else {

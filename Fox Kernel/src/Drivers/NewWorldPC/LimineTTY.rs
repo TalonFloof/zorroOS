@@ -2,6 +2,7 @@ use crate::FS::VFS;
 use crate::FS::DevFS;
 use alloc::sync::Arc;
 use spin::Once;
+use alloc::vec::Vec;
 use limine::*;
 use crate::Memory::PageTable;
 
@@ -52,13 +53,14 @@ impl VFS::Inode for LimineTTY {
         0
     }
     fn Write(&self, _offset: i64, buffer: &[u8]) -> i64 {
-        let stri = alloc::string::String::from(alloc::string::String::from_utf8_lossy(buffer));
+        let stri = Vec::from(buffer);
         let old_pt = x86_64::registers::control::Cr3::read();
         unsafe { crate::PageFrame::KernelPageTable.lock().Switch(); }
-        let writer = self.1.unwrap().write().unwrap();
-        let terminal = self.1.unwrap().terminals().unwrap().first().unwrap();
-        writer(&terminal,stri.as_str());
+        let func = unsafe {*((self.1.unwrap() as *const _ as *const u64).offset(3) as *const extern "C" fn(terminal: *const LimineTerminal, addr: *const u8, len: u64))};
+        let term = self.1.unwrap().terminals.get().unwrap().as_ptr().unwrap();
+        func(term, stri.as_ptr(), buffer.len() as u64);
         unsafe {x86_64::registers::control::Cr3::write(old_pt.0,old_pt.1);}
+        drop(stri);
         return buffer.len() as i64;
     }
     fn IOCtl(&self, cmd: usize, _arg: usize) -> Result<usize, i64> {

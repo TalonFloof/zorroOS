@@ -44,7 +44,7 @@ fn SetRange(Start: u64, End: u64) {
     for i in page_start..page_end {
         SetBit(ptr,i);
     }
-    if page_start == NextPage.load(Ordering::SeqCst) {
+    if page_start <= NextPage.load(Ordering::SeqCst) {
         NextPage.store(page_end,Ordering::SeqCst);
     }
 }
@@ -56,9 +56,7 @@ fn FreeRange(Start: u64, End: u64) {
     for i in page_start..page_end {
         ClearBit(ptr,i);
     }
-    if page_start < NextPage.load(Ordering::SeqCst) {
-        NextPage.store(page_start,Ordering::SeqCst);
-    }
+    NextPage.store(page_start,Ordering::SeqCst);
 }
 
 #[inline(always)]
@@ -121,7 +119,7 @@ pub fn Free(Addr: *mut u8, Size: u64) {
 }
 
 pub fn Setup(mem: [HeapRange; 64]) {
-    let mut max_mem: u64 = 0;
+    let mut max_mem: u64 = 0x1_0000_0000;
     for i in mem.iter() {
         if (i.base + i.length) > max_mem {
             max_mem = i.base + i.length;
@@ -146,6 +144,7 @@ pub fn Setup(mem: [HeapRange; 64]) {
             TotalMem.fetch_add(i.length,Ordering::SeqCst);
         }
     }
+    NextPage.store(0,Ordering::SeqCst);
     let bitmap = Bitmap.load(Ordering::Relaxed);
     assert_ne!(bitmap, 0);
     SetRange(bitmap-PHYSMEM_BEGIN,(bitmap-PHYSMEM_BEGIN)+(bm_pages*0x1000));

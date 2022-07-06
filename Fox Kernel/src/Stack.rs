@@ -14,6 +14,9 @@ impl<'a> Stack<'a> {
     pub fn GetTop(&self) -> u64 {
         *self.pointer
     }
+    pub fn Align(&mut self) {
+        *self.pointer = *self.pointer & !15;
+    }
     pub fn OffsetPtr<T: Sized>(&mut self) -> &mut T {
         self.Skip(size_of::<T>() as u64);
         return unsafe {&mut *(*self.pointer as *mut T)};

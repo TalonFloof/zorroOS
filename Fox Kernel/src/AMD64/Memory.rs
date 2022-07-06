@@ -65,8 +65,8 @@ pub fn AnalyzeMMAP() {
             LimineMemoryMapEntryType::AcpiReclaimable => "ACPI Table Data (Reclaimable)",
             LimineMemoryMapEntryType::AcpiNvs => "ACPI Non-volatile Storage",
             LimineMemoryMapEntryType::BadMemory => "Damaged/Bad Memory",
-            LimineMemoryMapEntryType::BootloaderReclaimable => "Usable (Bootloader Data)",
-            LimineMemoryMapEntryType::KernelAndModules => "Fox Kernel/InitRD",
+            LimineMemoryMapEntryType::BootloaderReclaimable => "Bootloader Data (Reclaimable)",
+            LimineMemoryMapEntryType::KernelAndModules => "Fox Kernel/Modules",
             LimineMemoryMapEntryType::Framebuffer => "GPU Framebuffer",
         };
         debug!("[mem 0x{:016x}-0x{:016x}] {}", base, end, entry_type);
@@ -135,9 +135,7 @@ impl Drop for PageTableImpl {
                                         let pagetable = ((*pagedirectory).index(i).addr().as_u64()+PHYSMEM_BEGIN) as *mut HWPageTable;
                                         for k in 0..512 {
                                             if (*pagetable).index(k).flags().contains(PageTableFlags::PRESENT) {
-                                                if (*pagetable).index(k).addr().as_u64() >= PHYSMEM_BEGIN {
-                                                    Free(((*pagetable).index(k).addr().as_u64()+PHYSMEM_BEGIN) as *mut u8, 0x1000);
-                                                }
+                                                Free(((*pagetable).index(k).addr().as_u64()+PHYSMEM_BEGIN) as *mut u8, 0x1000);
                                             }
                                         }
                                         Free(pagetable as *mut u8, 0x1000);

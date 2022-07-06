@@ -80,6 +80,7 @@ extern "C" fn x86Fault(
         if index == 0x0e {
             error!("CR2=0x{:016x}", cr2);
         }
+        crate::Process::DumpPageMaps(pid);
         crate::Process::Process::SendSignal(pid,crate::Process::Signals::SIGSEGV);
         crate::Scheduler::Scheduler::Tick(CurrentHart(),regs);
     } else {

@@ -68,9 +68,9 @@ impl Scheduler {
                             }
                             ProcessStatus::FORCEKILL(false) => {
                                 if proc.children.len() > 0 {
-                                proc.status = ProcessStatus::FORCEKILL(true);
-                                let children: Vec<i32> = proc.children.clone();
-                                drop(plock);
+                                    proc.status = ProcessStatus::FORCEKILL(true);
+                                    let children: Vec<i32> = proc.children.clone();
+                                    drop(plock);
                                     let mut plock = PROCESSES.lock();
                                     for i in children.iter() {
                                         if let Some(child) = plock.get_mut(&i) {
