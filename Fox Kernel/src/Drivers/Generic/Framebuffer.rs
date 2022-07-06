@@ -27,6 +27,7 @@ impl DevFS::Device for Framebuffer {
 impl VFS::Inode for Framebuffer {
     fn Stat(&self) -> Result<VFS::Metadata, i64> {
         Ok(VFS::Metadata {
+            device_id: 0,
             inode_id: i64::MAX,
             mode: 0o0020666, // crw-rw-rw-
             nlinks: 1,
@@ -40,6 +41,9 @@ impl VFS::Inode for Framebuffer {
             atime: unsafe {crate::UNIX_EPOCH as i64},
             mtime: unsafe {crate::UNIX_EPOCH as i64},
             ctime: unsafe {crate::UNIX_EPOCH as i64},
+            reserved1: 0,
+            reserved2: 0,
+            reserved3: 0,
         })
     }
     fn GetName(&self) -> Result<&str, i64> {

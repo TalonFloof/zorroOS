@@ -20,6 +20,7 @@ pub struct DevRootInode {}
 impl VFS::Inode for DevRootInode {
     fn Stat(&self) -> Result<VFS::Metadata, i64> {
         Ok(VFS::Metadata {
+            device_id: 0,
             inode_id: i64::MAX,
             mode: 0o0040555, // dr-xr-xr-x
             nlinks: 1,
@@ -33,6 +34,9 @@ impl VFS::Inode for DevRootInode {
             atime: unsafe {crate::UNIX_EPOCH as i64},
             mtime: unsafe {crate::UNIX_EPOCH as i64},
             ctime: unsafe {crate::UNIX_EPOCH as i64},
+            reserved1: 0,
+            reserved2: 0,
+            reserved3: 0,
         })
     }
 

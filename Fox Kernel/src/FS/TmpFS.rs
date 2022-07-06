@@ -45,6 +45,7 @@ impl VFS::Inode for TMPInode {
     fn Stat(&self) -> Result<VFS::Metadata, i64> {
         let length = self.content.lock().len() as i64;
         Ok(VFS::Metadata {
+            device_id: 0,
             inode_id: self.id,
             mode: self.mode.load(Ordering::SeqCst),
             nlinks: 1,
@@ -58,6 +59,9 @@ impl VFS::Inode for TMPInode {
             atime: self.mtime.load(Ordering::SeqCst),
             mtime: self.mtime.load(Ordering::SeqCst),
             ctime: self.ctime.load(Ordering::SeqCst),
+            reserved1: 0,
+            reserved2: 0,
+            reserved3: 0,
         })
     }
 

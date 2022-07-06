@@ -24,6 +24,7 @@ impl DevFS::Device for PtsDir {
 impl VFS::Inode for PtsDir {
     fn Stat(&self) -> Result<VFS::Metadata, i64> {
         Ok(VFS::Metadata {
+            device_id: 0,
             inode_id: i64::MAX,
             mode: 0o0040555, // dr-xr-xr-x
             nlinks: 1,
@@ -37,6 +38,9 @@ impl VFS::Inode for PtsDir {
             atime: unsafe {crate::UNIX_EPOCH as i64},
             mtime: unsafe {crate::UNIX_EPOCH as i64},
             ctime: unsafe {crate::UNIX_EPOCH as i64},
+            reserved1: 0,
+            reserved2: 0,
+            reserved3: 0,
         })
     }
 
@@ -113,6 +117,7 @@ pub struct PTClient {
 impl VFS::Inode for PTClient {
     fn Stat(&self) -> Result<VFS::Metadata, i64> {
         Ok(VFS::Metadata {
+            device_id: 0,
             inode_id: i64::MAX,
             mode: 0o0020666, // crw-rw-rw-
             nlinks: 1,
@@ -126,6 +131,9 @@ impl VFS::Inode for PTClient {
             atime: unsafe {crate::UNIX_EPOCH as i64},
             mtime: unsafe {crate::UNIX_EPOCH as i64},
             ctime: unsafe {crate::UNIX_EPOCH as i64},
+            reserved1: 0,
+            reserved2: 0,
+            reserved3: 0,
         })
     }
     fn GetName(&self) -> Result<&str, i64> {
@@ -210,6 +218,7 @@ impl Drop for Ptmx {
 impl VFS::Inode for Ptmx {
     fn Stat(&self) -> Result<VFS::Metadata, i64> {
         Ok(VFS::Metadata {
+            device_id: 0,
             inode_id: i64::MAX,
             mode: 0o0020666, // crw-rw-rw-
             nlinks: 1,
@@ -223,6 +232,9 @@ impl VFS::Inode for Ptmx {
             atime: unsafe {crate::UNIX_EPOCH as i64},
             mtime: unsafe {crate::UNIX_EPOCH as i64},
             ctime: unsafe {crate::UNIX_EPOCH as i64},
+            reserved1: 0,
+            reserved2: 0,
+            reserved3: 0,
         })
     }
     fn GetName(&self) -> Result<&str, i64> {
