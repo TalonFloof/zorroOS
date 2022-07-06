@@ -10,7 +10,6 @@ use alloc::string::String;
 use alloc::sync::Arc;
 use crate::FS::VFS::FileDescriptor;
 use alloc::vec::Vec;
-use alloc::boxed::Box;
 use cstr_core::CString;
 use cstr_core::c_char;
 
@@ -355,10 +354,19 @@ impl Process {
                         env_pointers.push(ptr.GetTop() as usize);
                     }
                     env_pointers.push(0);
+                    for i in arg_pointers.iter().rev() {
+                        ptr.Write::<u64>(*i as u64);
+                    }
+                    let first_pointer = ptr.GetTop();
+                    for i in env_pointers.iter().rev() {
+                        ptr.Write::<u64>(*i as u64);
+                    }
+                    let second_pointer = ptr.GetTop();
+                    ptr.Align();
                     ptr.Write::<u64>(0);
-                    ptr.Write::<u64>(0x2000);
+                    ptr.Write::<u64>(if envv.is_some() {second_pointer} else {0});
                     ptr.Write::<u64>(0);
-                    ptr.Write::<u64>(0x1000);
+                    ptr.Write::<u64>(if argv.is_some() {first_pointer} else {0});
                     ptr.Write::<u64>(arg_pointers.len() as u64);
                     proc.task_state.SetSP(ptr.GetTop() as usize);
                     drop(arg_pointers);

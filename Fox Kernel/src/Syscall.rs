@@ -628,7 +628,7 @@ pub fn SystemCall(regs: &mut State) {
                 regs.SetSC0((-Errors::ENOENT as isize) as usize);
                 return;
             }
-            regs.SetSC0(crate::Process::Process::Exec(curproc,path.ok().unwrap(),None,None));
+            regs.SetSC0(crate::Process::Process::Exec(curproc,path.ok().unwrap(),if regs.GetSC2() > 0 {Some(regs.GetSC2() as *const usize)} else {None},if regs.GetSC3() > 0 {Some(regs.GetSC3() as *const usize)} else {None}));
         }
         0x13 => { // pollpid
             let plock = crate::Process::PROCESSES.lock();
