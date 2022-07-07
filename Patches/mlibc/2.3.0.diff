@@ -14,6 +14,22 @@ diff -Nur mlibc-2.3.0/abis/owlos/auxv.h mlibc-2.3.0-owlos/abis/owlos/auxv.h
 +#define AT_EXECFN 31
 +
 +#endif // _ABIBITS_AUXV_H
+diff -Nur mlibc-2.3.0/ci/owlos.cross-file mlibc-2.3.0-owlos/ci/owlos.cross-file
+--- mlibc-2.3.0/ci/owlos.cross-file	1969-12-31 18:00:00.000000000 -0600
++++ mlibc-2.3.0-owlos/ci/owlos.cross-file	2022-07-07 12:06:25.523876314 -0500
+@@ -0,0 +1,12 @@
++[binaries]
++c = 'gcc-10'
++cpp = 'g++-10'
++
++[properties]
++needs_exe_wrapper = true
++
++[host_machine]
++system = 'owlos'
++cpu_family = 'x86_64'
++cpu = 'x86_64'
++endian = 'little'
 diff -Nur mlibc-2.3.0/meson.build mlibc-2.3.0-owlos/meson.build
 --- mlibc-2.3.0/meson.build	2022-06-20 04:58:47.000000000 -0500
 +++ mlibc-2.3.0-owlos/meson.build	2022-07-07 11:58:27.813435110 -0500
