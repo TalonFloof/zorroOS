@@ -16,107 +16,18 @@ diff -Nur mlibc-2.3.0/abis/owlos/auxv.h mlibc-2.3.0-owlos/abis/owlos/auxv.h
 +#endif // _ABIBITS_AUXV_H
 diff -Nur mlibc-2.3.0/meson.build mlibc-2.3.0-owlos/meson.build
 --- mlibc-2.3.0/meson.build	2022-06-20 04:58:47.000000000 -0500
-+++ mlibc-2.3.0-owlos/meson.build	2022-07-06 19:03:04.022867169 -0500
-@@ -99,52 +99,56 @@
- #----------------------------------------------------------------------------------------
- 
- # Process sysdeps first, as sysdeps might want to disable unsupported options.
--if host_machine.system() == 'linux'
--	disable_linux_headers = true
--	rtdl_include_dirs += include_directories('sysdeps/linux/include')
--	libc_include_dirs += include_directories('sysdeps/linux/include')
--	subdir('sysdeps/linux')
--elif host_machine.system() == 'aero'
--	rtdl_include_dirs += include_directories('sysdeps/aero/include')
--	libc_include_dirs += include_directories('sysdeps/aero/include')
--	subdir('sysdeps/aero')
--elif host_machine.system() == 'managarm'
-+#if host_machine.system() == 'linux'
-+#	disable_linux_headers = true
-+#	rtdl_include_dirs += include_directories('sysdeps/linux/include')
-+#	libc_include_dirs += include_directories('sysdeps/linux/include')
-+#	subdir('sysdeps/linux')
-+#elif host_machine.system() == 'aero'
-+#	rtdl_include_dirs += include_directories('sysdeps/aero/include')
-+#	libc_include_dirs += include_directories('sysdeps/aero/include')
-+#	subdir('sysdeps/aero')
-+#elif host_machine.system() == 'managarm'
- 	# TODO: Adopt the include_directories() commands from the managarm meson.build.
--	rtdl_include_dirs += include_directories('sysdeps/managarm/include')
--	libc_include_dirs += include_directories('sysdeps/managarm/include')
--	internal_conf.set('MLIBC_MAP_DSO_SEGMENTS', true)
--	internal_conf.set('MLIBC_MAP_FILE_WINDOWS', true)
--	subdir('sysdeps/managarm')
--elif host_machine.system() == 'qword'
--	disable_linux_option = true
--	rtdl_include_dirs += include_directories('sysdeps/qword/include')
--	libc_include_dirs += include_directories('sysdeps/qword/include')
--	subdir('sysdeps/qword')
--elif host_machine.system() == 'ironclad'
-+#	rtdl_include_dirs += include_directories('sysdeps/managarm/include')
-+#	libc_include_dirs += include_directories('sysdeps/managarm/include')
-+#	internal_conf.set('MLIBC_MAP_DSO_SEGMENTS', true)
-+#	internal_conf.set('MLIBC_MAP_FILE_WINDOWS', true)
-+#	subdir('sysdeps/managarm')
-+#elif host_machine.system() == 'qword'
-+#	disable_linux_option = true
-+#	rtdl_include_dirs += include_directories('sysdeps/qword/include')
-+#	libc_include_dirs += include_directories('sysdeps/qword/include')
-+#	subdir('sysdeps/qword')
-+#elif host_machine.system() == 'ironclad'
- 	# disable_linux_option = true
--	rtdl_include_dirs += include_directories('sysdeps/ironclad/include')
--	libc_include_dirs += include_directories('sysdeps/ironclad/include')
--	subdir('sysdeps/ironclad')
--elif host_machine.system() == 'sigma'
-+#	rtdl_include_dirs += include_directories('sysdeps/ironclad/include')
-+#	libc_include_dirs += include_directories('sysdeps/ironclad/include')
-+#	subdir('sysdeps/ironclad')
-+#elif host_machine.system() == 'sigma'
- 	#disable_linux_option = true
--	rtdl_include_dirs += include_directories('sysdeps/sigma/include')
--	libc_include_dirs += include_directories('sysdeps/sigma/include')
--	libsigma = dependency('sigma')
--	libc_deps += libsigma
--	rtdl_deps += libsigma
--	subdir('sysdeps/sigma')
--elif host_machine.system() == 'lemon'
--	rtdl_include_dirs += include_directories('sysdeps/lemon/include')
--	libc_include_dirs += include_directories('sysdeps/lemon/include')
--	subdir('sysdeps/lemon')
--elif host_machine.system() == 'dripos'
--	disable_linux_option = true
--	rtdl_include_dirs += include_directories('sysdeps/dripos/include')
--	libc_include_dirs += include_directories('sysdeps/dripos/include')
--	subdir('sysdeps/dripos')
--else
--	error('No sysdeps defined for OS: ' + host_machine.system())
--endif
-+#	rtdl_include_dirs += include_directories('sysdeps/sigma/include')
-+#	libc_include_dirs += include_directories('sysdeps/sigma/include')
-+#	libsigma = dependency('sigma')
-+#	libc_deps += libsigma
-+#	rtdl_deps += libsigma
-+#	subdir('sysdeps/sigma')
-+#elif host_machine.system() == 'lemon'
-+#	rtdl_include_dirs += include_directories('sysdeps/lemon/include')
-+#	libc_include_dirs += include_directories('sysdeps/lemon/include')
-+#	subdir('sysdeps/lemon')
-+#elif host_machine.system() == 'dripos'
-+#	disable_linux_option = true
-+#	rtdl_include_dirs += include_directories('sysdeps/dripos/include')
-+#	libc_include_dirs += include_directories('sysdeps/dripos/include')
-+#	subdir('sysdeps/dripos')
-+#elif host_machine.system() == 'owlos'
++++ mlibc-2.3.0-owlos/meson.build	2022-07-07 11:58:27.813435110 -0500
+@@ -142,6 +142,10 @@
+ 	rtdl_include_dirs += include_directories('sysdeps/dripos/include')
+ 	libc_include_dirs += include_directories('sysdeps/dripos/include')
+ 	subdir('sysdeps/dripos')
++elif host_machine.system() == 'owlos'
 +	rtdl_include_dirs += include_directories('sysdeps/owlos/include')
 +	libc_include_dirs += include_directories('sysdeps/owlos/include')
 +	subdir('sysdeps/owlos')
-+#else
-+#	error('No sysdeps defined for OS: ' + host_machine.system())
-+#endif
- 
- #----------------------------------------------------------------------------------------
- # Configuration based on enabled options.
+ else
+ 	error('No sysdeps defined for OS: ' + host_machine.system())
+ endif
 diff -Nur mlibc-2.3.0/options/rtdl/generic/linker.cpp mlibc-2.3.0-owlos/options/rtdl/generic/linker.cpp
 --- mlibc-2.3.0/options/rtdl/generic/linker.cpp	2022-06-20 04:58:47.000000000 -0500
 +++ mlibc-2.3.0-owlos/options/rtdl/generic/linker.cpp	2022-07-06 15:08:31.043332388 -0500
