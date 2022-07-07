@@ -229,33 +229,33 @@ impl PageTable for PageTableImpl {
         }
     }
 
-    fn Clone(&self, is_thread: bool) -> Arc<PageTableImpl> {
+    fn Clone(&self, stack: usize) -> Arc<PageTableImpl> {
         let mut pt = PageTableImpl::new();
-        let start = if is_thread {255} else {0};
-        if is_thread {
-            pt.page_table.index_mut(0).set_addr(self.page_table.index(0).addr(), PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::USER_ACCESSIBLE | PageTableFlags::BIT_9);
+        pt.page_table.index_mut(0).set_addr(self.page_table.index(0).addr(), PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::USER_ACCESSIBLE | PageTableFlags::BIT_9);
+        if stack > 0 {
+            pt.page_table.index_mut(255).set_addr(self.page_table.index(255).addr(), PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::USER_ACCESSIBLE | PageTableFlags::BIT_9);
+            return Arc::new(pt);
         }
-        for h in start..=255 {
-            if self.page_table.index(h).flags().contains(PageTableFlags::PRESENT) {
-                let pd_pagetable = (self.page_table.index(h).addr().as_u64()+PHYSMEM_BEGIN) as *mut HWPageTable;
-                unsafe {
-                    for i in 0..512 {
-                        if (*pd_pagetable).index(i).flags().contains(PageTableFlags::PRESENT) {
-                            let pagedirectory = ((*pd_pagetable).index(i).addr().as_u64()+PHYSMEM_BEGIN) as *mut HWPageTable;
-                            for j in 0..512 {
-                                if (*pagedirectory).index(j).flags().contains(PageTableFlags::PRESENT) {
-                                    let pagetable = ((*pagedirectory).index(j).addr().as_u64()+PHYSMEM_BEGIN) as *mut HWPageTable;
-                                    for k in 0..512 {
-                                        if (*pagetable).index(k).flags().contains(PageTableFlags::PRESENT) {
-                                            let flags = (*pagetable).index(k).flags();
-                                            let new_page = Allocate(0x1000).unwrap();
-                                            core::ptr::copy(((*pagetable).index(k).addr().as_u64()+PHYSMEM_BEGIN) as *const usize,new_page as *mut usize,0x1000/(usize::BITS/8) as usize);
-                                            let mut npe = pt.Map(((h << 39) | (i << 30) | (j << 21) | (k << 12)) as u64,new_page as u64-PHYSMEM_BEGIN);
-                                            npe.SetWritable(flags.contains(PageTableFlags::WRITABLE));
-                                            npe.SetExecutable(!flags.contains(PageTableFlags::NO_EXECUTE));
-                                            npe.SetUser(true);
-                                            npe.Update();
-                                        }
+        let h = 255;
+        if self.page_table.index(h).flags().contains(PageTableFlags::PRESENT) {
+            let pd_pagetable = (self.page_table.index(h).addr().as_u64()+PHYSMEM_BEGIN) as *mut HWPageTable;
+            unsafe {
+                for i in 0..512 {
+                    if (*pd_pagetable).index(i).flags().contains(PageTableFlags::PRESENT) {
+                        let pagedirectory = ((*pd_pagetable).index(i).addr().as_u64()+PHYSMEM_BEGIN) as *mut HWPageTable;
+                        for j in 0..512 {
+                            if (*pagedirectory).index(j).flags().contains(PageTableFlags::PRESENT) {
+                                let pagetable = ((*pagedirectory).index(j).addr().as_u64()+PHYSMEM_BEGIN) as *mut HWPageTable;
+                                for k in 0..512 {
+                                    if (*pagetable).index(k).flags().contains(PageTableFlags::PRESENT) {
+                                        let flags = (*pagetable).index(k).flags();
+                                        let new_page = Allocate(0x1000).unwrap();
+                                        core::ptr::copy(((*pagetable).index(k).addr().as_u64()+PHYSMEM_BEGIN) as *const usize,new_page as *mut usize,0x1000/(usize::BITS/8) as usize);
+                                        let mut npe = pt.Map(((h << 39) | (i << 30) | (j << 21) | (k << 12)) as u64,new_page as u64-PHYSMEM_BEGIN);
+                                        npe.SetWritable(flags.contains(PageTableFlags::WRITABLE));
+                                        npe.SetExecutable(!flags.contains(PageTableFlags::NO_EXECUTE));
+                                        npe.SetUser(true);
+                                        npe.Update();
                                     }
                                 }
                             }

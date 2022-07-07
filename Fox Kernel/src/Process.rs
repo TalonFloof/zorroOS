@@ -260,7 +260,7 @@ impl Process {
         }
         drop(lock);
     }
-    pub fn Fork(&mut self) -> Self {
+    pub fn Fork(&mut self, stack: usize) -> Self {
         let mut task_state = State::new(false);
         task_state.Save(&self.task_state);
         task_state.SetSC0(0);
@@ -290,7 +290,7 @@ impl Process {
             umask: self.umask,
             pgid: self.pgid,
 
-            pagetable: self.pagetable.Clone(true),
+            pagetable: self.pagetable.Clone(stack),
 
             cwd: self.cwd.clone(),
             status: ProcessStatus::NEW,

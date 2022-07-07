@@ -73,7 +73,7 @@ fn main(ramdisks: Vec<(String,&[u8])>) -> ! {
     }
     crate::Framebuffer::Progress(3);
     if crate::CommandLine::FLAGS.get().unwrap().contains("--break") {panic!("Break");}
-    //unsafe {crate::Console::QUIET = true;}
+    unsafe {crate::Console::QUIET = true;}
     crate::arch::Timer::Sleep(500);
     Scheduler::Scheduler::Start(CurrentHart())
 }

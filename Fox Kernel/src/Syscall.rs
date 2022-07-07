@@ -171,8 +171,7 @@ pub struct DirEntry {
     inode_id: i64,
     offset: i64,
     length: i64,
-    file_type: i8,
-    name: [u8; 256],
+    file_type: i64,
 }
 
 #[repr(C)]
@@ -212,10 +211,10 @@ pub fn SystemCall(regs: &mut State) {
         0x02 => { // fork
             let mut plock = crate::Process::PROCESSES.lock();
             let proc = plock.get_mut(&curproc).unwrap();
-            proc.task_state.Save(regs);
-            let forked_proc = Process::Fork(proc);
-            let forked_ip = forked_proc.task_state.GetIP();
-            let forked_sp = forked_proc.task_state.GetSP();
+            if regs.GetSC1() == 0 {proc.task_state.Save(regs);}
+            let forked_proc = Process::Fork(proc,regs.GetSC2());
+            let forked_ip = if regs.GetSC1() > 0 {regs.GetSC1()} else {forked_proc.task_state.GetIP()};
+            let forked_sp = if regs.GetSC2() > 0 {regs.GetSC2()} else {forked_proc.task_state.GetSP()};
             drop(plock);
             let val = Process::AddProcess(forked_proc);
             if val > 0 {
@@ -313,32 +312,34 @@ pub fn SystemCall(regs: &mut State) {
                 return;
             }
             if fd.as_ref().unwrap().is_dir {
-                if buf.len() < core::mem::size_of::<DirEntry>() {
-                    drop(plock);
-                    regs.SetSC0((-Errors::EINVAL) as usize);
-                    return;
-                }
                 let result = fd.as_ref().unwrap().inode.ReadDir(fd.as_ref().unwrap().offset as usize);
                 if result.is_err() {
                     regs.SetSC0((-(result.err().unwrap() as isize)) as usize);
                     drop(plock);
                     return;
                 }
+                if result.as_ref().is_ok() {
+                    if result.as_ref().ok().unwrap().is_some() {
+                        if buf.len() < 33+result.as_ref().ok().unwrap().as_ref().unwrap().GetName().ok().unwrap().len() {
+                            drop(plock);
+                            regs.SetSC0(0);
+                            return;
+                        }
+                    }
+                }
                 match result.ok().unwrap() {
                     Some(inode) => {
                         fd.as_mut().unwrap().offset += 1;
-                        let mut name_buf = [0u8; 256];
                         let name = CString::new(inode.GetName().ok().unwrap()).ok().unwrap();
-                        name_buf.copy_from_slice(name.as_bytes_with_nul());
                         let entry = DirEntry {
                             inode_id: inode.Stat().ok().unwrap().inode_id,
                             offset: fd.as_ref().unwrap().offset,
-                            length: core::mem::size_of::<DirEntry>() as i64,
+                            length: ((&name).as_bytes_with_nul().len()+32) as i64,
                             file_type: 0,
-                            name: name_buf,
                         };
-                        unsafe {core::ptr::copy(&entry as *const _ as *const u8, regs.GetSC2() as *mut u8,core::mem::size_of::<DirEntry>());}
-                        regs.SetSC0(core::mem::size_of::<DirEntry>());
+                        unsafe {core::ptr::copy(&entry as *const _ as *const u8, regs.GetSC2() as *mut u8,32);}
+                        unsafe {core::ptr::copy(name.as_bytes_with_nul().as_ptr(), (regs.GetSC2()+32) as *mut u8,name.as_bytes_with_nul().len());}
+                        regs.SetSC0(entry.length as usize);
                         drop(plock);
                         return;
                     }
@@ -825,8 +826,13 @@ pub fn SystemCall(regs: &mut State) {
             }
             drop(plock);
         }
-        0x21 => { // nanosleep
-            unimplemented!();
+        0x21 => { // clock_get
+            let timestamp = crate::arch::Timer::GetTimeStamp();
+            unsafe {
+                *(regs.GetSC1() as *mut i64) = timestamp.0;
+                *(regs.GetSC2() as *mut i64) = timestamp.1;
+            }
+            regs.SetSC0(0);
         }
         0x22 => { // chdir
             let mut plock = crate::Process::PROCESSES.lock();
@@ -1072,6 +1078,15 @@ pub fn SystemCall(regs: &mut State) {
                 unreachable!();
             }
             regs.SetSC0((-Errors::EINVAL as isize) as usize);
+        }
+        0xf1 => { // foxkernel_log
+            let msg = unsafe {CStr::from_ptr(regs.GetSC1() as *const c_char)}.to_str();
+            if msg.is_err() {
+                regs.SetSC0((-Errors::EINVAL as isize) as usize);
+                return;
+            }
+            print!("{}\n", msg.ok().unwrap());
+            regs.SetSC0(0);
         }
         _ => {
 
