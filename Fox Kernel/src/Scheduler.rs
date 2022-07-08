@@ -7,8 +7,9 @@ use crate::IdleThread;
 use crate::Process::{Process, PROCESSES, TaskState, TaskFloatState, ProcessStatus};
 use crate::arch::CurrentHart;
 use alloc::vec::Vec;
+use alloc::boxed::Box;
 
-pub static SCHEDULERS: Mutex<BTreeMap<u32,Scheduler>> = Mutex::new(BTreeMap::new());
+pub static SCHEDULERS: Mutex<BTreeMap<u32,Box<Scheduler>>> = Mutex::new(BTreeMap::new());
 pub static SCHEDULER_STARTED: AtomicBool = AtomicBool::new(false);
 
 pub struct Scheduler {
@@ -122,7 +123,7 @@ impl Scheduler {
             if lock.get(&pid).is_none() {
                 panic!("PID: {}, Attempt to Context Switch to unknown process", pid);
             }
-            let task = lock.get(&pid).expect("Attempt to Context Switch to unknown process") as *const Process;
+            let task = lock.get(&pid).expect("Attempt to Context Switch to unknown process").as_ref() as *const Process;
             unsafe { (&*task).task_fpstate.Restore(); }
             drop(lock);
             unsafe { (&*task).ContextSwitch() }
@@ -136,8 +137,8 @@ impl Scheduler {
         if CurrentHart() == 0 {
             sched.process_queue.lock().push_front(1);
         }
-        writelock.insert(hartid,sched);
-        let ptr = writelock.get(&hartid).unwrap() as *const Scheduler;
+        writelock.insert(hartid,Box::new(sched));
+        let ptr = writelock.get(&hartid).unwrap().as_ref() as *const Scheduler;
         drop(writelock);
         unsafe {
             let id = (&*ptr).FindNextProcess();
@@ -159,7 +160,7 @@ impl Scheduler {
             }
             drop(pl);
         }
-        let ptr = sched as *const Scheduler;
+        let ptr = sched.as_ref() as *const Scheduler;
         drop(l);
         /*
         Generally this would be a terrible idea, but since scheduler values are atomic,

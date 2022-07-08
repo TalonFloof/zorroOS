@@ -12,8 +12,9 @@ use crate::FS::VFS::FileDescriptor;
 use alloc::vec::Vec;
 use cstr_core::CString;
 use cstr_core::c_char;
+use alloc::boxed::Box;
 
-pub static PROCESSES: Mutex<BTreeMap<i32,Process>> = Mutex::new(BTreeMap::new());
+pub static PROCESSES: Mutex<BTreeMap<i32,Box<Process>>> = Mutex::new(BTreeMap::new());
 pub static NEXTPROCESS: AtomicI32 = AtomicI32::new(1);
 
 pub mod Signals {
@@ -161,7 +162,7 @@ impl Process {
         if let Some(parent) = plock.get_mut(&proc.parent_id) {
             parent.children.push(id);
         }
-        plock.insert(id,proc);
+        plock.insert(id,Box::new(proc));
         drop(plock);
         return id;
     }

@@ -17,7 +17,7 @@ pub static Pages: AtomicU64 = AtomicU64::new(0);
 static NextPage: AtomicU64 = AtomicU64::new(0);
 pub static UsedMem: AtomicU64 = AtomicU64::new(0);
 pub static TotalMem: AtomicU64 = AtomicU64::new(0);
-static PhysMemLock: Mutex<PhantomData<()>> = Mutex::new(PhantomData);
+static PhysMemLock: Mutex<bool> = Mutex::new(false);
 lazy_static! {
     pub static ref KernelPageTable: Mutex<PageTableImpl> = Mutex::new(PageTableImpl::new());
 }
@@ -76,7 +76,8 @@ fn TestRange(Addr: u64, Size: u64) -> bool {
 
 // XXXX: Should Allocate and Free be unsafe?
 pub fn Allocate(Size: u64) -> Option<*mut u8> {
-    let lock = PhysMemLock.lock();
+    let mut lock = PhysMemLock.lock();
+    *lock = !*lock;
     let np = NextPage.load(Ordering::SeqCst);
     let p = Pages.load(Ordering::SeqCst);
     let pages = Size / 0x1000;
@@ -93,7 +94,8 @@ pub fn Allocate(Size: u64) -> Option<*mut u8> {
     return None;
 }
 pub fn AllocateAlign(Size: u64) -> Option<*mut u8> {
-    let lock = PhysMemLock.lock();
+    let mut lock = PhysMemLock.lock();
+    *lock = !*lock;
     let np = (NextPage.load(Ordering::SeqCst) * 0x1000) / Size;
     let p = (Pages.load(Ordering::SeqCst) * 0x1000) / Size;
     for i in np..p {
@@ -110,7 +112,8 @@ pub fn AllocateAlign(Size: u64) -> Option<*mut u8> {
 }
 #[inline(always)]
 pub fn Free(Addr: *mut u8, Size: u64) {
-    let lock = PhysMemLock.lock();
+    let mut lock = PhysMemLock.lock();
+    *lock = !*lock;
     if Addr as u64 != 0 {
         FreeRange(Addr as u64-PHYSMEM_BEGIN, ((Addr as u64)-PHYSMEM_BEGIN) + Size);
         UsedMem.fetch_sub(Size,Ordering::SeqCst);

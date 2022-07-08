@@ -7,12 +7,16 @@ description = "A UNIX-like Kernel"
 license = "Apache-2.0"
 
 [dependencies]
-spin = "*"
 xmas-elf = "*"
 log = "*"
 cstr_core = "*"
 cpio_reader = "*"
 tinytga = "*"
+
+[dependencies.spin]
+version = "*"
+default-features = false
+features = ["once","mutex","use_ticket_mutex"]
 
 [dependencies.lazy_static]
 version = "*"

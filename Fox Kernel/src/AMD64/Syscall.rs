@@ -10,6 +10,7 @@ use crate::arch::Task::State;
 #[doc(hidden)]
 unsafe extern "C" fn __syscall() {
     asm!(
+    "cli",
     "swapgs",
     "mov gs:[0x8], rsp",
     "mov rsp, gs:[0x0]",
