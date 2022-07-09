@@ -2,7 +2,7 @@ use alloc::boxed::Box;
 use alloc::sync::Arc;
 use core::ops::{Index, IndexMut};
 use limine::*;
-use crate::PageFrame::{Setup,HeapRange};
+use crate::PageFrame::Setup;
 use x86_64::structures::paging::{frame::PhysFrame as PageFrame, page::Size4KiB, page_table::{PageTable as HWPageTable, PageTableEntry, PageTableFlags}};
 use crate::arch::PHYSMEM_BEGIN;
 use spin::Mutex;
@@ -54,7 +54,7 @@ pub fn AnalyzeMMAP() {
         }
         x86_64::instructions::tlb::flush_all();
     }
-    let mut array: [HeapRange; 64] = [HeapRange {base: 0, length: 0}; 64];
+    let mut array: [(u64, u64); 32] = [(0,0); 32];
     let mut array_index = 0;
     for i in mmap.iter() {
         let base = (i.base as usize) + (PHYSMEM_BEGIN as usize);
@@ -71,8 +71,8 @@ pub fn AnalyzeMMAP() {
         };
         debug!("[mem 0x{:016x}-0x{:016x}] {}", base, end, entry_type);
         if i.typ == LimineMemoryMapEntryType::Usable {
-            array[array_index].base = i.base;
-            array[array_index].length = i.len;
+            array[array_index].0 = i.base;
+            array[array_index].1 = i.len;
             array_index += 1;
         } else if i.typ == LimineMemoryMapEntryType::KernelAndModules {
             crate::PageFrame::UsedMem.fetch_add(i.len,core::sync::atomic::Ordering::SeqCst);

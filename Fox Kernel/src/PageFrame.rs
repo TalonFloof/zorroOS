@@ -9,12 +9,6 @@ use core::marker::PhantomData;
 use alloc::collections::LinkedList;
 use core::cmp::Ordering;
 
-#[derive(Copy, Clone)]
-pub struct HeapRange {
-    pub base: u64,
-    pub length: u64
-}
-
 pub struct FreeAlloc(pub LinkedList<(usize,usize)>);
 
 impl FreeAlloc {
@@ -100,11 +94,11 @@ pub fn Free(address: *mut u8, size: u64) {
     UsedMem.fetch_sub(size as u64,atomic::Ordering::SeqCst);
 }
 
-pub fn Setup(mem: [HeapRange; 64]) {
+pub fn Setup(mem: [(u64, u64); 32]) {
     for i in mem.iter() {
-        if i.length != 0 {
-            unsafe {FRAME_ALLOC.lock().Free((i.base+PHYSMEM_BEGIN) as usize,i.length as usize);}
-            TotalMem.fetch_add(i.length,atomic::Ordering::SeqCst);
+        if i.1 != 0 {
+            unsafe {FRAME_ALLOC.lock().Free((i.0+PHYSMEM_BEGIN) as usize,i.1 as usize);}
+            TotalMem.fetch_add(i.1,atomic::Ordering::SeqCst);
         }
     }
     let lock = FRAME_ALLOC.lock();
