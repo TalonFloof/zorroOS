@@ -25,5 +25,5 @@ fn main() {
     println!("WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.");
     println!("See the License for the specific language governing permissions and");
     println!("limitations under the License.\n");
-    loop {opapi::syscall::fork();}
+    loop {opapi::syscall::sched_yield();}
 }

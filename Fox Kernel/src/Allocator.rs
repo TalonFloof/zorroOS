@@ -179,3 +179,16 @@ unsafe impl GlobalAlloc for LockedAllocator {
 
 #[global_allocator]
 static ALLOCATOR: LockedAllocator = LockedAllocator(Mutex::new(LinkedListAllocator::new()));
+
+extern "C" {
+    fn __early_heap_start();
+    fn __early_heap_end();
+}
+
+pub fn Setup() {
+    let ptr_start = __early_heap_start as *const u8 as usize;
+    let ptr_len = (__early_heap_end as *const u8 as usize)-ptr_start;
+    unsafe {core::ptr::write_bytes(ptr_start as *mut u8,0x00,ptr_len);}
+    unsafe {ALLOCATOR.0.lock().init(ptr_start,ptr_len);}
+    log::debug!("{}K early kernel heap @ 0x{:016x} ready", ptr_len/1024, ptr_start);
+}

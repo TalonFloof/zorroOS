@@ -87,6 +87,7 @@ extern "C" fn _start_entry() {
 extern "C" fn _start(stack_top: u64) {
     UART::Setup();
 	print_startup_message!();
+	crate::Allocator::Setup();
 	GDT::Setup(stack_top);
 	unsafe { IDT::Setup(); }
 	Syscall::Initialize();

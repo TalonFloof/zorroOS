@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 #![feature(asm_sym,const_btree_new,naked_functions,map_first_last,
-const_mut_refs,panic_info_message,lang_items,rustc_private,int_roundings,abi_x86_interrupt)]
+const_mut_refs,panic_info_message,lang_items,rustc_private,int_roundings,linked_list_cursors)]
 #![allow(non_snake_case,unused_must_use,non_upper_case_globals,non_camel_case_types)]
 
 extern crate alloc;
@@ -52,11 +52,6 @@ fn main(ramdisks: Vec<(String,&[u8])>) -> ! {
     crate::Framebuffer::Progress(1);
     FS::Initalize(ramdisks);
     crate::Framebuffer::Progress(2);
-    {
-        let used = PageFrame::UsedMem.load(core::sync::atomic::Ordering::SeqCst);
-	    let total = PageFrame::TotalMem.load(core::sync::atomic::Ordering::SeqCst);
-	    log::info!("{} MiB Used out of {} MiB Total", used/1024/1024, total/1024/1024);
-    }
     // Load /bin/init
     let mut proc = Process::Process::new(String::from("/bin/init"),-1);
     proc.hart.store(CurrentHart(),core::sync::atomic::Ordering::SeqCst);
@@ -72,6 +67,11 @@ fn main(ramdisks: Vec<(String,&[u8])>) -> ! {
         }
     }
     crate::Framebuffer::Progress(3);
+    {
+        let used = PageFrame::UsedMem.load(core::sync::atomic::Ordering::SeqCst);
+	    let total = PageFrame::TotalMem.load(core::sync::atomic::Ordering::SeqCst);
+	    log::info!("{} MiB Used out of {} MiB Total", used/1024/1024, total/1024/1024);
+    }
     if crate::CommandLine::FLAGS.get().unwrap().contains("--break") {panic!("Break");}
     unsafe {crate::Console::QUIET = true;}
     crate::arch::Timer::Sleep(500);

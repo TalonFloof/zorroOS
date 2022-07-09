@@ -16,7 +16,7 @@ tinytga = "*"
 [dependencies.spin]
 version = "*"
 default-features = false
-features = ["once","mutex","use_ticket_mutex"]
+features = ["once","mutex","spin_mutex"]
 
 [dependencies.lazy_static]
 version = "*"

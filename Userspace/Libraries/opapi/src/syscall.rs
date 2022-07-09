@@ -185,7 +185,11 @@ pub fn sigreturn() {
     Syscall(0x20,0,0,0);
 }
 
-// nanosleep goes here
+pub fn getclock() -> (i64,i64) {
+    let mut array = [0i64; 2];
+    Syscall(0x21,array.as_mut_ptr() as usize,unsafe {array.as_mut_ptr().offset(1) as usize},0);
+    return (array[0],array[1]);
+}
 
 pub fn chdir(path: &str) -> isize {
     let cpath = CString::new(path).expect("owlOS Programmer API: String conversion failed");

@@ -23,26 +23,24 @@ SECTIONS
     /* that is the beginning of the region. */
     . = 0xffffffff80000000;
 
-    .text : {
+    .text : ALIGN(4096) {
         *(.text .text.*)
     } :text
 
-    /* Move to the next memory page for .rodata */
-    . += CONSTANT(MAXPAGESIZE);
-
-    .rodata : {
+    .rodata : ALIGN(4096) {
         *(.rodata .rodata.*)
     } :rodata
 
-    /* Move to the next memory page for .data */
-    . += CONSTANT(MAXPAGESIZE);
-
-    .data : {
+    .data : ALIGN(4096) {
         *(.data .data.*)
     } :data
 
-    .bss : {
+    .bss : ALIGN(4096) {
         *(COMMON)
         *(.bss .bss.*)
+        . = ALIGN(4096);
+        __early_heap_start = .;
+        . += 0x100000;
+        __early_heap_end = .;
     } :data
 }
