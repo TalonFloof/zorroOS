@@ -6,6 +6,7 @@
     "target-pointer-width": "64",
     "target-c-int-width": "32",
     "arch": "x86_64",
+    "env": "mlibc",
     "os": "owlos",
     "executables": true,
     "linker": "rust-lld",

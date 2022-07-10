@@ -2,7 +2,6 @@ use core::num::NonZeroUsize;
 use xhci::accessor::Mapper;
 use core::sync::atomic::{AtomicUsize,Ordering};
 use spin::Mutex;
-use alloc::collections::LinkedList;
 
 #[derive(Clone)]
 struct MemoryMapper;
@@ -74,7 +73,8 @@ static XHCI_BASE: AtomicUsize = AtomicUsize::new(0);
 
 pub fn Initalize() {
     let flock = crate::PageFrame::FRAME_ALLOC.lock();
-    let highest_address = flock.0.cursor_back().current().unwrap().0 as u64;
+    let mut highest_address = flock.0.cursor_back().current().unwrap().1 as u64;
+    if highest_address < 0x100000000 {highest_address = 0x100000000;}
     drop(flock);
     let lock = crate::Drivers::Arch::PCI::PCI_DEVICES.lock();
     for i in lock.iter() {

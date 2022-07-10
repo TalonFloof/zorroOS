@@ -1,11 +1,9 @@
 use core::sync::atomic;
 use core::sync::atomic::AtomicU64;
-use log::{debug,info};
 use lazy_static::lazy_static;
 use spin::Mutex;
 use crate::arch::PHYSMEM_BEGIN;
 use crate::arch::Memory::PageTableImpl;
-use core::marker::PhantomData;
 use alloc::collections::LinkedList;
 use core::cmp::Ordering;
 

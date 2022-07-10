@@ -44,6 +44,17 @@ diff -Nur mlibc-2.3.0/meson.build mlibc-2.3.0-owlos/meson.build
  else
  	error('No sysdeps defined for OS: ' + host_machine.system())
  endif
+diff -Nur mlibc-2.3.0/meson_options.txt mlibc-2.3.0-owlos/meson_options.txt
+--- mlibc-2.3.0/meson_options.txt	2022-06-20 04:58:47.000000000 -0500
++++ mlibc-2.3.0-owlos/meson_options.txt	2022-07-10 12:02:02.571681573 -0500
+@@ -1,6 +1,6 @@
+ option('headers_only', type : 'boolean', value : false)
+ option('mlibc_no_headers', type : 'boolean', value : false)
+-option('static', type : 'boolean', value : false)
++option('static', type : 'boolean', value : true)
+ option('build_tests', type: 'boolean', value : false)
+ option('disable_ansi_option', type: 'boolean', value : false)
+ option('disable_crypt_option', type: 'boolean', value : false)
 diff -Nur mlibc-2.3.0/options/rtdl/generic/linker.cpp mlibc-2.3.0-owlos/options/rtdl/generic/linker.cpp
 --- mlibc-2.3.0/options/rtdl/generic/linker.cpp	2022-06-20 04:58:47.000000000 -0500
 +++ mlibc-2.3.0-owlos/options/rtdl/generic/linker.cpp	2022-07-06 15:08:31.043332388 -0500
