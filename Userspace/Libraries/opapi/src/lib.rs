@@ -9,6 +9,7 @@ extern crate alloc;
 pub mod syscall;
 pub mod io;
 pub mod allocator;
+pub mod file;
 
 #[macro_use]
 pub mod macros;

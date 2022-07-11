@@ -121,6 +121,14 @@ pub fn execv(path: &str, argv: &[&CStr]) -> isize {
     ret
 }
 
+pub fn execve(path: &str, argv: &[&CStr], envp: &[&CStr]) -> isize {
+    let cpath = CString::new(path).expect("owlOS Programmer API: String conversion failed");
+    let ptr = cpath.into_raw();
+    let ret = Syscall(0x12,ptr as usize,argv.as_ptr() as usize,envp.as_ptr() as usize);
+    let _ = unsafe {CString::from_raw(ptr)}; // This prevents memory leaking from occuring.
+    ret
+}
+
 pub fn wait(wstatus: *mut usize) -> isize {
     loop {
         let result = Syscall(0x13,-1isize as usize,wstatus as usize,0);

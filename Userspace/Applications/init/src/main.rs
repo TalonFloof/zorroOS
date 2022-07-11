@@ -8,6 +8,8 @@ extern crate alloc;
 
 pub mod Console;
 
+use opapi::file::*;
+
 #[no_mangle]
 fn main() {
     if !Console::SetupConsole() {
