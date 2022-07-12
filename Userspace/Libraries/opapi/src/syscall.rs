@@ -228,7 +228,7 @@ pub fn pipe() -> Result<(isize,isize),isize> {
 }
 
 #[repr(C)]
-pub struct MmapStruct {
+pub(crate) struct MmapStruct {
     addr: usize,
     size: usize,
     prot: usize,
@@ -246,7 +246,9 @@ pub fn mmap(addr: usize, size: usize, prot: usize, flags: usize, fd: isize, offs
         fd: fd as usize,
         offset,
     };
-    Syscall(0x25,&args as *const _ as usize,0,0)
+    let result = Syscall(0x25,&args as *const _ as usize,0,0);
+    drop(args);
+    result
 }
 
 pub fn foxkernel_powerctl(cmd: usize) -> isize {
