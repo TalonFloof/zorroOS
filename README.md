@@ -1,4 +1,4 @@
-# <img align="center" height="100" src="Docs/owlOS Light.png"><br>owlOS
+# <img align="center" height="128" src="Docs/owlOS (Full).svg"><br>
 
 [![made-with-rust](https://img.shields.io/badge/Made%20with-Rust-1f425f.svg)](https://www.rust-lang.org/)
 [![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FTalon396%2FowlOS&count_bg=%2379C83D&title_bg=%23323232&icon=&icon_color=%23E7E7E7&title=hits&edge_flat=true)](https://hits.seeyoufarm.com)
