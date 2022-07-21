@@ -6,8 +6,6 @@
 [![License](https://img.shields.io/github/license/Talon396/owlOS?logo=apache&style=flat-square)](https://www.apache.org/licenses/LICENSE-2.0)
 [![owlOS Developer Builds (AMD64)](https://github.com/Talon396/owlOS/actions/workflows/AMD64_DevBuilds.yml/badge.svg)](https://github.com/Talon396/owlOS/actions/workflows/AMD64_DevBuilds.yml)
 
-# NOTICE: Development on owlOS is temporarily suspended. Development will continue on August 2022 or sooner.
-
 ## What is owlOS?
 
 **owlOS** is a free, open-source **UNIX**-like operating system made from<br>
