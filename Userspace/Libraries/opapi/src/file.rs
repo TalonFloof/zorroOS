@@ -1,6 +1,5 @@
 use alloc::string::String;
 use alloc::vec;
-use alloc::vec::Vec;
 
 pub const O_EXEC: usize      = 1;
 pub const O_RDONLY: usize    = 2;
@@ -28,6 +27,9 @@ pub const SEEK_SET: usize = 3;
 pub struct File(isize);
 
 impl File {
+    pub(crate) fn OpenInternal(fd: isize) -> Self {
+        File(fd)
+    }
     pub fn Open(path: &str, mode: usize) -> Result<Self,isize> {
         let result = crate::syscall::open(path,mode);
         if result >= 0 {

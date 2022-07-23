@@ -144,8 +144,8 @@ impl Drop for PageTableImpl {
                                 Free(pagedirectory as *mut u8, 0x1000);
                             }
                         }
+                        Free(pd_pagetable as *mut u8, 0x1000);
                     }
-                    Free(pd_pagetable as *mut u8, 0x1000);
                 }
             }
         }

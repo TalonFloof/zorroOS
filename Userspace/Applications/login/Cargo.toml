@@ -1,5 +1,5 @@
 [package]
-name = "init"
+name = "login"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,4 +8,3 @@ edition = "2021"
 [dependencies]
 opapi = { path = "../../Libraries/opapi" }
 spin = "*"
-pc-keyboard = "*"

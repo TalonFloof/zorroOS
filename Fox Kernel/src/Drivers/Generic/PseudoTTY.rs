@@ -1,6 +1,6 @@
 use crate::FS::VFS;
 use crate::FS::DevFS;
-use alloc::sync::Arc;
+use alloc::sync::{Arc, Weak};
 use spin::{Once,Mutex};
 use alloc::collections::{BTreeMap,VecDeque};
 use alloc::string::{String,ToString};
@@ -98,21 +98,22 @@ pub struct PTY {
 }
 impl PTY {
     pub fn new(index: usize) -> Arc<Self> {
-        let ret = Self {
-            index,
-            index_str: index.to_string(),
-            client: Arc::new(PTClient {p: index}),
-            server: Arc::new(PTServer {p: index}),
+        let arc = Arc::new_cyclic(|x| {
+            Self {
+                index,
+                index_str: index.to_string(),
+                client: Arc::new(PTClient {p: x.clone()}),
+                server: Arc::new(PTServer {p: x.clone()}),
 
-            pty_read: Mutex::new(VecDeque::new()),
-            pty_write: Mutex::new(VecDeque::new()),
-        };
-        let arc = Arc::new(ret);
+                pty_read: Mutex::new(VecDeque::new()),
+                pty_write: Mutex::new(VecDeque::new()),
+            }
+        });
         return arc;
     }
 }
 pub struct PTClient {
-    p: usize,
+    p: Weak<PTY>,
 }
 impl VFS::Inode for PTClient {
     fn Stat(&self) -> Result<VFS::Metadata, i64> {
@@ -137,73 +138,83 @@ impl VFS::Inode for PTClient {
         })
     }
     fn GetName(&self) -> Result<&str, i64> {
-        let plock = PTYS.lock();
-        let arc = plock.get(&self.p).unwrap();
-        let str_size = arc.index_str.len();
-        let ptr = arc.index_str.as_str().as_ptr();
-        let slice = unsafe {alloc::slice::from_raw_parts(ptr,str_size)};
-        Ok(alloc::str::from_utf8(slice).ok().unwrap())
+        if let Some(arc) = self.p.upgrade() {
+            let str_size = arc.index_str.len();
+            let ptr = arc.index_str.as_str().as_ptr();
+            let slice = unsafe {alloc::slice::from_raw_parts(ptr,str_size)};
+            drop(arc);
+            return Ok(alloc::str::from_utf8(slice).ok().unwrap())
+        }
+        Err(Errors::EPIPE as i64)
     }
     fn Read(&self, _offset: i64, buffer: &mut [u8]) -> i64 {
-        let plock = PTYS.lock();
-        let arc = plock.get(&self.p).unwrap();
-        let mut i = 0;
-        let mut lock = arc.pty_read.lock();
-        if lock.len() == 0 {
+        if let Some(arc) = self.p.upgrade() {
+            let mut i = 0;
+            let mut lock = arc.pty_read.lock();
+            if lock.len() == 0 {
+                drop(lock);
+                drop(arc);
+                return -(Errors::EAGAIN as i64);
+            }
+            while i < buffer.len() && lock.len() > 0 {
+                buffer[i] = lock.pop_front().unwrap();
+                i += 1;
+            }
             drop(lock);
-            return -(Errors::EAGAIN as i64);
+            drop(arc);
+            return i as i64;
         }
-        while i < buffer.len() && lock.len() > 0 {
-            buffer[i] = lock.pop_front().unwrap();
-            i += 1;
-        }
-        drop(lock);
-        return i as i64;
+        return -(Errors::EPIPE as i64);
     }
     fn Write(&self, _offset: i64, buffer: &[u8]) -> i64 {
-        let plock = PTYS.lock();
-        let arc = plock.get(&self.p).unwrap();
-        let mut i = 0;
-        let mut lock = arc.pty_write.lock();
-        while i < buffer.len() {
-            lock.push_back(buffer[i]);
-            i += 1;
+        if let Some(arc) = self.p.upgrade() {
+            let mut i = 0;
+            let mut lock = arc.pty_write.lock();
+            while i < buffer.len() {
+                lock.push_back(buffer[i]);
+                i += 1;
+            }
+            drop(lock);
+            drop(arc);
+            return i as i64;
         }
-        drop(lock);
-        return i as i64;
+        return -(Errors::EPIPE as i64);
     }
 }
 pub struct PTServer {
-    p: usize,
+    p: Weak<PTY>,
 }
 impl VFS::Inode for PTServer {
     fn Read(&self, _offset: i64, buffer: &mut [u8]) -> i64 {
-        let plock = PTYS.lock();
-        let arc = plock.get(&self.p).unwrap();
-        let mut i = 0;
-        let mut lock = arc.pty_write.lock();
-        if lock.len() == 0 {
+        if let Some(arc) = self.p.upgrade() {
+            let mut i = 0;
+            let mut lock = arc.pty_write.lock();
+            if lock.len() == 0 {
+                drop(lock);
+                //return -(Errors::EAGAIN as i64);
+                return 0;
+            }
+            while i < buffer.len() && lock.len() > 0 {
+                buffer[i] = lock.pop_front().unwrap();
+                i += 1;
+            }
             drop(lock);
-            return -(Errors::EAGAIN as i64);
+            return i as i64;
         }
-        while i < buffer.len() && lock.len() > 0 {
-            buffer[i] = lock.pop_front().unwrap();
-            i += 1;
-        }
-        drop(lock);
-        return i as i64;
+        return -(Errors::EPIPE as i64);
     }
     fn Write(&self, _offset: i64, buffer: &[u8]) -> i64 {
-        let plock = PTYS.lock();
-        let arc = plock.get(&self.p).unwrap();
-        let mut i = 0;
-        let mut lock = arc.pty_read.lock();
-        while i < buffer.len() {
-            lock.push_back(buffer[i]);
-            i += 1;
+        if let Some(arc) = self.p.upgrade() {
+            let mut i = 0;
+            let mut lock = arc.pty_read.lock();
+            while i < buffer.len() {
+                lock.push_back(buffer[i]);
+                i += 1;
+            }
+            drop(lock);
+            return i as i64;
         }
-        drop(lock);
-        return i as i64;
+        return -(Errors::EPIPE as i64);
     }
 }
 struct Ptmx(AtomicUsize);
@@ -291,6 +302,9 @@ pub fn AddPTY() -> usize {
             log::debug!("Create PTY #{}!", i);
             lock.insert(i,PTY::new(i));
             drop(lock);
+            if PTYS.is_locked() {
+                panic!("PTY Deadlock!");
+            }
             return i;
         }
     }

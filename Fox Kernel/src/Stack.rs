@@ -15,7 +15,7 @@ impl<'a> Stack<'a> {
         *self.pointer
     }
     pub fn Align(&mut self) {
-        *self.pointer = *self.pointer & !15;
+        *self.pointer = *self.pointer & (!15);
     }
     pub fn OffsetPtr<T: Sized>(&mut self) -> &mut T {
         self.Skip(size_of::<T>() as u64);
@@ -23,7 +23,7 @@ impl<'a> Stack<'a> {
     }
     pub fn Write<T: Sized>(&mut self, val: T) {
         self.Skip(size_of::<T>() as u64);
-        unsafe {*(*self.pointer as *mut T) = val;}
+        unsafe {((*self.pointer) as *mut T).write_volatile(val);}
     }
     pub fn WriteByteSlice(&mut self, b: &[u8]) {
         self.Skip(b.len() as u64);

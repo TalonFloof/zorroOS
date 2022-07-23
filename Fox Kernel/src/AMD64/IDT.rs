@@ -183,7 +183,6 @@ macro_rules! set_irq_handler {
                     "mov rsi, rsp",
                     "cld",
                     "call x86Fault",
-                    "add rsp, 8",
 
                     "pop r15",
                     "pop r14",
@@ -200,6 +199,7 @@ macro_rules! set_irq_handler {
                     "pop rcx",
                     "pop rbx",
                     "pop rax",
+                    "add rsp, 8",
 
                     "iretq",
                     options(noreturn)
@@ -272,7 +272,6 @@ macro_rules! set_irq_handler {
                     "mov rsi, rsp",
                     "cld",
                     "call x86Fault",
-                    "add rsp, 8",
 
                     "pop r15",
                     "pop r14",
@@ -289,6 +288,7 @@ macro_rules! set_irq_handler {
                     "pop rcx",
                     "pop rbx",
                     "pop rax",
+                    "add rsp, 8",
 
                     "iretq",
                     options(noreturn)

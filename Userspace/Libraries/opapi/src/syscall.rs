@@ -113,6 +113,14 @@ pub fn ioctl(fd: isize, req: usize, arg: usize) -> isize {
     Syscall(0x11,fd as usize,req,arg)
 }
 
+pub fn exec(path: &str) -> isize {
+    let cpath = CString::new(path).expect("owlOS Programmer API: String conversion failed");
+    let ptr = cpath.into_raw();
+    let ret = Syscall(0x12,ptr as usize,0,0);
+    let _ = unsafe {CString::from_raw(ptr)}; // This prevents memory leaking from occuring.
+    ret
+}
+
 pub fn execv(path: &str, argv: &[&CStr]) -> isize {
     let cpath = CString::new(path).expect("owlOS Programmer API: String conversion failed");
     let ptr = cpath.into_raw();
@@ -124,7 +132,9 @@ pub fn execv(path: &str, argv: &[&CStr]) -> isize {
 pub fn execve(path: &str, argv: &[&CStr], envp: &[&CStr]) -> isize {
     let cpath = CString::new(path).expect("owlOS Programmer API: String conversion failed");
     let ptr = cpath.into_raw();
-    let ret = Syscall(0x12,ptr as usize,argv.as_ptr() as usize,envp.as_ptr() as usize);
+    let arg2: usize = argv.as_ptr() as usize;
+    let arg3: usize = envp.as_ptr() as usize;
+    let ret = Syscall(0x12,ptr as usize,arg2,arg3);
     let _ = unsafe {CString::from_raw(ptr)}; // This prevents memory leaking from occuring.
     ret
 }

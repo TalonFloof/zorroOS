@@ -47,7 +47,7 @@ impl VFS::Inode for LimineTTY {
         Ok("liminecon")
     }
     fn Open(&self, mode: usize) -> Result<(), i64> {
-        if unsafe {crate::Console::QUIET} && mode != usize::MAX {
+        if !matches!(crate::CommandLine::FLAGS.get().unwrap().get("--no_debug"),None) && mode != usize::MAX {
             TTY.get().unwrap().Write(0,b"\x1b[1;1H\x1b[2J");
             TTY.get().unwrap().IOCtl(1,0);
         }

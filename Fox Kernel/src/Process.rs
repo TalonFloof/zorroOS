@@ -341,40 +341,45 @@ impl Process {
                 proc.pagetable = Arc::new(pt); // Old pagetable will be dropped if all references are gone
                 unsafe {proc.pagetable.Switch();}
                 proc.task_state.SetIP(val);
-                unsafe {
-                    let mut ptr = crate::Stack::Stack::new(&mut *(0x800000000000 as *mut u64));
-                    let mut arg_pointers: Vec<usize> = Vec::new();
-                    let mut env_pointers: Vec<usize> = Vec::new();
-                    for i in argp.iter() {
-                        ptr.WriteByteSlice(i.to_bytes_with_nul());
-                        arg_pointers.push(ptr.GetTop() as usize);
-                    }
-                    arg_pointers.push(0);
-                    for i in envp.iter() {
-                        ptr.WriteByteSlice(i.to_bytes_with_nul());
-                        env_pointers.push(ptr.GetTop() as usize);
-                    }
-                    env_pointers.push(0);
-                    for i in arg_pointers.iter().rev() {
-                        ptr.Write::<u64>(*i as u64);
-                    }
-                    let first_pointer = ptr.GetTop();
-                    for i in env_pointers.iter().rev() {
-                        ptr.Write::<u64>(*i as u64);
-                    }
-                    let second_pointer = ptr.GetTop();
-                    ptr.Align();
-                    ptr.Write::<u64>(0);
-                    ptr.Write::<u64>(if envv.is_some() {second_pointer} else {0});
-                    ptr.Write::<u64>(0);
-                    ptr.Write::<u64>(if argv.is_some() {first_pointer} else {0});
-                    ptr.Write::<u64>(arg_pointers.len() as u64);
-                    proc.task_state.SetSP(ptr.GetTop() as usize);
-                    drop(arg_pointers);
-                    drop(env_pointers);
+                drop(proc);
+                drop(plock);
+                let mut stack_top = 0x800000000000;
+                let mut ptr = crate::Stack::Stack::new(&mut stack_top);
+                let mut arg_pointers: Vec<usize> = Vec::new();
+                let mut env_pointers: Vec<usize> = Vec::new();
+                for i in argp.iter() {
+                    ptr.WriteByteSlice(i.to_bytes_with_nul());
+                    arg_pointers.push(ptr.GetTop() as usize);
                 }
+                arg_pointers.push(0);
+                for i in envp.iter() {
+                    ptr.WriteByteSlice(i.to_bytes_with_nul());
+                    env_pointers.push(ptr.GetTop() as usize);
+                }
+                env_pointers.push(0);
+                ptr.Align();
+                for i in arg_pointers.iter().rev() {
+                    ptr.Write::<u64>(*i as u64);
+                }
+                let first_pointer = ptr.GetTop();
+                for i in env_pointers.iter().rev() {
+                    ptr.Write::<u64>(*i as u64);
+                }
+                let second_pointer = ptr.GetTop();
+                ptr.Align();
+                ptr.Write::<u64>(0);
+                ptr.Write::<u64>(if envv.is_some() {second_pointer} else {0});
+                ptr.Write::<u64>(0);
+                ptr.Write::<u64>(if argv.is_some() {first_pointer} else {0});
+                ptr.Write::<u64>(arg_pointers.len() as u64);
+                let mut plock = PROCESSES.lock();
+                let proc = (&mut plock).get_mut(&pid).unwrap();
+                proc.task_state.SetSP(ptr.GetTop() as usize);
+                drop(arg_pointers);
+                drop(env_pointers);
                 proc.fds.retain(|_,x| !x.close_on_exec);
                 let state_ptr = &proc.task_state as *const State as usize;
+                drop(proc);
                 drop(plock);
                 drop(argp);
                 drop(envp);
@@ -392,9 +397,9 @@ impl Process {
 }
 
 pub fn PageFault(pid: i32, location: usize) -> bool {
-    let mut lock = PROCESSES.lock();
-    let proc = lock.get_mut(&pid).unwrap();
     if (0x7f8000000000..0x800000000000).contains(&(location)) { // Stack Allocation
+        let mut lock = PROCESSES.lock();
+        let proc = lock.get_mut(&pid).unwrap();
         if proc.pagetable.GetEntry((location.div_floor(0x1000) * 0x1000) as u64).is_none() {
             let mut page = Arc::get_mut(&mut proc.pagetable).unwrap().Map((location.div_floor(0x1000) * 0x1000) as u64,crate::PageFrame::Allocate(0x1000).unwrap() as u64-crate::arch::PHYSMEM_BEGIN);
             page.SetUser(true);
@@ -407,7 +412,6 @@ pub fn PageFault(pid: i32, location: usize) -> bool {
         drop(lock);
         return false;
     } else {
-        drop(lock);
         return false;
     }
 }
