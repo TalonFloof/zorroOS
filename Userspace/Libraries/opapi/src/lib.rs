@@ -10,6 +10,7 @@ pub mod syscall;
 pub mod io;
 pub mod allocator;
 pub mod file;
+pub mod errors;
 
 #[macro_use]
 pub mod macros;

@@ -128,15 +128,16 @@ pub fn Mount(path: &str, filesystem: Arc<dyn Filesystem>) {
 
 pub fn FindMount(path: &str) -> Result<(usize,Arc<dyn Filesystem>),i64> {
     let mlock = MOUNTS.lock();
+    let mut best: (Option<Arc<dyn Filesystem>>, usize, usize) = (None,0,0);
     for (i,(name,val)) in mlock.iter().enumerate() {
         if name.cmp(&String::from(path)) == core::cmp::Ordering::Equal {
-            let mnt = val.clone();
-            drop(mlock);
-            return Ok((i,mnt))
+            if best.2 < name.len() {
+                best = (Some(val.clone()),i,name.len());
+            }
         }
     }
     drop(mlock);
-    Err(Errors::ENOENT as i64)
+    return if best.0.is_none() {Err(Errors::ENOENT as i64)} else {Ok((best.1,best.0.unwrap()))};
 }
 
 pub fn UMount(name: &str) -> i64 {

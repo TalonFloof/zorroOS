@@ -52,9 +52,6 @@ impl VFS::Inode for PtsDir {
     }
 
     fn Lookup(&self, name: &str) -> Result<Arc<dyn VFS::Inode>, i64> {
-        if name == "ptmx" {
-            return Ok(Arc::new(Ptmx(AtomicUsize::new(usize::MAX))))
-        }
         let lock = PTYS.lock();
         for i in lock.iter() {
             if i.1.client.GetName()? == name {
@@ -70,9 +67,6 @@ impl VFS::Inode for PtsDir {
         if index < lock.len() {
             drop(lock);
             return Ok(Some(PTYS.lock().get(&index).unwrap().client.clone()))
-        } else if index == lock.len() {
-            drop(lock);
-            return Ok(Some(Arc::new(Ptmx(AtomicUsize::new(usize::MAX)))));
         }
         drop(lock);
         Ok(None)
@@ -217,6 +211,49 @@ impl VFS::Inode for PTServer {
         return -(Errors::EPIPE as i64);
     }
 }
+struct PtmxDev(usize);
+impl PtmxDev {
+    fn new() -> Arc<Self> {
+        Arc::new(PtmxDev(DevFS::ReserveDeviceID()))
+    }
+}
+impl VFS::Inode for PtmxDev {
+    fn Stat(&self) -> Result<VFS::Metadata, i64> {
+        Ok(VFS::Metadata {
+            device_id: 0,
+            inode_id: i64::MAX,
+            mode: 0o0020666, // crw-rw-rw-
+            nlinks: 1,
+            uid: 0,
+            gid: 0,
+            rdev: 0,
+            size: 0,
+            blksize: 0,
+            blocks: 0,
+
+            atime: unsafe {crate::UNIX_EPOCH as i64},
+            mtime: unsafe {crate::UNIX_EPOCH as i64},
+            ctime: unsafe {crate::UNIX_EPOCH as i64},
+            reserved1: 0,
+            reserved2: 0,
+            reserved3: 0,
+        })
+    }
+    fn GetName(&self) -> Result<&str, i64> {
+        Ok("ptmx")
+    }
+    fn Open(&self, _mode: usize) -> Result<(), i64> {
+        panic!("You shouldn't be seeing this");
+    }
+}
+impl DevFS::Device for PtmxDev {
+    fn DeviceID(&self) -> usize {
+        self.0
+    }
+    fn Inode(&self) -> Arc<dyn VFS::Inode> {
+        Arc::new(Ptmx(AtomicUsize::new(usize::MAX)))
+    }
+}
 struct Ptmx(AtomicUsize);
 impl Drop for Ptmx {
     fn drop(&mut self) {
@@ -320,7 +357,9 @@ pub fn DestroyPTY(index: usize) {
 
 static PTSDIR: Once<Arc<PtsDir>> = Once::new();
 static PTYS: Mutex<BTreeMap<usize, Arc<PTY>>> = Mutex::new(BTreeMap::new());
+static PTMXDEV: Once<Arc<PtmxDev>> = Once::new();
 
 pub fn Initalize() {
     DevFS::InstallDevice(PTSDIR.call_once(|| PtsDir::new()).clone());
+    DevFS::InstallDevice(PTMXDEV.call_once(|| PtmxDev::new()).clone());
 }

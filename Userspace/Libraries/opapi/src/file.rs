@@ -1,5 +1,6 @@
 use alloc::string::String;
 use alloc::vec;
+use alloc::string::ToString;
 
 pub const O_EXEC: usize      = 1;
 pub const O_RDONLY: usize    = 2;
@@ -45,7 +46,35 @@ impl File {
         }
         Ok(result as usize)
     }
-    pub fn ReadToString(&self, s: &mut String) -> Result<(),isize> {
+    pub fn ReadLine(&self) -> Result<String,isize> {
+        if self.0 == 0 {
+            let mut buf = vec![0u8; 256];
+            let mut key_stroke = vec![0u8; 1];
+            let mut position = 0;
+            loop {
+                let result = crate::syscall::read(self.0,key_stroke.as_mut_slice());
+                if result < 0 {
+                    return Err(result);
+                }
+                if key_stroke[0] == '\n' as u8 {
+                    crate::syscall::write(self.0,b"\n");
+                    return Ok(String::from_utf8_lossy(&buf[0..position]).to_string());
+                } else if key_stroke[0] == '\x08' as u8 {
+                    if position > 0 {
+                        crate::syscall::write(self.0,b"\x08 \x08");
+                        position -= 1;
+                    }
+                } else {
+                    crate::syscall::write(self.0,key_stroke.as_slice());
+                    buf[position] = key_stroke[0];
+                    position += 1;
+                }
+            }
+        } else {
+            return Err(crate::errors::ENOSYS);
+        }
+    }
+    pub fn ReadToString(&self) -> Result<String,isize> {
         let curpos = crate::syscall::lseek(self.0,0,SEEK_CUR);
         if curpos < 0 {
             return Err(curpos);
@@ -67,9 +96,7 @@ impl File {
             return Err(result);
         }
         bytes.truncate(result as usize);
-        s.push_str(bytes.as_str());
-        drop(bytes);
-        Ok(())
+        Ok(bytes)
     }
     pub fn Write(&self, buf: &[u8]) -> Result<usize,isize> {
         let result = crate::syscall::write(self.0,buf);
@@ -133,6 +160,8 @@ impl Iterator for ReadDir {
 
 impl Drop for File {
     fn drop(&mut self) {
-        crate::syscall::close(self.0);
+        if self.0 > 2 {
+            crate::syscall::close(self.0);
+        }
     }
 }

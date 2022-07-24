@@ -8,6 +8,7 @@ pub static ALT: AtomicBool = AtomicBool::new(false);
 pub static CTRL: AtomicBool = AtomicBool::new(false);
 pub static SHIFT: AtomicBool = AtomicBool::new(false);
 pub static SESSION_STARTED: AtomicBool = AtomicBool::new(false);
+pub static PTY_READY: AtomicBool = AtomicBool::new(false);
 
 pub(crate) fn SetupConsole() -> bool {
     let con = opapi::syscall::open("/dev/liminecon",O_RDWR | O_CLOEXEC);
@@ -63,9 +64,9 @@ pub fn Loop() -> ! {
     }
     if let Some(ref mut keyboard) = *KEYBOARD.lock() {
         let kbd = File::Open("/dev/kbd",O_RDWR | O_CLOEXEC).expect("NO KEYBOARD CHARACTER STREAM?");
-        let pt_server = File::Open("/dev/pts/ptmx",O_RDWR | O_CLOEXEC).expect("NO PTMX?");
-        let mut key_buf = vec![0u8; 1];
-        let mut buf = vec![0u8; 32];
+        let pt_server = File::Open("/dev/ptmx",O_RDWR | O_CLOEXEC).expect("NO PTMX?");
+        PTY_READY.store(true, Ordering::Relaxed);
+        let mut buf = vec![0u8; 1];
         loop {
             let has_started = SESSION_STARTED.load(Ordering::Relaxed);
             if kbd.Read(&mut buf[0..=0]).ok().unwrap() > 0 {
@@ -85,7 +86,7 @@ pub fn Loop() -> ! {
                             DecodedKey::Unicode(c) => {
                                 if has_started {
                                     buf[0] = c as u8;
-                                    pt_server.Write(&mut buf[0..=0]);
+                                    drop(pt_server.Write(&mut buf[0..=0]));
                                 }
                             },
                             _ => {},
@@ -94,11 +95,9 @@ pub fn Loop() -> ! {
                 }
                 buf[0] = 0;
             }
-            if has_started {
-                if let Ok(val) = pt_server.Read(buf.as_mut_slice()) {
-                    if val > 0 {
-                        opapi::syscall::write(1,&buf[0..val]);
-                    }
+            if let Ok(val) = pt_server.Read(buf.as_mut_slice()) {
+                if val > 0 {
+                    opapi::syscall::write(1,&buf[0..val]);
                 }
             }
             opapi::syscall::sched_yield();

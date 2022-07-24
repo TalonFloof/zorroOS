@@ -203,6 +203,19 @@ pub fn sigreturn() {
     Syscall(0x20,0,0,0);
 }
 
+pub fn nanosleep(secs: i64, nanos: i64) {
+    let mut deadline = getclock();
+    deadline.0 += secs+((deadline.1+nanos)/1000000000);
+    deadline.1 = (deadline.1+nanos)%1000000000;
+    loop {
+        let cur = getclock();
+        if cur.0 > deadline.0 || (cur.0 == deadline.0 && cur.1 >= deadline.1) {
+            return;
+        }
+        sched_yield();
+    }
+}
+
 pub fn getclock() -> (i64,i64) {
     let mut array = [0i64; 2];
     Syscall(0x21,array.as_mut_ptr() as usize,unsafe {array.as_mut_ptr().offset(1) as usize},0);
