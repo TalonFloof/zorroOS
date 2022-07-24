@@ -1,5 +1,5 @@
 use crate::arch::Syscall;
-use cstr_core::{CStr,CString};
+use cstr_core::{CString};
 use crate::Stat;
 use alloc::string::String;
 use alloc::vec;

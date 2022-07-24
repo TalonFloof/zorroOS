@@ -6,10 +6,30 @@ use alloc::vec::Vec;
 use limine::*;
 use crate::Memory::PageTable;
 
-struct LimineTTY(usize,Option<&'static LimineTerminalResponse>);
+#[repr(C)]
+pub struct WinSize {
+    row: u16,
+    col: u16,
+    reserved1: u16,
+    reserved2: u16,
+}
+
+struct LimineTTY(usize,Option<&'static LimineTerminalResponse>,usize,usize);
 impl LimineTTY {
     pub fn new() -> Arc<Self> {
-        Arc::new(Self(DevFS::ReserveDeviceID(),crate::arch::TERMINAL.get_response().get()))
+        let term = crate::arch::TERMINAL.get_response().get();
+        let mut row = 0;
+        let mut col = 0;
+        if term.is_some() {
+            /*
+            The latest revision of the Limine Protocol has the row and column entries in the LimineTerminal struct swapped
+            but the limine-rs crate has it swapped, so for now the values have been swapped.
+            I opened a PR to try to fix it but I don't know if/when it will be merged...
+            */
+            row = unsafe {term.unwrap().terminals.get().unwrap().as_ptr().unwrap().as_ref().unwrap().cols as usize};
+            col = unsafe {term.unwrap().terminals.get().unwrap().as_ptr().unwrap().as_ref().unwrap().rows as usize};
+        }
+        Arc::new(Self(DevFS::ReserveDeviceID(),term,row,col))
     }
 }
 impl DevFS::Device for LimineTTY {
@@ -67,7 +87,7 @@ impl VFS::Inode for LimineTTY {
         drop(stri);
         return buffer.len() as i64;
     }
-    fn IOCtl(&self, cmd: usize, _arg: usize) -> Result<usize, i64> {
+    fn IOCtl(&self, cmd: usize, arg: usize) -> Result<usize, i64> {
         return match cmd {
             0x1 => { // FOXKERNEL_AMD64_LIMINETTYREDRAW
                 let old_pt = x86_64::registers::control::Cr3::read();
@@ -76,6 +96,14 @@ impl VFS::Inode for LimineTTY {
                 let term = self.1.unwrap().terminals.get().unwrap().as_ptr().unwrap();
                 func(term, core::ptr::null(), -4i64 as u64);
                 unsafe {x86_64::registers::control::Cr3::write(old_pt.0,old_pt.1);}
+                Ok(0)
+            }
+            0x400E => { // TIOCSWINSZ
+                let ptr = arg as *mut WinSize;
+                unsafe {
+                    ptr.as_mut().unwrap().row = self.2 as u16;
+                    ptr.as_mut().unwrap().col = self.3 as u16;
+                }
                 Ok(0)
             }
             _ => {

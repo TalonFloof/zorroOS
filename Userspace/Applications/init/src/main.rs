@@ -10,7 +10,6 @@ pub mod Console;
 
 use core::sync::atomic::Ordering;
 use opapi::file::*;
-use cstr_core::CStr;
 use alloc::vec;
 use alloc::vec::Vec;
 
@@ -38,7 +37,7 @@ fn main() {
             counter = (counter + 1) % 4;
         }
         drop(opapi::io::stdout().Write(b"\x1b[?25h\x1b[1m\x1b[32m\xfb\x1b[0m]\n\n"));
-        let args: Vec<*const u8> = unsafe {vec![b"/bin/login\0".as_ptr(),core::ptr::null()]};
+        let args: Vec<*const u8> = vec![b"/bin/login\0".as_ptr(),core::ptr::null()];
         let result = opapi::syscall::execv("/bin/login",args.as_slice());
         if result < 0 {
             panic!("Failed to start /bin/login, Reason: {}", result);

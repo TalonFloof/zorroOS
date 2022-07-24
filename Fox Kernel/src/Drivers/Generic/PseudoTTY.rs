@@ -336,7 +336,6 @@ pub fn AddPTY() -> usize {
     let len = lock.keys().last().unwrap_or_else(|| &0) + 1;
     for i in 0..=len {
         if !(lock.contains_key(&i)) {
-            log::debug!("Create PTY #{}!", i);
             lock.insert(i,PTY::new(i));
             drop(lock);
             if PTYS.is_locked() {

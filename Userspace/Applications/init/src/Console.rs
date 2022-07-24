@@ -1,8 +1,9 @@
 use opapi::file::*;
-use pc_keyboard::{layouts, DecodedKey, Error, HandleControl, KeyState, KeyCode, KeyEvent, Keyboard, ScancodeSet1, ScancodeSet2};
+use pc_keyboard::{layouts, DecodedKey, Error, HandleControl, KeyState, KeyCode, KeyEvent, Keyboard, ScancodeSet1};
 use spin::Mutex;
 use alloc::vec;
 use core::sync::atomic::{AtomicBool,Ordering};
+use opapi::sys::termios::*;
 
 pub static ALT: AtomicBool = AtomicBool::new(false);
 pub static CTRL: AtomicBool = AtomicBool::new(false);
@@ -18,6 +19,14 @@ pub(crate) fn SetupConsole() -> bool {
     if opapi::syscall::dup2(con,1).is_negative() || opapi::syscall::dup2(con,2).is_negative() {
         return false;
     }
+    let mut ttysize: WinSize = WinSize {
+        row: 0,
+        col: 0,
+        reserved1: 0,
+        reserved2: 0,
+    };
+    opapi::syscall::ioctl(1,TIOCGWINSZ,core::ptr::addr_of_mut!(ttysize) as usize);
+    println!("owlOS SysV Init running with {}x{} TTY", ttysize.col, ttysize.row);
     return true;
 }
 
