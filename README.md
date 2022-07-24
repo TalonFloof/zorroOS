@@ -19,7 +19,7 @@ kernel known as the **Fox Kernel**.
 
 <img src="Docs/Screenshot_June_29_22_FoxKernel.png" alt="Screenshot of Fox Kernel booting" width="640">
 
-<img src="Docs/Screenshot_July_23_22_owlOS.png" alt="Screenshot of owlOS" width="640">
+<img src="Docs/Screenshot_July_24_22_owlOS.png" alt="Screenshot of owlOS" width="640">
 
 ---
 ## Building

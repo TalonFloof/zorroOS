@@ -35,6 +35,17 @@ pub mod PS2Keyboard {
             while u8::read_from_port(0x64) & 0x1 == 0x1 {
                 u8::read_from_port(0x60);
             }
+            u8::write_to_port(0x64, 0xae);
+            Wait();
+            let mut status = u8::read_from_port(0x20);
+            status = ((status | 1) & !0x10) | 0x40;
+            Wait();
+            u8::write_to_port(0x64, 0x60);
+            Wait();
+            u8::write_to_port(0x60, status);
+            Wait();
+
+            SendCommand(0xf4);
             SendCommand(0xf0);
             SendCommand(1);
             Keyboard::KEYBOARD.call_once(|| Arc::new(PS2KBD));
@@ -49,6 +60,17 @@ pub mod PS2Keyboard {
             timeout -= 1;
             unsafe {
                 if u8::read_from_port(0x64) & 0x2 != 0x2 {
+                    return;
+                }
+            }
+        }
+    }
+    pub fn WaitData() {
+        let mut timeout = 10000;
+        while timeout > 0 {
+            timeout -= 1;
+            unsafe {
+                if u8::read_from_port(0x64) & 0x1 != 0x1 {
                     return;
                 }
             }
@@ -70,7 +92,7 @@ pub mod PS2Keyboard {
             while u8::read_from_port(0x64) & 0x1 == 0x1 {
                 let mut lock = BUFFER.lock();
                 let val = u8::read_from_port(0x60);
-                if val == 0x00 || val == 0xAA || val == 0xEE || val >= 0xFA {
+                if val == 0x00 || val == 0xEE || val >= 0xFA {
                     continue;
                 }
                 if lock.len() >= 128 {

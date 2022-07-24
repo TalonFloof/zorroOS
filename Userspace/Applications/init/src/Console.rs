@@ -1,5 +1,5 @@
 use opapi::file::*;
-use pc_keyboard::{layouts, DecodedKey, Error, HandleControl, KeyState, KeyCode, KeyEvent, Keyboard, ScancodeSet1};
+use pc_keyboard::{layouts, DecodedKey, Error, HandleControl, KeyState, KeyCode, KeyEvent, Keyboard, ScancodeSet1, ScancodeSet2};
 use spin::Mutex;
 use alloc::vec;
 use core::sync::atomic::{AtomicBool,Ordering};
@@ -82,7 +82,9 @@ pub fn Loop() -> ! {
                     let is_shift = SHIFT.load(Ordering::Relaxed);
                     if let Some(key) = keyboard.HandleKeyEvent(key_event) {
                         match key {
-                            DecodedKey::Unicode('\u{7f}') if is_alt && is_ctrl => SESSION_STARTED.store(true, Ordering::Relaxed),
+                            DecodedKey::Unicode('\u{7f}') if is_alt && is_ctrl => {
+                                SESSION_STARTED.store(true, Ordering::Relaxed);
+                            },
                             DecodedKey::Unicode(c) => {
                                 if has_started {
                                     buf[0] = c as u8;

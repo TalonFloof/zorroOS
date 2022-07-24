@@ -11,6 +11,7 @@ pub mod io;
 pub mod allocator;
 pub mod file;
 pub mod errors;
+pub mod process;
 
 #[macro_use]
 pub mod macros;

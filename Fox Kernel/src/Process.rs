@@ -10,8 +10,7 @@ use alloc::string::String;
 use alloc::sync::Arc;
 use crate::FS::VFS::FileDescriptor;
 use alloc::vec::Vec;
-use cstr_core::CString;
-use cstr_core::c_char;
+use cstr_core::{c_char,CStr,CString};
 use alloc::boxed::Box;
 
 pub static PROCESSES: Mutex<BTreeMap<i32,Box<Process>>> = Mutex::new(BTreeMap::new());
@@ -318,7 +317,7 @@ impl Process {
                     if argv.unwrap().offset(i).read() as usize == 0 {
                         break;
                     }
-                    let arg = CString::from_raw(argv.unwrap().offset(i).read() as *mut c_char).clone();
+                    let arg = CString::from(CStr::from_ptr(argv.unwrap().offset(i).read() as *mut c_char));
                     argp.push(arg);
                 }
             }
@@ -327,7 +326,7 @@ impl Process {
                     if envv.unwrap().offset(i).read() as usize == 0 {
                         break;
                     }
-                    let arg = CString::from_raw(envv.unwrap().offset(i).read() as *mut c_char).clone();
+                    let arg = CString::from(CStr::from_ptr(envv.unwrap().offset(i).read() as *mut c_char));
                     envp.push(arg);
                 }
             }

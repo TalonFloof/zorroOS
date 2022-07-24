@@ -10,13 +10,13 @@ use opapi::file::*;
 
 #[no_mangle]
 fn main() {
-    // This is temporary
+    println!("owlOS Nightly /dev/pts/0");
     loop {
-        print!("owlOS Nightly /dev/pts/0\nowlOS login: ");
+        print!("owlOS login: ");
         let username = opapi::io::stdin().ReadLine().expect("Something went wrong!");
         print!("Password: ");
         let password = opapi::io::stdin().ReadLine().expect("Something went wrong!");
-        if username == "root" {
+        if username == "root" { // This is temporary
             break;
         }
         opapi::syscall::nanosleep(3,0);
@@ -24,7 +24,7 @@ fn main() {
     }
     if let Ok(motd) = File::Open("/etc/motd",O_RDONLY | O_CLOEXEC) {
         if let Ok(msg) = motd.ReadToString() {
-            print!("{}", msg);
+            println!("{}", msg);
         }
     }
     loop {opapi::syscall::sched_yield();}

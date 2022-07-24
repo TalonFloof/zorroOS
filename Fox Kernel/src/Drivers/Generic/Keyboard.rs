@@ -45,6 +45,7 @@ impl VFS::Inode for KeyboardDevice {
         Ok("kbd")
     }
     fn Read(&self, _offset: i64, buffer: &mut [u8]) -> i64 {
+        if buffer.len() == 0 {return 0;}
         for i in 0..buffer.len() {
             let val = KEYBOARD.get().unwrap().Read();
             if val.is_none() {
