@@ -26,7 +26,7 @@ pub(crate) fn SetupConsole() -> bool {
         reserved2: 0,
     };
     opapi::syscall::ioctl(1,TIOCGWINSZ,core::ptr::addr_of_mut!(ttysize) as usize);
-    println!("owlOS SysV Init running with {}x{} TTY", ttysize.col, ttysize.row);
+    println!("owlOS SysV Init running with {}x{} TTY\n", ttysize.col, ttysize.row);
     return true;
 }
 
