@@ -95,7 +95,7 @@ pub fn SendIPIWait(dest: u8, dsh: u32, Type: u32, vector: u8) {
 }
 
 pub fn EnableHarts() {
-    let smp = unsafe {crate::arch::SMP.get_response().as_mut_ptr().expect("The Fox Kernel requires that the Limine compatible bootloader that you are using is compatable with the SMP feature.").as_mut().unwrap().cpus().unwrap()};
+    let smp = unsafe {crate::arch::SMP.get_response().as_ptr().expect("The Fox Kernel requires that the Limine compatible bootloader that you are using is compatable with the SMP feature.").as_mut().unwrap().cpus().unwrap()};
     unsafe {
         for i in smp.iter_mut() {
             if i.lapic_id != 0 {

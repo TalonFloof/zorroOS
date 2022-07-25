@@ -17,17 +17,12 @@ pub struct WinSize {
 struct LimineTTY(usize,Option<&'static LimineTerminalResponse>,usize,usize);
 impl LimineTTY {
     pub fn new() -> Arc<Self> {
-        let term = crate::arch::TERMINAL.get_response().get();
+        let term = unsafe {crate::arch::TERMINAL.get_response().get()};
         let mut row = 0;
         let mut col = 0;
         if term.is_some() {
-            /*
-            The latest revision of the Limine Protocol has the row and column entries in the LimineTerminal struct swapped
-            but the limine-rs crate has it swapped, so for now the values have been swapped.
-            I opened a PR to try to fix it but I don't know if/when it will be merged...
-            */
-            row = unsafe {term.unwrap().terminals.get().unwrap().as_ptr().unwrap().as_ref().unwrap().cols as usize};
-            col = unsafe {term.unwrap().terminals.get().unwrap().as_ptr().unwrap().as_ref().unwrap().rows as usize};
+            row = unsafe {term.unwrap().terminals.get().unwrap().as_ptr().unwrap().as_ref().unwrap().rows as usize};
+            col = unsafe {term.unwrap().terminals.get().unwrap().as_ptr().unwrap().as_ref().unwrap().cols as usize};
         }
         Arc::new(Self(DevFS::ReserveDeviceID(),term,row,col))
     }
@@ -81,7 +76,7 @@ impl VFS::Inode for LimineTTY {
         let old_pt = x86_64::registers::control::Cr3::read();
         unsafe { crate::PageFrame::KernelPageTable.lock().Switch(); }
         let func = unsafe {*((self.1.unwrap() as *const _ as *const u64).offset(3) as *const extern "C" fn(terminal: *const LimineTerminal, addr: *const u8, len: u64))};
-        let term = self.1.unwrap().terminals.get().unwrap().as_ptr().unwrap();
+        let term = unsafe {self.1.unwrap().terminals.get()}.unwrap().as_ptr().unwrap();
         func(term, stri.as_ptr(), buffer.len() as u64);
         unsafe {x86_64::registers::control::Cr3::write(old_pt.0,old_pt.1);}
         drop(stri);
@@ -93,7 +88,7 @@ impl VFS::Inode for LimineTTY {
                 let old_pt = x86_64::registers::control::Cr3::read();
                 unsafe { crate::PageFrame::KernelPageTable.lock().Switch(); }
                 let func = unsafe {*((self.1.unwrap() as *const _ as *const u64).offset(3) as *const extern "C" fn(terminal: *const LimineTerminal, addr: *const u8, len: u64))};
-                let term = self.1.unwrap().terminals.get().unwrap().as_ptr().unwrap();
+                let term = unsafe {self.1.unwrap().terminals.get()}.unwrap().as_ptr().unwrap();
                 func(term, core::ptr::null(), -4i64 as u64);
                 unsafe {x86_64::registers::control::Cr3::write(old_pt.0,old_pt.1);}
                 Ok(0)

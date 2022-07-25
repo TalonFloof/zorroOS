@@ -1,0 +1,8 @@
+sources:
+  - name: mlibc
+    subdir: '3rdparty'
+    git: 'https://github.com/managarm/mlibc.git'
+    branch: 'master'
+    rolling_version: true
+    version: '0.0pl@ROLLING_ID@'
+  

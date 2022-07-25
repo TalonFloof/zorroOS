@@ -32,7 +32,7 @@ debug = 0
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
 x86_64 = {version="*",features=["nightly"]}
-limine = "*"
+limine = { git = "https://github.com/limine-bootloader/limine-rs", rev = "91a7b5941576004edc99b81ec2e65dec6d629250" }
 acpi = "*"
 rsdp = "*"
 xhci = "*"

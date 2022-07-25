@@ -93,8 +93,8 @@ extern "C" fn _start(stack_top: u64) {
 	Syscall::Initialize();
 	Task::SetupFPU();
 	Memory::AnalyzeMMAP();
-	if KERNEL_FILE.get_response().get().is_some() {
-		let cmdstr = String::from(KERNEL_FILE.get_response().get().unwrap().kernel_file.get().unwrap().cmdline.to_string().unwrap());
+	if unsafe {KERNEL_FILE.get_response().get()}.is_some() {
+		let cmdstr = String::from(unsafe {KERNEL_FILE.get_response().get().unwrap().kernel_file.get()}.unwrap().cmdline.to_string().unwrap());
 		if cmdstr.len() == 0 {
 			log::warn!("Kernel Command Line is empty!");
 		} else {
@@ -104,9 +104,9 @@ extern "C" fn _start(stack_top: u64) {
 	} else {
 		log::error!("Bootloader didn't specify Kernel Command Line!");
 	}
-	if FRAMEBUFFER.get_response().get().is_some() {
-		let fb_tag = &FRAMEBUFFER.get_response().get().unwrap().framebuffers().unwrap()[0];
-		crate::Framebuffer::Init(fb_tag.address.as_mut_ptr().unwrap() as *mut u32,fb_tag.width as usize,fb_tag.height as usize,fb_tag.pitch as usize,fb_tag.bpp as usize);
+	if unsafe {FRAMEBUFFER.get_response().get()}.is_some() {
+		let fb_tag = &unsafe {FRAMEBUFFER.get_response().get()}.unwrap().framebuffers().unwrap()[0];
+		crate::Framebuffer::Init(fb_tag.address.as_ptr().unwrap() as *mut u32,fb_tag.width as usize,fb_tag.height as usize,fb_tag.pitch as usize,fb_tag.bpp as usize);
 	}
 	unsafe {crate::UNIX_EPOCH = TIMESTAMP.get_response().get().expect("The Fox Kernel requires that the Limine compatible bootloader that you are using contains a UNIX Epoch Timestamp.").boot_time as u64};
 	ACPI::AnalyzeRSDP();
@@ -115,7 +115,7 @@ extern "C" fn _start(stack_top: u64) {
 	} else {
 		log::warn!("Symmetric Multiprocessing was disabled by bootloader!");
 	}
-	if let Some(mods) = MODULES.get_response().get() {
+	if let Some(mods) = unsafe {MODULES.get_response().get()} {
 		let mut mod_list: Vec<(String,&[u8])> = Vec::new();
 		for i in mods.modules().unwrap().iter() {
 			unsafe {mod_list.push((String::from(i.cmdline.to_string().unwrap()),core::slice::from_raw_parts(i.base.as_ptr().unwrap(), i.length as usize)));}

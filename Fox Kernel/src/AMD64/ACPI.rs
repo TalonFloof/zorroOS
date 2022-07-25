@@ -26,7 +26,7 @@ pub static AML_TABLES: Mutex<Vec<&[u8]>> = Mutex::new(Vec::new());
 pub static ACPI_TABLES: Mutex<Option<AcpiTables<ACPIMapping>>> = Mutex::new(None);
 
 pub fn AnalyzeRSDP() {
-    let tag = RSDP.get_response().get().expect("The Fox Kernel requires that the Limine compatible bootloader that you are using contains a pointer to the ACPI tables.");
+    let tag = unsafe {RSDP.get_response().get()}.expect("The Fox Kernel requires that the Limine compatible bootloader that you are using contains a pointer to the ACPI tables.");
     if tag.address.as_ptr().is_none() {
         panic!("Your Firmware is not ACPI-Compliant");
     }

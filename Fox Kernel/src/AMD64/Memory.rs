@@ -20,7 +20,7 @@ fn GetStartPageTable() -> *mut HWPageTable {
 }
 
 pub fn AnalyzeMMAP() {
-    let mmap = crate::arch::MMAP.get_response().get().unwrap().mmap().unwrap();
+    let mmap = unsafe {crate::arch::MMAP.get_response().get()}.unwrap().mmap().unwrap();
     *Startup_PageTable.lock() = Some(x86_64::registers::control::Cr3::read().0.start_address().as_u64()+PHYSMEM_BEGIN);
     let pml4: *mut HWPageTable = GetStartPageTable();
     unsafe {
