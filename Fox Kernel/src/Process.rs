@@ -281,7 +281,7 @@ impl Process {
             task_state,
             sig_state,
             task_fpstate: self.task_fpstate.Clone(),
-            tcb,
+            tcb: self.tcb,
 
             hart: AtomicU32::new(u32::MAX),
             name: self.name.clone(),
