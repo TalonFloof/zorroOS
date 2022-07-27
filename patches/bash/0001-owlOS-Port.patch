@@ -1,7 +1,7 @@
-From 79e31c6e382f6f41878ebb7786b866bfc69d0fdd Mon Sep 17 00:00:00 2001
+From b04b741955c852147883d2ed478e3157c95d0986 Mon Sep 17 00:00:00 2001
 From: Talon396 <105325988+Talon396@users.noreply.github.com>
 Date: Tue, 26 Jul 2022 13:53:53 -0500
-Subject: [PATCH] owlOS Port
+Subject: [PATCH 1/2] owlOS Port
 
 Signed-off-by: Talon396 <105325988+Talon396@users.noreply.github.com>
 ---
