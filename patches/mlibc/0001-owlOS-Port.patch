@@ -1,6 +1,6 @@
-From 85612741424bd3089545efa45aa889d718e3a1e0 Mon Sep 17 00:00:00 2001
+From 57c3a5754b0d7cddc6de4555df6d499700e2e7a7 Mon Sep 17 00:00:00 2001
 From: Talon396 <105325988+Talon396@users.noreply.github.com>
-Date: Tue, 26 Jul 2022 17:06:19 -0500
+Date: Wed, 27 Jul 2022 12:49:04 -0500
 Subject: [PATCH] owlOS Port
 
 Signed-off-by: Talon396 <105325988+Talon396@users.noreply.github.com>
@@ -8,12 +8,12 @@ Signed-off-by: Talon396 <105325988+Talon396@users.noreply.github.com>
  abis/owlos/auxv.h                            |  12 +
  ci/owlos.cross-file                          |  12 +
  meson.build                                  |   4 +
- options/rtdl/generic/linker.cpp              |   2 +-
+ options/rtdl/generic/linker.cpp              |   6 +-
  sysdeps/owlos/AMD64/crt0.S                   |   5 +
  sysdeps/owlos/AMD64/thread_entry.S           |   7 +
  sysdeps/owlos/generic/entry.cpp              |  32 ++
- sysdeps/owlos/generic/generic.cpp            | 349 +++++++++++++++++++
- sysdeps/owlos/generic/thread.cpp             |  39 +++
+ sysdeps/owlos/generic/generic.cpp            | 358 +++++++++++++++++++
+ sysdeps/owlos/generic/thread.cpp             |  39 ++
  sysdeps/owlos/include/abi-bits/abi.h         |   1 +
  sysdeps/owlos/include/abi-bits/access.h      |   1 +
  sysdeps/owlos/include/abi-bits/auxv.h        |   1 +
@@ -43,9 +43,9 @@ Signed-off-by: Talon396 <105325988+Talon396@users.noreply.github.com>
  sysdeps/owlos/include/abi-bits/wait.h        |   1 +
  sysdeps/owlos/include/mlibc/thread-entry.hpp |  10 +
  sysdeps/owlos/include/owlos/mmap_args.h      |  15 +
- sysdeps/owlos/include/owlos/syscall.h        | 106 ++++++
+ sysdeps/owlos/include/owlos/syscall.h        | 107 ++++++
  sysdeps/owlos/meson.build                    |  66 ++++
- 40 files changed, 685 insertions(+), 1 deletion(-)
+ 40 files changed, 697 insertions(+), 3 deletions(-)
  create mode 100644 abis/owlos/auxv.h
  create mode 100644 ci/owlos.cross-file
  create mode 100644 sysdeps/owlos/AMD64/crt0.S
@@ -137,14 +137,18 @@ index fd95bb4a..8869fe1c 100644
  	error('No sysdeps defined for OS: ' + host_machine.system())
  endif
 diff --git a/options/rtdl/generic/linker.cpp b/options/rtdl/generic/linker.cpp
-index ffdf5c34..5095ef7b 100644
+index ffdf5c34..0f5813c1 100644
 --- a/options/rtdl/generic/linker.cpp
 +++ b/options/rtdl/generic/linker.cpp
-@@ -14,7 +14,7 @@ uintptr_t libraryBase = 0x41000000;
+@@ -12,9 +12,9 @@
  
- bool verbose = false;
- bool stillSlightlyVerbose = false;
+ uintptr_t libraryBase = 0x41000000;
+ 
+-bool verbose = false;
+-bool stillSlightlyVerbose = false;
 -bool logBaseAddresses = false;
++bool verbose = true;
++bool stillSlightlyVerbose = true;
 +bool logBaseAddresses = true;
  bool eagerBinding = true;
  
@@ -214,10 +218,10 @@ index 00000000..a59b55a5
 \ No newline at end of file
 diff --git a/sysdeps/owlos/generic/generic.cpp b/sysdeps/owlos/generic/generic.cpp
 new file mode 100644
-index 00000000..aa27528d
+index 00000000..22493015
 --- /dev/null
 +++ b/sysdeps/owlos/generic/generic.cpp
-@@ -0,0 +1,349 @@
+@@ -0,0 +1,358 @@
 +#include <owlos/syscall.h>
 +#include <owlos/mmap_args.h>
 +#include <stddef.h>
@@ -250,7 +254,7 @@ index 00000000..aa27528d
 +        return 0;
 +    }
 +    int sys_tcb_set(void *pointer) {
-+        mlibc::infoLogger() << "sys_tcb_set() not implemented" << frg::endlog;
++        syscall(SYS_SET_THREAD_AREA,pointer);
 +        return 0;
 +    }
 +    int sys_vm_map(void *hint, size_t size, int prot, int flags, int fd, off_t offset, void **window) {
@@ -557,6 +561,15 @@ index 00000000..aa27528d
 +        if (result < 0) {
 +            return -result;
 +        }
++        return 0;
++    }
++    int sys_uname(struct utsname* buf)
++        ensure(buf);
++        strcpy(buf->sysname, MLIBC_SYSTEM_NAME);
++        strcpy(buf->nodename, "owlOS");
++        strcpy(buf->release, "Nightly");
++        strcpy(buf->version, _TIMESTAMP_);
++        strcpy(buf->machine, "x86_64-pc");
 +        return 0;
 +    }
 +    int sys_pipe(int *fds, int flags) {
@@ -869,10 +882,10 @@ index 00000000..6b65a6c5
 \ No newline at end of file
 diff --git a/sysdeps/owlos/include/owlos/syscall.h b/sysdeps/owlos/include/owlos/syscall.h
 new file mode 100644
-index 00000000..8ff127b3
+index 00000000..b7810927
 --- /dev/null
 +++ b/sysdeps/owlos/include/owlos/syscall.h
-@@ -0,0 +1,106 @@
+@@ -0,0 +1,107 @@
 +
 +#ifndef SYSCALL_H
 +#define SYSCALL_H
@@ -920,6 +933,7 @@ index 00000000..8ff127b3
 +#define SYS_MUNMAP 38
 +#define SYS_FUTEX_WAIT 39
 +#define SYS_FUTEX_WAKE 40
++#define SYS_SET_THREAD_AREA 41
 +#define SYS_FOXKERNEL_POWERCTL 0xf0
 +#define SYS_FOXKERNEL_LOG 0xf1
 +
@@ -979,7 +993,6 @@ index 00000000..8ff127b3
 +#endif
 +
 +#endif
-\ No newline at end of file
 diff --git a/sysdeps/owlos/meson.build b/sysdeps/owlos/meson.build
 new file mode 100644
 index 00000000..8edfc38a

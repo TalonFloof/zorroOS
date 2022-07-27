@@ -124,6 +124,7 @@ impl Scheduler {
                 panic!("PID: {}, Attempt to Context Switch to unknown process", pid);
             }
             let task = lock.get(&pid).expect("Attempt to Context Switch to unknown process").as_ref() as *const Process;
+            unsafe { crate::arch::Task::SetTCB((&*task).tcb); }
             unsafe { (&*task).task_fpstate.Restore(); }
             drop(lock);
             unsafe { (&*task).ContextSwitch() }

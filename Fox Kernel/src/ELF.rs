@@ -7,9 +7,9 @@ use alloc::string::String;
 fn LoadELF(path: &str, inode_id: i64, data: &[u8], pt: &mut PageTableImpl, seg: &mut Vec<(usize,usize,String,u8,i64,usize)>) -> Result<usize,()> {
     match xmas_elf::ElfFile::new(data) {
         Ok(elf) => {
-            if path != "/usr/lib/ld.so" {
+            /*if path != "/usr/lib/ld.so" {
                 seg.push((0,4096,String::from("[zero_page]"),0,0,0));
-            }
+            }*/
             let mut entry = elf.header.pt2.entry_point();
             let mut highest_addr = 0;
             for i in elf.program_iter() {

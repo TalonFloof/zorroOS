@@ -91,7 +91,7 @@ if args[0] == "build":
                 sys.exit(output.returncode)
             for i in output.stdout.splitlines():
                 if len(i[2:]) > 0:
-                    output = subprocess.run(["cp","-r","/".join(["xbstrap-build/system-root",i[2:].decode("UTF-8")]),"/".join(["SystemRoot",i[2:].decode("UTF-8")])])
+                    output = subprocess.run(["cp","-r","/".join(["xbstrap-build/system-root",i[2:].decode("UTF-8")]),"SystemRoot/"])
                     if output.returncode != 0:
                         print("\x1b[1m\x1b[31mFailed\x1b[0m---",output.returncode)
                         sys.exit(output.returncode)

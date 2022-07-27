@@ -3,6 +3,7 @@ use crate::arch::GDT::HARTS;
 use crate::CurrentHart;
 use crate::Memory::PageTable;
 use crate::Process::{TaskState,TaskFloatState};
+use x86_64::instructions::segmentation::Segment64;
 
 #[repr(C, align(8))]
 #[derive(Debug)]
@@ -182,4 +183,8 @@ pub fn SetupFPU() {
     cr4.set(x86_64::registers::control::Cr4Flags::PAGE_GLOBAL,true);
     unsafe {x86_64::registers::control::Cr4::write(cr4);}
 	unsafe { asm!("fninit"); }
+}
+
+pub fn SetTCB(val: usize) {
+    unsafe {x86_64::registers::segmentation::FS::write_base(x86_64::VirtAddr::new(val as u64))};
 }
