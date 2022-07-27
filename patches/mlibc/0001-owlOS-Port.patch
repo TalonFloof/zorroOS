@@ -1,6 +1,6 @@
-From c23588164bb14066641f12d08374ca76e5c5a640 Mon Sep 17 00:00:00 2001
+From 85612741424bd3089545efa45aa889d718e3a1e0 Mon Sep 17 00:00:00 2001
 From: Talon396 <105325988+Talon396@users.noreply.github.com>
-Date: Mon, 25 Jul 2022 14:57:15 -0500
+Date: Tue, 26 Jul 2022 17:06:19 -0500
 Subject: [PATCH] owlOS Port
 
 Signed-off-by: Talon396 <105325988+Talon396@users.noreply.github.com>
@@ -8,7 +8,6 @@ Signed-off-by: Talon396 <105325988+Talon396@users.noreply.github.com>
  abis/owlos/auxv.h                            |  12 +
  ci/owlos.cross-file                          |  12 +
  meson.build                                  |   4 +
- meson_options.txt                            |   2 +-
  options/rtdl/generic/linker.cpp              |   2 +-
  sysdeps/owlos/AMD64/crt0.S                   |   5 +
  sysdeps/owlos/AMD64/thread_entry.S           |   7 +
@@ -46,7 +45,7 @@ Signed-off-by: Talon396 <105325988+Talon396@users.noreply.github.com>
  sysdeps/owlos/include/owlos/mmap_args.h      |  15 +
  sysdeps/owlos/include/owlos/syscall.h        | 106 ++++++
  sysdeps/owlos/meson.build                    |  66 ++++
- 41 files changed, 686 insertions(+), 2 deletions(-)
+ 40 files changed, 685 insertions(+), 1 deletion(-)
  create mode 100644 abis/owlos/auxv.h
  create mode 100644 ci/owlos.cross-file
  create mode 100644 sysdeps/owlos/AMD64/crt0.S
@@ -137,18 +136,6 @@ index fd95bb4a..8869fe1c 100644
  else
  	error('No sysdeps defined for OS: ' + host_machine.system())
  endif
-diff --git a/meson_options.txt b/meson_options.txt
-index 32a2f339..35245fae 100644
---- a/meson_options.txt
-+++ b/meson_options.txt
-@@ -1,6 +1,6 @@
- option('headers_only', type : 'boolean', value : false)
- option('mlibc_no_headers', type : 'boolean', value : false)
--option('static', type : 'boolean', value : false)
-+option('static', type : 'boolean', value : false)
- option('build_tests', type: 'boolean', value : false)
- option('disable_ansi_option', type: 'boolean', value : false)
- option('disable_crypt_option', type: 'boolean', value : false)
 diff --git a/options/rtdl/generic/linker.cpp b/options/rtdl/generic/linker.cpp
 index ffdf5c34..5095ef7b 100644
 --- a/options/rtdl/generic/linker.cpp

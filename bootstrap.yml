@@ -2,17 +2,71 @@ sources:
   - name: mlibc
     subdir: '3rdparty'
     git: 'https://github.com/managarm/mlibc.git'
-    branch: 'master'
-    rolling_version: true
-    version: '0.0pl@ROLLING_ID@'
+    tag: '2.3.0'
+    version: '2.3.0'
 
   - name: binutils
     subdir: '3rdparty'
     git: 'git://sourceware.org/git/binutils-gdb.git'
     tag: 'binutils-2_38'
     version: '2.38'
-    patch-path-strip: 1
+    tools_required:
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+    regenerate:
+      - args: ['cp',
+               '@BUILD_ROOT@/tools/host-automake-v1.16/share/automake-1.16/config.sub',
+               '@THIS_SOURCE_DIR@/']
   
+  - name: pkg-config
+    subdir: '3rdparty'
+    git: 'https://gitlab.freedesktop.org/pkg-config/pkg-config.git'
+    tag: 'pkg-config-0.29.2'
+    version: '0.29.2'
+    tools_required:
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+      - host-libtool
+    regenerate:
+      - args: ['./autogen.sh']
+        environ:
+          NOCONFIGURE: 'yes'
+
+  - name: tzcode
+    subdir: '3rdparty'
+    url: 'https://data.iana.org/time-zones/releases/tzcode2022a.tar.gz'
+    format: 'tar.gz'
+    version: '2022a'
+
+  - name: tzdata
+    subdir: '3rdparty'
+    sources_required: ['tzcode']
+    url: 'https://data.iana.org/time-zones/releases/tzdata2022a.tar.gz'
+    format: 'tar.gz'
+    version: '2022a'
+    regenerate:  
+      - args: ['cp', '-r', '@THIS_SOURCE_DIR@/../tzcode/.', '@THIS_SOURCE_DIR@/']
+
+  - name: ncurses
+    subdir: '3rdparty'
+    git: 'https://github.com/ThomasDickey/ncurses-snapshots.git'
+    tag: 'v6_3'
+    version: '6.3'
+    tools_required:
+      - host-autoconf-v2.69
+      - host-automake-v1.16
+    regenerate:
+      - args: [ 'cp',
+                '@BUILD_ROOT@/tools/host-automake-v1.16/share/automake-1.16/config.sub',
+                '@THIS_SOURCE_DIR@/' ]
+
+  - name: gnulib
+    subdir: '3rdparty'
+    git: 'https://git.savannah.gnu.org/git/gnulib.git'
+    branch: 'master'
+    rolling_version: true
+    version: '0.0pl@ROLLING_ID@'
+
   - name: gcc
     subdir: '3rdparty'
     git: 'git://gcc.gnu.org/git/gcc.git'
@@ -45,20 +99,28 @@ sources:
       - args: ['autoconf']
         workdir: '@THIS_SOURCE_DIR@/libstdc++-v3'
   
-  - name: ncurses
-    subdir: '3rdparty'
-    git: 'https://github.com/ThomasDickey/ncurses-snapshots.git'
-    tag: 'v6_3'
-    version: '6.3'
-    tools_required:
-      - host-autoconf-v2.69
-      - host-automake-v1.16
-    regenerate:
-      - args: [ 'cp',
-                '@BUILD_ROOT@/tools/host-automake-v1.16/share/automake-1.16/config.sub',
-                '@THIS_SOURCE_DIR@/' ]
-  
 tools:
+  - name: host-zic
+    from_source: tzdata
+    configure:
+      - args: ['cp', '-r', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
+    compile:
+      - args: ['make', 'zic']
+    install:
+      - args: ['mkdir', '-p', '@PREFIX@/bin']
+      - args: ['cp', 'zic', '@PREFIX@/bin/']
+  
+  - name: host-tic
+    from_source: ncurses
+    configure:
+      - args: [ '@THIS_SOURCE_DIR@/configure' ]
+    compile:
+      - args: [ 'make', '-C', 'include' ]
+      - args: [ 'make', '-C', 'progs', 'tic' ]
+    install:
+      - args: [ 'mkdir', '-p', '@PREFIX@/bin' ]
+      - args: [ 'cp', 'progs/tic', '@PREFIX@/bin/' ]
+    
   - name: host-libtool
     exports_aclocal: true
     source:
@@ -150,17 +212,7 @@ tools:
       - args: ['make', '-j@PARALLELISM@', 'all-binutils', 'all-gas', 'all-ld']
     install:
       - args: ['make', 'install-strip-binutils', 'install-strip-gas', 'install-strip-ld']
-
-  - name: host-tic
-    from_source: ncurses
-    configure:
-      - args: [ '@THIS_SOURCE_DIR@/configure' ]
-    compile:
-      - args: [ 'make', '-C', 'include' ]
-      - args: [ 'make', '-C', 'progs', 'tic' ]
-    install:
-      - args: [ 'mkdir', '-p', '@PREFIX@/bin' ]
-
+  
   - name: host-gcc
     from_source: gcc
     tools_required:
@@ -194,7 +246,7 @@ tools:
           - args: ['ln', '-sf', '../../../host-binutils/x86_64-owlos/bin/ld',
                    '@PREFIX@/x86_64-owlos/bin/ld']
   
-  - name: libgcc
+      - name: libgcc
         tools_required:
           - tool: host-gcc
             stage_dependencies: [compiler]
@@ -361,37 +413,6 @@ packages:
       - args: ['mkdir', '-p', '@THIS_COLLECT_DIR@/bin']
       - args: [ 'ln', '-s', '/usr/bin/bash', '@THIS_COLLECT_DIR@/bin/bash' ]
       - args: [ 'ln', '-s', '/usr/bin/bash', '@THIS_COLLECT_DIR@/bin/sh' ]
-  
-  - name: readline
-    source:
-      subdir: '3rdparty'
-      git: 'https://git.savannah.gnu.org/git/readline.git'
-      tag: 'readline-8.1'
-      version: '8.1'
-      tools_required:
-        - host-autoconf-v2.69
-        - host-automake-v1.16
-      regenerate:
-        - args: ['cp',
-                 '@BUILD_ROOT@/tools/host-automake-v1.16/share/automake-1.16/config.sub',
-                 '@THIS_SOURCE_DIR@/support/']
-    tools_required:
-      - host-gcc
-    pkgs_required:
-      - mlibc
-      - ncurses
-    configure:
-      - args:
-          - '@THIS_SOURCE_DIR@/configure'
-          - '--host=x86_64-owlos'
-          - '--prefix=/usr'
-          - '--disable-static'
-          - '--enable-multibyte'
-    build:
-      - args: ['make', '-j@PARALLELISM@']
-      - args: ['make', 'DESTDIR=@THIS_COLLECT_DIR@', 'install']
-        environ:
-          DESTDIR: '@THIS_COLLECT_DIR@'
 
   - name: coreutils
     source:
@@ -436,3 +457,104 @@ packages:
       - args: ['make', 'install-strip']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
+    
+  - name: tzdata
+    from_source: tzdata
+    tools_required:
+      - host-zic
+      - host-gcc
+    pkgs_required:
+      - mlibc
+    configure:
+      - args: ['cp', '-r', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@/']
+    build:
+      # Build and install support programs
+      - args: ['make', 'CC=x86_64-owlos-gcc', 'AR=x86_64-owlos-ar']
+      - args: ['make', 'install', 'DESTDIR=@THIS_COLLECT_DIR@', 'ZIC=zic']
+      # Create the required directories
+      - args: ['mkdir', '-p', '@THIS_COLLECT_DIR@/etc']
+      - args: ['mkdir', '-p', '@THIS_COLLECT_DIR@/usr/share/zoneinfo/posix']
+      - args: ['mkdir', '-p', '@THIS_COLLECT_DIR@/usr/share/zoneinfo/right']
+      # Create the time zone files without leap seconds, convention puts these in both zoneinfo and zoneinfo/posix.
+      # After that. create time time zone files with leap seconds
+      - args: |
+          set -e
+          zic -L /dev/null -d "@THIS_COLLECT_DIR@"/usr/share/zoneinfo "@THIS_BUILD_DIR@"/etcetera
+          zic -L /dev/null -d "@THIS_COLLECT_DIR@"/usr/share/zoneinfo/posix "@THIS_BUILD_DIR@"/etcetera
+          zic -L "@THIS_SOURCE_DIR@"/leapseconds -d "@THIS_COLLECT_DIR@"/usr/share/zoneinfo/right "@THIS_BUILD_DIR@"/etcetera
+          zic -L /dev/null -d "@THIS_COLLECT_DIR@"/usr/share/zoneinfo "@THIS_BUILD_DIR@"/southamerica
+          zic -L /dev/null -d "@THIS_COLLECT_DIR@"/usr/share/zoneinfo/posix "@THIS_BUILD_DIR@"/southamerica
+          zic -L "@THIS_SOURCE_DIR@"/leapseconds -d "@THIS_COLLECT_DIR@"/usr/share/zoneinfo/right "@THIS_BUILD_DIR@"/southamerica
+          zic -L /dev/null -d "@THIS_COLLECT_DIR@"/usr/share/zoneinfo "@THIS_BUILD_DIR@"/northamerica
+          zic -L /dev/null -d "@THIS_COLLECT_DIR@"/usr/share/zoneinfo/posix "@THIS_BUILD_DIR@"/northamerica
+          zic -L "@THIS_SOURCE_DIR@"/leapseconds -d "@THIS_COLLECT_DIR@"/usr/share/zoneinfo/right "@THIS_BUILD_DIR@"/northamerica
+          zic -L /dev/null -d "@THIS_COLLECT_DIR@"/usr/share/zoneinfo "@THIS_BUILD_DIR@"/europe
+          zic -L /dev/null -d "@THIS_COLLECT_DIR@"/usr/share/zoneinfo/posix "@THIS_BUILD_DIR@"/europe
+          zic -L "@THIS_SOURCE_DIR@"/leapseconds -d "@THIS_COLLECT_DIR@"/usr/share/zoneinfo/right "@THIS_BUILD_DIR@"/europe
+          zic -L /dev/null -d "@THIS_COLLECT_DIR@"/usr/share/zoneinfo "@THIS_BUILD_DIR@"/africa
+          zic -L /dev/null -d "@THIS_COLLECT_DIR@"/usr/share/zoneinfo/posix "@THIS_BUILD_DIR@"/africa
+          zic -L "@THIS_SOURCE_DIR@"/leapseconds -d "@THIS_COLLECT_DIR@"/usr/share/zoneinfo/right "@THIS_BUILD_DIR@"/africa
+          zic -L /dev/null -d "@THIS_COLLECT_DIR@"/usr/share/zoneinfo "@THIS_BUILD_DIR@"/antarctica
+          zic -L /dev/null -d "@THIS_COLLECT_DIR@"/usr/share/zoneinfo/posix "@THIS_BUILD_DIR@"/antarctica
+          zic -L "@THIS_SOURCE_DIR@"/leapseconds -d "@THIS_COLLECT_DIR@"/usr/share/zoneinfo/right "@THIS_BUILD_DIR@"/antarctica
+          zic -L /dev/null -d "@THIS_COLLECT_DIR@"/usr/share/zoneinfo "@THIS_BUILD_DIR@"/asia
+          zic -L /dev/null -d "@THIS_COLLECT_DIR@"/usr/share/zoneinfo/posix "@THIS_BUILD_DIR@"/asia
+          zic -L "@THIS_SOURCE_DIR@"/leapseconds -d "@THIS_COLLECT_DIR@"/usr/share/zoneinfo/right "@THIS_BUILD_DIR@"/asia
+          zic -L /dev/null -d "@THIS_COLLECT_DIR@"/usr/share/zoneinfo "@THIS_BUILD_DIR@"/australasia
+          zic -L /dev/null -d "@THIS_COLLECT_DIR@"/usr/share/zoneinfo/posix "@THIS_BUILD_DIR@"/australasia
+          zic -L "@THIS_SOURCE_DIR@"/leapseconds -d "@THIS_COLLECT_DIR@"/usr/share/zoneinfo/right "@THIS_BUILD_DIR@"/australasia
+          zic -L /dev/null -d "@THIS_COLLECT_DIR@"/usr/share/zoneinfo "@THIS_BUILD_DIR@"/backward
+          zic -L /dev/null -d "@THIS_COLLECT_DIR@"/usr/share/zoneinfo/posix "@THIS_BUILD_DIR@"/backward
+          zic -L "@THIS_SOURCE_DIR@"/leapseconds -d "@THIS_COLLECT_DIR@"/usr/share/zoneinfo/right "@THIS_BUILD_DIR@"/backward
+      # Create the posixrules file, POSIX requires daylight saving rules to be in accordance with US rules, thus use New York
+      - args: ['zic', '-d', '@THIS_COLLECT_DIR@/usr/share/zoneinfo', '-p', 'America/New_York']
+      # Default to UTC for localtime, this should be fixed, but that is pending xbstrap support.
+      - args: ['ln', '-sf', '/usr/share/zoneinfo/UTC', '@THIS_COLLECT_DIR@/etc/localtime']
+  
+  - name: binutils
+    from_source: binutils
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+    configure:
+      - args:
+          - '@THIS_SOURCE_DIR@/configure'
+          - '--host=x86_64-owlos'
+          - '--prefix=/usr'
+          - '--target=x86_64-owlos'
+          - '--with-sysroot=/'
+          - '--disable-nls'
+          - '--disable-werror'
+          # -g blows up the binary size.
+  
+  - name: gcc
+    from_source: gcc
+    tools_required:
+      - host-gcc
+    pkgs_required:
+      - mlibc
+      - binutils
+    configure:
+      - args:
+          - '@THIS_SOURCE_DIR@/configure'
+          - '--host=x86_64-owlos'
+          - '--prefix=/usr'
+          - '--target=x86_64-owlos'
+          - '--with-sysroot=/'
+          - '--with-build-sysroot=@SYSROOT_DIR@'
+          - '--enable-languages=c,c++'
+          - '--enable-initfini-array'
+          - '--disable-multilib'
+          - '--disable-nls'
+          # -g blows up GCC's binary size.
+          - 'CFLAGS=-O2 -pipe'
+          - 'CXXFLAGS=-O2 -pipe'
+    build:
+      - args: ['make', '-j@PARALLELISM@', 'all-gcc', 'all-target-libgcc']
+      - args: ['make', 'install-strip-gcc', 'install-strip-target-libgcc']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+      - args: ['sh', '-c', 'cp -rv @BUILD_ROOT@/tools/host-gcc/x86_64-owlos/lib/* @THIS_COLLECT_DIR@/usr/lib/']
+      - args: ['sh', '-c', 'cp -rv @BUILD_ROOT@/tools/host-gcc/x86_64-owlos/include/* @THIS_COLLECT_DIR@/usr/include/']
+      - args: ['ln', '-s', '/usr/bin/gcc', '@THIS_COLLECT_DIR@/usr/bin/cc']
