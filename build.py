@@ -3,8 +3,16 @@
 import sys, os, subprocess
 from xml.etree.ElementTree import TreeBuilder
 
+build_all = False
+
 args = sys.argv.copy()
 del args[0]
+
+for i in range(0,len(args)):
+    if args[i] == "--distro":
+        build_all = True
+        del args[i]
+        break
 
 if len(args) == 0:
     args.append(input("Action (build, run): "))
@@ -45,14 +53,49 @@ if args[0] == "build":
     attempt_build("Userspace","Userspace","cargo build -Z unstable-options --target .cargo/"+args[1]+".json --out-dir ../out/bin")
     os.system("rm out/bin/*.rlib")
     ##################################################################
-    with open("out/root.cpio", "wb") as rootcpio:
-        attempt_package("Create InitRD","",("",))
-        subprocess.run(["rm","-f","out/root.cpio.gz"])
-        output = subprocess.run(["cp","-r","out/bin","Meta/bin"])
+    if build_all:
+        attempt_build("3rd Party Software","","true")
+        subprocess.run(["pip3","install","xbstrap"])
+        output = subprocess.run(["mkdir","-p","xbstrap-build"])
         if output.returncode != 0:
             print("\x1b[1m\x1b[31mFailed\x1b[0m---",output.returncode)
             sys.exit(output.returncode)
-        output = subprocess.run(["find",".","-type","f"],cwd="Meta/",stdout=subprocess.PIPE)
+        output = subprocess.run(["/bin/bash","-c","cd xbstrap-build && xbstrap init .. && xbstrap install -u --all"])
+        if output.returncode != 0:
+            print("\x1b[1m\x1b[31mFailed\x1b[0m---",output.returncode)
+            sys.exit(output.returncode)
+    ##################################################################
+    with open("out/root.cpio", "wb") as rootcpio:
+        attempt_package("Create InitRD","",("",))
+        subprocess.run(["rm","-f","out/root.cpio.gz"])
+        subprocess.run(["rm","-f", "-r","SystemRoot"])
+        subprocess.run(["mkdir","-p","SystemRoot"])
+        output = subprocess.run(["cp","-r","out/bin","SystemRoot/bin"])
+        if output.returncode != 0:
+            print("\x1b[1m\x1b[31mFailed\x1b[0m---",output.returncode)
+            sys.exit(output.returncode)
+        output = subprocess.run(["find",".","-maxdepth","1"],cwd="Meta/",stdout=subprocess.PIPE)
+        if output.returncode != 0:
+            print("\x1b[1m\x1b[31mFailed\x1b[0m---",output.returncode)
+            sys.exit(output.returncode)
+        for i in output.stdout.splitlines():
+            if len(i[2:]) > 0:
+                o = subprocess.run(["cp","-r","/".join(["Meta",i[2:].decode("UTF-8")]),"/".join(["SystemRoot",i[2:].decode("UTF-8")])])
+                if o.returncode != 0:
+                    print("\x1b[1m\x1b[31mFailed\x1b[0m---",o.returncode)
+                    sys.exit(o.returncode)
+        if build_all:
+            output = subprocess.run(["find",".","-maxdepth","1"],cwd="xbstrap-build/system-root/",stdout=subprocess.PIPE)
+            if output.returncode != 0:
+                print("\x1b[1m\x1b[31mFailed\x1b[0m---",output.returncode)
+                sys.exit(output.returncode)
+            for i in output.stdout.splitlines():
+                if len(i[2:]) > 0:
+                    output = subprocess.run(["cp","-r","/".join(["xbstrap-build/system-root",i[2:].decode("UTF-8")]),"/".join(["SystemRoot",i[2:].decode("UTF-8")])])
+                    if output.returncode != 0:
+                        print("\x1b[1m\x1b[31mFailed\x1b[0m---",output.returncode)
+                        sys.exit(output.returncode)
+        output = subprocess.run(["find",".","-type","f"],cwd="SystemRoot/",stdout=subprocess.PIPE)
         if output.returncode != 0:
             print("\x1b[1m\x1b[31mFailed\x1b[0m---",output.returncode)
             sys.exit(output.returncode)
@@ -60,7 +103,7 @@ if args[0] == "build":
         for i in output.stdout.splitlines():
             find.append(i[2:])
         output = subprocess.run(["cpio","-o","-v","--block-size=1"],
-                                cwd="Meta/",
+                                cwd="SystemRoot/",
                                 stdout=rootcpio,
                                 input=b'\n'.join(find))
         if output.returncode != 0:
@@ -70,7 +113,7 @@ if args[0] == "build":
     if output.returncode != 0:
         print("\x1b[1m\x1b[31mFailed\x1b[0m---",output.returncode)
         sys.exit(output.returncode)
-    output = subprocess.run(["rm","-r","Meta/bin"])
+    output = subprocess.run(["rm","-r","SystemRoot"])
     if output.returncode != 0:
         print("\x1b[1m\x1b[31mFailed\x1b[0m---",output.returncode)
         sys.exit(output.returncode)

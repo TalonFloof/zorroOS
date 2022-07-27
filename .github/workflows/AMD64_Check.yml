@@ -1,4 +1,4 @@
-name: owlOS Developer Builds (AMD64)
+name: owlOS Check (AMD64)
 
 on:
   push:
@@ -25,8 +25,3 @@ jobs:
         sudo apt-get install -y nasm
     - name: Build owlOS
       run: ./build.py build AMD64 NewWorldPC
-    - name: Upload ISO as Artifact
-      uses: actions/upload-artifact@v2
-      with:
-        name: owlOS
-        path: ./owlOS.iso
