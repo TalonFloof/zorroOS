@@ -350,43 +350,41 @@ impl Process {
                 let mut ptr = crate::Stack::Stack::new(&mut stack_top);
                 let mut arg_pointers: Vec<usize> = Vec::new();
                 let mut env_pointers: Vec<usize> = Vec::new();
-                for i in argp.iter() {
-                    ptr.WriteByteSlice(i.to_bytes_with_nul());
-                    arg_pointers.push(ptr.GetTop() as usize);
-                }
-                arg_pointers.push(0);
                 for i in envp.iter() {
                     ptr.WriteByteSlice(i.to_bytes_with_nul());
                     env_pointers.push(ptr.GetTop() as usize);
                 }
-                env_pointers.push(0);
+                for i in argp.iter() {
+                    ptr.WriteByteSlice(i.to_bytes_with_nul());
+                    arg_pointers.push(ptr.GetTop() as usize);
+                }
                 ptr.Align();
                 if let Some(aux) = val.1 {
+                    if (arg_pointers.len() + 1 + env_pointers.len() + 1 + 1) % 2 == 8 {
+                        ptr.Write::<u64>(0);
+                    }
+                    let hdr: [(usize, usize); 4] = [
+                        (3, aux.addr as usize),
+                        (4, aux.entrySize as usize),
+                        (5, aux.entryCount as usize),
+                        (9, aux.entry as usize),
+                    ];
                     ptr.Write::<u64>(0);
                     ptr.Write::<u64>(0);
-
-                    ptr.Write::<u64>(aux.addr);
-                    ptr.Write::<u64>(3);
-
-                    ptr.Write::<u64>(aux.entrySize);
-                    ptr.Write::<u64>(4);
-
-                    ptr.Write::<u64>(aux.entryCount);
-                    ptr.Write::<u64>(5);
-
-                    ptr.Write::<u64>(aux.entry);
-                    ptr.Write::<u64>(9);
+                    ptr.Write(hdr);
+                } else {
+                    if (arg_pointers.len() + 1 + env_pointers.len() + 1 + 1) % 2 == 0 {
+                        ptr.Write::<u64>(0);
+                    }
                 }
-                for i in arg_pointers.iter().rev() {
-                    ptr.Write::<u64>(*i as u64);
-                }
-                for i in env_pointers.iter().rev() {
-                    ptr.Write::<u64>(*i as u64);
-                }
-                ptr.Write::<u64>((arg_pointers.len()-1) as u64);
+                ptr.Write::<u64>(0);
+                ptr.Write(env_pointers.as_slice());
+                ptr.Write::<u64>(0);
+                ptr.Write(arg_pointers.as_slice());
+                ptr.Write::<u64>(arg_pointers.len() as u64);
                 let mut plock = PROCESSES.lock();
                 let proc = (&mut plock).get_mut(&pid).unwrap();
-                proc.task_state.SetSP(ptr.GetTop() as usize);
+                proc.task_state.SetSP((ptr.GetTop()+8) as usize);
                 drop(arg_pointers);
                 drop(env_pointers);
                 proc.fds.retain(|_,x| !x.close_on_exec);

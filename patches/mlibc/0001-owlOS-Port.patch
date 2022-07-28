@@ -1,6 +1,6 @@
-From 4cc20c589c10d37de0a12ca1018f3d6eac5a5034 Mon Sep 17 00:00:00 2001
+From 8cde13e1de2c00913d9c5927eade27f330ab4d75 Mon Sep 17 00:00:00 2001
 From: Talon396 <105325988+Talon396@users.noreply.github.com>
-Date: Wed, 27 Jul 2022 13:56:12 -0500
+Date: Wed, 27 Jul 2022 21:24:33 -0500
 Subject: [PATCH] owlOS Port
 
 Signed-off-by: Talon396 <105325988+Talon396@users.noreply.github.com>
@@ -9,6 +9,7 @@ Signed-off-by: Talon396 <105325988+Talon396@users.noreply.github.com>
  ci/owlos.cross-file                          |  12 +
  meson.build                                  |   4 +
  options/rtdl/generic/linker.cpp              |   6 +-
+ options/rtdl/generic/main.cpp                |   4 +-
  sysdeps/owlos/AMD64/crt0.S                   |   5 +
  sysdeps/owlos/AMD64/thread_entry.S           |   7 +
  sysdeps/owlos/generic/entry.cpp              |  32 ++
@@ -45,7 +46,7 @@ Signed-off-by: Talon396 <105325988+Talon396@users.noreply.github.com>
  sysdeps/owlos/include/owlos/mmap_args.h      |  15 +
  sysdeps/owlos/include/owlos/syscall.h        | 107 ++++++
  sysdeps/owlos/meson.build                    |  66 ++++
- 40 files changed, 696 insertions(+), 3 deletions(-)
+ 41 files changed, 698 insertions(+), 5 deletions(-)
  create mode 100644 abis/owlos/auxv.h
  create mode 100644 ci/owlos.cross-file
  create mode 100644 sysdeps/owlos/AMD64/crt0.S
@@ -153,6 +154,21 @@ index ffdf5c34..0f5813c1 100644
  bool eagerBinding = true;
  
  #if defined(__x86_64__)
+diff --git a/options/rtdl/generic/main.cpp b/options/rtdl/generic/main.cpp
+index 0d7b0a8a..1dc861c9 100644
+--- a/options/rtdl/generic/main.cpp
++++ b/options/rtdl/generic/main.cpp
+@@ -15,8 +15,8 @@
+ #define HIDDEN  __attribute__ ((visibility ("hidden")))
+ #define EXPORT  __attribute__ ((visibility ("default")))
+ 
+-static constexpr bool logEntryExit = false;
+-static constexpr bool logStartup = false;
++static constexpr bool logEntryExit = true;
++static constexpr bool logStartup = true;
+ 
+ #ifndef MLIBC_STATIC_BUILD
+ extern HIDDEN void *_GLOBAL_OFFSET_TABLE_[];
 diff --git a/sysdeps/owlos/AMD64/crt0.S b/sysdeps/owlos/AMD64/crt0.S
 new file mode 100644
 index 00000000..06ab8a70

@@ -17,7 +17,7 @@ fn LoadELF(path: &str, inode_id: i64, data: &[u8], pt: &mut PageTableImpl, seg: 
             if path != "/usr/lib/ld.so" {
                 seg.push((0,4096,String::from("[zero_page]"),0,0,0));
             }
-            let mut entry = if path == "/usr/lib/ld.so" {0x40000000+elf.header.pt2.entry_point()} else {elf.header.pt2.entry_point()};
+            let mut entry = if path == "/usr/lib/ld.so" {0x4000_0000+elf.header.pt2.entry_point()} else {elf.header.pt2.entry_point()};
             let mut aux: Aux = Aux { addr: 0, entryCount: elf.header.pt2.ph_count() as u64, entrySize: elf.header.pt2.ph_entry_size() as u64, entry: elf.header.pt2.entry_point() };
             let mut dynamic: bool = false;
             for i in elf.program_iter() {
@@ -30,7 +30,7 @@ fn LoadELF(path: &str, inode_id: i64, data: &[u8], pt: &mut PageTableImpl, seg: 
                         let size = i.mem_size().div_ceil(0x1000) * 0x1000;
                         let pages = Allocate(size).unwrap();
                         let flags = i.flags();
-                        let addr = if path == "/usr/lib/ld.so" {0x40000000+i.virtual_addr() as usize} else {i.virtual_addr() as usize};
+                        let addr = (if path == "/usr/lib/ld.so" {0x4000_0000+i.virtual_addr() as usize} else {i.virtual_addr() as usize}) & !0xFFF;
                         unsafe {core::ptr::copy((data.as_ptr() as u64 + i.offset()) as *const u8,pages,i.file_size() as usize);}
                         seg.push((addr as usize,size as usize,String::from(path),1 | if flags.is_write() {2} else {0} | if flags.is_execute() {4} else {0},inode_id,i.offset() as usize));
                         if !crate::Memory::MapPages(pt,addr,pages as usize - crate::arch::PHYSMEM_BEGIN as usize,size as usize,flags.is_write(),flags.is_execute()) {

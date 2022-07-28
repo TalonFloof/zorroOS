@@ -132,7 +132,7 @@ impl Drop for PageTableImpl {
                                 let pagedirectory = ((*pd_pagetable).index(i).addr().as_u64()+PHYSMEM_BEGIN) as *mut HWPageTable;
                                 for j in 0..512 {
                                     if (*pagedirectory).index(j).flags().contains(PageTableFlags::PRESENT) {
-                                        let pagetable = ((*pagedirectory).index(i).addr().as_u64()+PHYSMEM_BEGIN) as *mut HWPageTable;
+                                        let pagetable = ((*pagedirectory).index(j).addr().as_u64()+PHYSMEM_BEGIN) as *mut HWPageTable;
                                         for k in 0..512 {
                                             if (*pagetable).index(k).flags().contains(PageTableFlags::PRESENT) {
                                                 Free(((*pagetable).index(k).addr().as_u64()+PHYSMEM_BEGIN) as *mut u8, 0x1000);

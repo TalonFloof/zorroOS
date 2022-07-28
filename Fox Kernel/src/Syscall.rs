@@ -690,12 +690,13 @@ pub fn SystemCall(regs: &mut State) {
                                     unsafe {*wstatus = (status as usize & 0xFF) << 8;}
                                 }
                             }
-                            regs.SetSC0(pid as usize);
+                            let ret = *i;
+                            regs.SetSC0(ret as usize);
                             drop(plock);
-                            crate::Process::Process::CleanupProcess(pid);
+                            crate::Process::Process::CleanupProcess(ret);
                             return;
                         } else if let crate::Process::ProcessStatus::STOPPED = child.status {
-                            regs.SetSC0(pid as usize);
+                            regs.SetSC0(*i as usize);
                             if !wstatus.is_null() {
                                 unsafe {*wstatus = 0x13ff};
                             }

@@ -37,9 +37,9 @@ fn main() {
             counter = (counter + 1) % 4;
         }
         drop(opapi::io::stdout().Write(b"\x1b[?25h\x1b[1m\x1b[32m\xfb\x1b[0m]\n\n"));
-        let args: Vec<*const u8> = vec![b"/usr/bin/bash\0".as_ptr(),core::ptr::null()];
-        let result = opapi::syscall::execv("/usr/bin/bash",args.as_slice());
-        if result < 0 {
+        let args: Vec<*const u8> = vec![b"/bin/login\0".as_ptr(),core::ptr::null()];
+        let result = opapi::syscall::execv("/bin/login",args.as_slice());
+        if result != 0 {
             panic!("Failed to start /bin/login, Reason: {}", result);
         }
         panic!("You shouldn't be seeing this");
