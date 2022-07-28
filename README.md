@@ -61,7 +61,7 @@ To compile owlOS, you need to know what architecture you want to
 target. For this example we'll use `AMD64` (aka x86_64). This is the CPU
 architecture that PCs use. Run the following command to build owlOS:
 ```sh
-$ python3 build.py build AMD64 NewWorldPC
+$ python3 build.py build AMD64 NewWorldPC --distro
 ```
 The build script will automatically create a bootable image for you.
 
@@ -127,7 +127,7 @@ balenaEtcher is free, easy to use, and is available on Windows, macOS, and Linux
 **owlOS requires the following minimal specs to run on a PC:**
 - CPU: AMD64 (x86_64) based CPU with at least One Core. (Two Cores recommended)
 - Firmware: ACPI compatible BIOS (UEFI recommended)
-- Memory: At least 128 MiB (1 GiB recommended)
+- Memory: At least 512 MiB (1 GiB recommended)
 - Display: At least 1024x768 with 32-bit color depth
 - USB: USB 3.0 or later (USB 2.0 controllers and prior are not supported, USB 2.0 and prior devices are supported)
 - Keyboard & Mouse: PS/2 Keyboard & Mouse (USB Keyboard & Mouse isn't supported yet)
