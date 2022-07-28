@@ -360,7 +360,7 @@ impl Process {
                 }
                 ptr.Align();
                 if let Some(aux) = val.1 {
-                    if (arg_pointers.len() + 1 + env_pointers.len() + 1 + 1) % 2 == 8 {
+                    if (arg_pointers.len() + 1 + env_pointers.len() + 1 + 1) % 2 == 1 {
                         ptr.Write::<u64>(0);
                     }
                     let hdr: [(usize, usize); 4] = [

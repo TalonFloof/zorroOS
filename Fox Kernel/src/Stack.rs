@@ -23,7 +23,7 @@ impl<'a> Stack<'a> {
     }
     pub fn Write<T: Sized>(&mut self, val: T) {
         self.Skip(size_of::<T>() as u64);
-        unsafe {((*self.pointer) as *mut T).write_volatile(val);}
+        unsafe {((*self.pointer) as *mut T).write(val);}
     }
     pub fn WriteByteSlice(&mut self, b: &[u8]) {
         self.Skip(b.len() as u64);

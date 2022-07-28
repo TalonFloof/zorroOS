@@ -37,10 +37,8 @@ fn main() {
             opapi::syscall::waitpid(shell_pid,&mut status,0);
             println!("exit {}", status as isize);
         } else {
-            let args: Vec<*const u8> = vec![b"/usr/bin/bash\0".as_ptr(),core::ptr::null()];
-            let result = opapi::syscall::execv("/usr/bin/bash",args.as_slice());
-            panic!("Failed to load!");
-            loop {opapi::syscall::sched_yield();}
+            let result = opapi::process::exec("/bin/osh");
+            panic!("Failed to load shell: {}", result);
         }
     }
 }

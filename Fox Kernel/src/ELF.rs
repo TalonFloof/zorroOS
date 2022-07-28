@@ -30,7 +30,7 @@ fn LoadELF(path: &str, inode_id: i64, data: &[u8], pt: &mut PageTableImpl, seg: 
                         let size = i.mem_size().div_ceil(0x1000) * 0x1000;
                         let pages = Allocate(size).unwrap();
                         let flags = i.flags();
-                        let addr = (if path == "/usr/lib/ld.so" {0x4000_0000+i.virtual_addr() as usize} else {i.virtual_addr() as usize}) & !0xFFF;
+                        let addr = (if path == "/usr/lib/ld.so" {0x4000_0000+i.virtual_addr() as usize} else {i.virtual_addr() as usize}).div_ceil(0x1000) * 0x1000;
                         unsafe {core::ptr::copy((data.as_ptr() as u64 + i.offset()) as *const u8,pages,i.file_size() as usize);}
                         seg.push((addr as usize,size as usize,String::from(path),1 | if flags.is_write() {2} else {0} | if flags.is_execute() {4} else {0},inode_id,i.offset() as usize));
                         if !crate::Memory::MapPages(pt,addr,pages as usize - crate::arch::PHYSMEM_BEGIN as usize,size as usize,flags.is_write(),flags.is_execute()) {

@@ -13,6 +13,7 @@ pub mod file;
 pub mod errors;
 pub mod process;
 pub mod sys;
+pub mod env;
 
 #[macro_use]
 pub mod macros;
@@ -58,7 +59,7 @@ extern "Rust" {
 
 #[doc(hidden)]
 #[no_mangle]
-fn _start(_argc: isize, _argv: *const *const u8, _envp: *const *const u8) -> ! {
+extern "C" fn _start(argc: isize, argv: *const *const u8, envp: *const *const u8) -> ! {
     syscall::exit(unsafe {main()});
 }
 

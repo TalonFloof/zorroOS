@@ -53,7 +53,7 @@ if args[0] == "build":
     attempt_build("Userspace","Userspace","cargo build -Z unstable-options --target .cargo/"+args[1]+".json --out-dir ../out/bin")
     os.system("rm out/bin/*.rlib")
     ##################################################################
-    """if build_all:
+    if build_all:
         attempt_build("3rd Party Software","","true")
         subprocess.run(["pip3","install","xbstrap"])
         output = subprocess.run(["mkdir","-p","xbstrap-build"])
@@ -63,7 +63,7 @@ if args[0] == "build":
         output = subprocess.run(["/bin/bash","-c","cd xbstrap-build && xbstrap init .. && xbstrap install -u --all"])
         if output.returncode != 0:
             print("\x1b[1m\x1b[31mFailed\x1b[0m---",output.returncode)
-            sys.exit(output.returncode)"""
+            sys.exit(output.returncode)
     ##################################################################
     with open("out/root.cpio", "wb") as rootcpio:
         attempt_package("Create InitRD","",("",))
