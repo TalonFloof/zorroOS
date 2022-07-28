@@ -4,7 +4,7 @@
 [![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FTalon396%2FowlOS&count_bg=%2379C83D&title_bg=%23323232&icon=&icon_color=%23E7E7E7&title=hits&edge_flat=true)](https://hits.seeyoufarm.com)
 [![Lines of Code](https://tokei.rs/b1/github/Talon396/owlOS)](https://github.com/Talon396/owlOS)
 [![License](https://img.shields.io/github/license/Talon396/owlOS?logo=apache&style=flat-square)](https://www.apache.org/licenses/LICENSE-2.0)
-[![owlOS Developer Builds (AMD64)](https://github.com/Talon396/owlOS/actions/workflows/AMD64_DevBuilds.yml/badge.svg)](https://github.com/Talon396/owlOS/actions/workflows/AMD64_DevBuilds.yml)
+[![owlOS Check (AMD64)](https://github.com/Talon396/owlOS/actions/workflows/AMD64_Check.yml/badge.svg)](https://github.com/Talon396/owlOS/actions/workflows/AMD64_Check.yml)
 
 ## What is owlOS?
 
