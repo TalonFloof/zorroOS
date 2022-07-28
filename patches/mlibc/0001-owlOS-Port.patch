@@ -1,6 +1,6 @@
-From 57c3a5754b0d7cddc6de4555df6d499700e2e7a7 Mon Sep 17 00:00:00 2001
+From 4cc20c589c10d37de0a12ca1018f3d6eac5a5034 Mon Sep 17 00:00:00 2001
 From: Talon396 <105325988+Talon396@users.noreply.github.com>
-Date: Wed, 27 Jul 2022 12:49:04 -0500
+Date: Wed, 27 Jul 2022 13:56:12 -0500
 Subject: [PATCH] owlOS Port
 
 Signed-off-by: Talon396 <105325988+Talon396@users.noreply.github.com>
@@ -12,7 +12,7 @@ Signed-off-by: Talon396 <105325988+Talon396@users.noreply.github.com>
  sysdeps/owlos/AMD64/crt0.S                   |   5 +
  sysdeps/owlos/AMD64/thread_entry.S           |   7 +
  sysdeps/owlos/generic/entry.cpp              |  32 ++
- sysdeps/owlos/generic/generic.cpp            | 358 +++++++++++++++++++
+ sysdeps/owlos/generic/generic.cpp            | 357 +++++++++++++++++++
  sysdeps/owlos/generic/thread.cpp             |  39 ++
  sysdeps/owlos/include/abi-bits/abi.h         |   1 +
  sysdeps/owlos/include/abi-bits/access.h      |   1 +
@@ -45,7 +45,7 @@ Signed-off-by: Talon396 <105325988+Talon396@users.noreply.github.com>
  sysdeps/owlos/include/owlos/mmap_args.h      |  15 +
  sysdeps/owlos/include/owlos/syscall.h        | 107 ++++++
  sysdeps/owlos/meson.build                    |  66 ++++
- 40 files changed, 697 insertions(+), 3 deletions(-)
+ 40 files changed, 696 insertions(+), 3 deletions(-)
  create mode 100644 abis/owlos/auxv.h
  create mode 100644 ci/owlos.cross-file
  create mode 100644 sysdeps/owlos/AMD64/crt0.S
@@ -218,10 +218,10 @@ index 00000000..a59b55a5
 \ No newline at end of file
 diff --git a/sysdeps/owlos/generic/generic.cpp b/sysdeps/owlos/generic/generic.cpp
 new file mode 100644
-index 00000000..22493015
+index 00000000..5c6eea06
 --- /dev/null
 +++ b/sysdeps/owlos/generic/generic.cpp
-@@ -0,0 +1,358 @@
+@@ -0,0 +1,357 @@
 +#include <owlos/syscall.h>
 +#include <owlos/mmap_args.h>
 +#include <stddef.h>
@@ -402,6 +402,14 @@ index 00000000..22493015
 +        __builtin_unreachable();
 +    }
 +    int sys_getentropy(void *buffer, size_t length) UNIMPLEMENTED("sys_getentropy")
++    int sys_uname(struct utsname* buf) {
++        strcpy(buf->sysname, MLIBC_SYSTEM_NAME);
++        strcpy(buf->nodename, "owlOS");
++        strcpy(buf->release, "Nightly");
++        strcpy(buf->version, __TIMESTAMP__);
++        strcpy(buf->machine, "x86_64-pc");
++        return 0;
++    }
 +    #endif
 +    // FILESYSTEM
 +    int sys_write(int fd, const void *buffer, size_t count, ssize_t *written) {
@@ -561,15 +569,6 @@ index 00000000..22493015
 +        if (result < 0) {
 +            return -result;
 +        }
-+        return 0;
-+    }
-+    int sys_uname(struct utsname* buf)
-+        ensure(buf);
-+        strcpy(buf->sysname, MLIBC_SYSTEM_NAME);
-+        strcpy(buf->nodename, "owlOS");
-+        strcpy(buf->release, "Nightly");
-+        strcpy(buf->version, _TIMESTAMP_);
-+        strcpy(buf->machine, "x86_64-pc");
 +        return 0;
 +    }
 +    int sys_pipe(int *fds, int flags) {
