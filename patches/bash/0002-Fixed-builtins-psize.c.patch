@@ -1,0 +1,25 @@
+From 824a3f7222e33d9a97a23d79a2bd0edf25f6e0c9 Mon Sep 17 00:00:00 2001
+From: Talon396 <105325988+Talon396@users.noreply.github.com>
+Date: Wed, 27 Jul 2022 09:32:59 -0500
+Subject: [PATCH 2/2] Fixed 'builtins/psize.c'
+
+Signed-off-by: Talon396 <105325988+Talon396@users.noreply.github.com>
+---
+ builtins/psize.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/builtins/psize.c b/builtins/psize.c
+index 1f170645..c074d50d 100644
+--- a/builtins/psize.c
++++ b/builtins/psize.c
+@@ -22,6 +22,7 @@
+     EPIPE.  Then report how many bytes we wrote.  We assume that this is the
+     pipe size. */
+ #include <stdio.h>
++#include <signal.h>
+ #include <stdlib.h>
+ #include <unistd.h>
+ 
+-- 
+2.34.1
+

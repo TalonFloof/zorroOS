@@ -1053,6 +1053,14 @@ pub fn SystemCall(regs: &mut State) {
         0x28 => { // futex_wake
 
         }
+        0x29 => { // set_thread_area
+            let mut plock = crate::Process::PROCESSES.lock();
+            let proc = plock.get_mut(&curproc).unwrap();
+            proc.tcb = regs.GetSC1();
+            crate::arch::Task::SetTCB(proc.tcb);
+            drop(plock);
+            regs.SetSC0(0);
+        }
         0xf0 => { // foxkernel_powerctl
             if curproc > 1 {
                 regs.SetSC0((-Errors::EACCES as isize) as usize);

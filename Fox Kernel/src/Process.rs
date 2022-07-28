@@ -86,6 +86,7 @@ pub struct Process {
     pub task_state: State,
     pub sig_state: State,
     pub task_fpstate: FloatState,
+    pub tcb: usize,
 
     pub hart: AtomicU32,
     pub name: String,
@@ -124,6 +125,7 @@ impl Process {
             task_state: state,
             sig_state: State::new(false),
             task_fpstate: FloatState::new(),
+            tcb: 0,
 
             hart: AtomicU32::new(u32::MAX),
             name,
@@ -279,6 +281,7 @@ impl Process {
             task_state,
             sig_state,
             task_fpstate: self.task_fpstate.Clone(),
+            tcb: self.tcb,
 
             hart: AtomicU32::new(u32::MAX),
             name: self.name.clone(),
@@ -336,10 +339,11 @@ impl Process {
         match LoadELFFromPath(crate::FS::VFS::GetAbsPath(path,proc.cwd.as_str()),&mut pt,&mut segments) {
             Ok(val) => {
                 proc.task_state.Exit();
+                proc.tcb = 0;
                 proc.memory_segments = Arc::new(Mutex::new(segments));
                 proc.pagetable = Arc::new(pt); // Old pagetable will be dropped if all references are gone
                 unsafe {proc.pagetable.Switch();}
-                proc.task_state.SetIP(val);
+                proc.task_state.SetIP(val.0);
                 drop(proc);
                 drop(plock);
                 let mut stack_top = 0x800000000000;
@@ -357,20 +361,29 @@ impl Process {
                 }
                 env_pointers.push(0);
                 ptr.Align();
+                if let Some(aux) = val.1 {
+                    ptr.Write::<u64>(0);
+                    ptr.Write::<u64>(0);
+
+                    ptr.Write::<u64>(aux.addr);
+                    ptr.Write::<u64>(3);
+
+                    ptr.Write::<u64>(aux.entrySize);
+                    ptr.Write::<u64>(4);
+
+                    ptr.Write::<u64>(aux.entryCount);
+                    ptr.Write::<u64>(5);
+
+                    ptr.Write::<u64>(aux.entry);
+                    ptr.Write::<u64>(9);
+                }
                 for i in arg_pointers.iter().rev() {
                     ptr.Write::<u64>(*i as u64);
                 }
-                let first_pointer = ptr.GetTop();
                 for i in env_pointers.iter().rev() {
                     ptr.Write::<u64>(*i as u64);
                 }
-                let second_pointer = ptr.GetTop();
-                ptr.Align();
-                ptr.Write::<u64>(0);
-                ptr.Write::<u64>(if envv.is_some() {second_pointer} else {0});
-                ptr.Write::<u64>(0);
-                ptr.Write::<u64>(if argv.is_some() {first_pointer} else {0});
-                ptr.Write::<u64>(arg_pointers.len() as u64);
+                ptr.Write::<u64>((arg_pointers.len()-1) as u64);
                 let mut plock = PROCESSES.lock();
                 let proc = (&mut plock).get_mut(&pid).unwrap();
                 proc.task_state.SetSP(ptr.GetTop() as usize);

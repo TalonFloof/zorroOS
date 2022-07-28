@@ -1,0 +1,72 @@
+From b194c296f80eccf6d5d2610bfafd6938e56f756f Mon Sep 17 00:00:00 2001
+From: Talon396 <105325988+Talon396@users.noreply.github.com>
+Date: Mon, 25 Jul 2022 15:19:59 -0500
+Subject: [PATCH] owlOS Port
+
+Signed-off-by: Talon396 <105325988+Talon396@users.noreply.github.com>
+---
+ bfd/config.bfd              | 5 +++++
+ gas/configure.tgt           | 1 +
+ ld/configure.tgt            | 4 ++++
+ ld/emulparams/elf_x86_64.sh | 2 +-
+ 4 files changed, 11 insertions(+), 1 deletion(-)
+
+diff --git a/bfd/config.bfd b/bfd/config.bfd
+index cfe5824788..960e2d28a8 100644
+--- a/bfd/config.bfd
++++ b/bfd/config.bfd
+@@ -749,6 +749,11 @@ case "${targ}" in
+   i[3-7]86-*-haiku*)
+     targ_defvec=i386_elf32_vec
+     ;;
++  x86_64-*-owlos*)
++    targ_defvec=x86_64_elf64_vec
++    targ_selvecs=i386_elf32_vec
++    want64=true
++    ;;
+   i[3-7]86-*-interix*)
+     targ_defvec=i386_pei_vec
+     targ_selvecs="i386_pe_vec"
+diff --git a/gas/configure.tgt b/gas/configure.tgt
+index 62f806bdfe..a27f1348c4 100644
+--- a/gas/configure.tgt
++++ b/gas/configure.tgt
+@@ -225,6 +225,7 @@ case ${generic_target} in
+   i386-*-beos*)				fmt=elf ;;
+   i386-*-elfiamcu)			fmt=elf arch=iamcu ;;
+   i386-*-elf*)				fmt=elf ;;
++  i386-*-owlos*)            fmt=elf ;;
+   i386-*-fuchsia*)			fmt=elf ;;
+   i386-*-haiku*)			fmt=elf em=haiku ;;
+   i386-*-genode*)			fmt=elf ;;
+diff --git a/ld/configure.tgt b/ld/configure.tgt
+index c7acf3f11f..a5bb1b13ca 100644
+--- a/ld/configure.tgt
++++ b/ld/configure.tgt
+@@ -324,6 +324,10 @@ i[3-7]86-*-bsd386)	targ_emul=i386bsd
+ i[3-7]86-*-bsdi*)	targ_emul=i386bsd
+ 			targ_extra_ofiles=
+ 			;;
++x86_64-*-owlos*)
++            targ_emul=elf_x86_64
++            targ_extra_emuls=elf_i386
++            ;;
+ i[3-7]86-*-linux-*)	targ_emul=elf_i386
+ 			targ_extra_emuls="elf_iamcu"
+ 			targ64_extra_emuls="elf_x86_64 elf32_x86_64 elf_l1om elf_k1om"
+diff --git a/ld/emulparams/elf_x86_64.sh b/ld/emulparams/elf_x86_64.sh
+index 5f2743ed40..58e8168442 100644
+--- a/ld/emulparams/elf_x86_64.sh
++++ b/ld/emulparams/elf_x86_64.sh
+@@ -43,7 +43,7 @@ fi
+ # Linux/Solaris modify the default library search path to first include
+ # a 64-bit specific directory.
+ case "$target" in
+-  x86_64*-linux*|i[3-7]86-*-linux-*)
++  x86_64*-linux*|i[3-7]86-*-linux-*|x86_64*-owlos*)
+     case "$EMULATION_NAME" in
+       *64*)
+ 	LIBPATH_SUFFIX=64
+-- 
+2.34.1
+

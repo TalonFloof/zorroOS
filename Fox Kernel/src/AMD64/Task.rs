@@ -183,3 +183,7 @@ pub fn SetupFPU() {
     unsafe {x86_64::registers::control::Cr4::write(cr4);}
 	unsafe { asm!("fninit"); }
 }
+
+pub fn SetTCB(val: usize) {
+    x86_64::registers::model_specific::FsBase::write(x86_64::VirtAddr::new(val as u64));
+}

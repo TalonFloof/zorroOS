@@ -1,8 +1,95 @@
-diff --git a/mlibc-2.3.0-owlos/abis/owlos/auxv.h b/mlibc-2.3.0-owlos/abis/owlos/auxv.h
+From 4cc20c589c10d37de0a12ca1018f3d6eac5a5034 Mon Sep 17 00:00:00 2001
+From: Talon396 <105325988+Talon396@users.noreply.github.com>
+Date: Wed, 27 Jul 2022 13:56:12 -0500
+Subject: [PATCH] owlOS Port
+
+Signed-off-by: Talon396 <105325988+Talon396@users.noreply.github.com>
+---
+ abis/owlos/auxv.h                            |  12 +
+ ci/owlos.cross-file                          |  12 +
+ meson.build                                  |   4 +
+ options/rtdl/generic/linker.cpp              |   6 +-
+ sysdeps/owlos/AMD64/crt0.S                   |   5 +
+ sysdeps/owlos/AMD64/thread_entry.S           |   7 +
+ sysdeps/owlos/generic/entry.cpp              |  32 ++
+ sysdeps/owlos/generic/generic.cpp            | 357 +++++++++++++++++++
+ sysdeps/owlos/generic/thread.cpp             |  39 ++
+ sysdeps/owlos/include/abi-bits/abi.h         |   1 +
+ sysdeps/owlos/include/abi-bits/access.h      |   1 +
+ sysdeps/owlos/include/abi-bits/auxv.h        |   1 +
+ sysdeps/owlos/include/abi-bits/blkcnt_t.h    |   1 +
+ sysdeps/owlos/include/abi-bits/blksize_t.h   |   1 +
+ sysdeps/owlos/include/abi-bits/dev_t.h       |   1 +
+ sysdeps/owlos/include/abi-bits/errno.h       |   1 +
+ sysdeps/owlos/include/abi-bits/fcntl.h       |   1 +
+ sysdeps/owlos/include/abi-bits/gid_t.h       |   1 +
+ sysdeps/owlos/include/abi-bits/in.h          |   1 +
+ sysdeps/owlos/include/abi-bits/ino_t.h       |   1 +
+ sysdeps/owlos/include/abi-bits/limits.h      |   1 +
+ sysdeps/owlos/include/abi-bits/mode_t.h      |   1 +
+ sysdeps/owlos/include/abi-bits/nlink_t.h     |   1 +
+ sysdeps/owlos/include/abi-bits/pid_t.h       |   1 +
+ sysdeps/owlos/include/abi-bits/reboot.h      |   1 +
+ sysdeps/owlos/include/abi-bits/resource.h    |   1 +
+ sysdeps/owlos/include/abi-bits/seek-whence.h |   1 +
+ sysdeps/owlos/include/abi-bits/signal.h      |   1 +
+ sysdeps/owlos/include/abi-bits/socket.h      |   1 +
+ sysdeps/owlos/include/abi-bits/stat.h        |   1 +
+ sysdeps/owlos/include/abi-bits/termios.h     |   1 +
+ sysdeps/owlos/include/abi-bits/time.h        |   1 +
+ sysdeps/owlos/include/abi-bits/uid_t.h       |   1 +
+ sysdeps/owlos/include/abi-bits/utsname.h     |   1 +
+ sysdeps/owlos/include/abi-bits/vm-flags.h    |   1 +
+ sysdeps/owlos/include/abi-bits/wait.h        |   1 +
+ sysdeps/owlos/include/mlibc/thread-entry.hpp |  10 +
+ sysdeps/owlos/include/owlos/mmap_args.h      |  15 +
+ sysdeps/owlos/include/owlos/syscall.h        | 107 ++++++
+ sysdeps/owlos/meson.build                    |  66 ++++
+ 40 files changed, 696 insertions(+), 3 deletions(-)
+ create mode 100644 abis/owlos/auxv.h
+ create mode 100644 ci/owlos.cross-file
+ create mode 100644 sysdeps/owlos/AMD64/crt0.S
+ create mode 100644 sysdeps/owlos/AMD64/thread_entry.S
+ create mode 100644 sysdeps/owlos/generic/entry.cpp
+ create mode 100644 sysdeps/owlos/generic/generic.cpp
+ create mode 100644 sysdeps/owlos/generic/thread.cpp
+ create mode 120000 sysdeps/owlos/include/abi-bits/abi.h
+ create mode 120000 sysdeps/owlos/include/abi-bits/access.h
+ create mode 120000 sysdeps/owlos/include/abi-bits/auxv.h
+ create mode 120000 sysdeps/owlos/include/abi-bits/blkcnt_t.h
+ create mode 120000 sysdeps/owlos/include/abi-bits/blksize_t.h
+ create mode 120000 sysdeps/owlos/include/abi-bits/dev_t.h
+ create mode 120000 sysdeps/owlos/include/abi-bits/errno.h
+ create mode 120000 sysdeps/owlos/include/abi-bits/fcntl.h
+ create mode 120000 sysdeps/owlos/include/abi-bits/gid_t.h
+ create mode 120000 sysdeps/owlos/include/abi-bits/in.h
+ create mode 120000 sysdeps/owlos/include/abi-bits/ino_t.h
+ create mode 120000 sysdeps/owlos/include/abi-bits/limits.h
+ create mode 120000 sysdeps/owlos/include/abi-bits/mode_t.h
+ create mode 120000 sysdeps/owlos/include/abi-bits/nlink_t.h
+ create mode 120000 sysdeps/owlos/include/abi-bits/pid_t.h
+ create mode 120000 sysdeps/owlos/include/abi-bits/reboot.h
+ create mode 120000 sysdeps/owlos/include/abi-bits/resource.h
+ create mode 120000 sysdeps/owlos/include/abi-bits/seek-whence.h
+ create mode 120000 sysdeps/owlos/include/abi-bits/signal.h
+ create mode 120000 sysdeps/owlos/include/abi-bits/socket.h
+ create mode 120000 sysdeps/owlos/include/abi-bits/stat.h
+ create mode 120000 sysdeps/owlos/include/abi-bits/termios.h
+ create mode 120000 sysdeps/owlos/include/abi-bits/time.h
+ create mode 120000 sysdeps/owlos/include/abi-bits/uid_t.h
+ create mode 120000 sysdeps/owlos/include/abi-bits/utsname.h
+ create mode 120000 sysdeps/owlos/include/abi-bits/vm-flags.h
+ create mode 120000 sysdeps/owlos/include/abi-bits/wait.h
+ create mode 100644 sysdeps/owlos/include/mlibc/thread-entry.hpp
+ create mode 100644 sysdeps/owlos/include/owlos/mmap_args.h
+ create mode 100644 sysdeps/owlos/include/owlos/syscall.h
+ create mode 100644 sysdeps/owlos/meson.build
+
+diff --git a/abis/owlos/auxv.h b/abis/owlos/auxv.h
 new file mode 100644
-index 0000000..0932282
+index 00000000..09322826
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/abis/owlos/auxv.h
++++ b/abis/owlos/auxv.h
 @@ -0,0 +1,12 @@
 +#ifndef _ABIBITS_AUXV_H
 +#define _ABIBITS_AUXV_H
@@ -16,11 +103,11 @@ index 0000000..0932282
 +#define AT_EXECFN 31
 +
 +#endif // _ABIBITS_AUXV_H
-diff --git a/mlibc-2.3.0-owlos/ci/owlos.cross-file b/mlibc-2.3.0-owlos/ci/owlos.cross-file
+diff --git a/ci/owlos.cross-file b/ci/owlos.cross-file
 new file mode 100644
-index 0000000..4dd3e73
+index 00000000..4dd3e737
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/ci/owlos.cross-file
++++ b/ci/owlos.cross-file
 @@ -0,0 +1,12 @@
 +[binaries]
 +c = 'gcc-10'
@@ -34,10 +121,10 @@ index 0000000..4dd3e73
 +cpu_family = 'x86_64'
 +cpu = 'x86_64'
 +endian = 'little'
-diff --git a/mlibc-2.3.0/meson.build b/mlibc-2.3.0-owlos/meson.build
-index fd95bb4..8869fe1 100644
---- a/mlibc-2.3.0/meson.build
-+++ b/mlibc-2.3.0-owlos/meson.build
+diff --git a/meson.build b/meson.build
+index fd95bb4a..8869fe1c 100644
+--- a/meson.build
++++ b/meson.build
 @@ -142,6 +142,10 @@ elif host_machine.system() == 'dripos'
  	rtdl_include_dirs += include_directories('sysdeps/dripos/include')
  	libc_include_dirs += include_directories('sysdeps/dripos/include')
@@ -49,47 +136,39 @@ index fd95bb4..8869fe1 100644
  else
  	error('No sysdeps defined for OS: ' + host_machine.system())
  endif
-diff --git a/mlibc-2.3.0/meson_options.txt b/mlibc-2.3.0-owlos/meson_options.txt
-index 32a2f33..35245fa 100644
---- a/mlibc-2.3.0/meson_options.txt
-+++ b/mlibc-2.3.0-owlos/meson_options.txt
-@@ -1,6 +1,6 @@
- option('headers_only', type : 'boolean', value : false)
- option('mlibc_no_headers', type : 'boolean', value : false)
--option('static', type : 'boolean', value : false)
-+option('static', type : 'boolean', value : true)
- option('build_tests', type: 'boolean', value : false)
- option('disable_ansi_option', type: 'boolean', value : false)
- option('disable_crypt_option', type: 'boolean', value : false)
-diff --git a/mlibc-2.3.0/options/rtdl/generic/linker.cpp b/mlibc-2.3.0-owlos/options/rtdl/generic/linker.cpp
-index ffdf5c3..5095ef7 100644
---- a/mlibc-2.3.0/options/rtdl/generic/linker.cpp
-+++ b/mlibc-2.3.0-owlos/options/rtdl/generic/linker.cpp
-@@ -14,7 +14,7 @@ uintptr_t libraryBase = 0x41000000;
+diff --git a/options/rtdl/generic/linker.cpp b/options/rtdl/generic/linker.cpp
+index ffdf5c34..0f5813c1 100644
+--- a/options/rtdl/generic/linker.cpp
++++ b/options/rtdl/generic/linker.cpp
+@@ -12,9 +12,9 @@
  
- bool verbose = false;
- bool stillSlightlyVerbose = false;
+ uintptr_t libraryBase = 0x41000000;
+ 
+-bool verbose = false;
+-bool stillSlightlyVerbose = false;
 -bool logBaseAddresses = false;
++bool verbose = true;
++bool stillSlightlyVerbose = true;
 +bool logBaseAddresses = true;
  bool eagerBinding = true;
  
  #if defined(__x86_64__)
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/AMD64/crt0.S b/mlibc-2.3.0-owlos/sysdeps/owlos/AMD64/crt0.S
+diff --git a/sysdeps/owlos/AMD64/crt0.S b/sysdeps/owlos/AMD64/crt0.S
 new file mode 100644
-index 0000000..06ab8a7
+index 00000000..06ab8a70
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/AMD64/crt0.S
++++ b/sysdeps/owlos/AMD64/crt0.S
 @@ -0,0 +1,5 @@
 +.section .text
 +.global _start
 +_start:
 +    mov $main, %rdi
 +    call __mlibc_entry
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/AMD64/thread_entry.S b/mlibc-2.3.0-owlos/sysdeps/owlos/AMD64/thread_entry.S
+diff --git a/sysdeps/owlos/AMD64/thread_entry.S b/sysdeps/owlos/AMD64/thread_entry.S
 new file mode 100644
-index 0000000..7a78a40
+index 00000000..7a78a409
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/AMD64/thread_entry.S
++++ b/sysdeps/owlos/AMD64/thread_entry.S
 @@ -0,0 +1,7 @@
 +.section .text
 +.global __mlibc_start_thread
@@ -98,11 +177,11 @@ index 0000000..7a78a40
 +	pop %rsi
 +	pop %rdx
 +	call __mlibc_enter_thread
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/generic/entry.cpp b/mlibc-2.3.0-owlos/sysdeps/owlos/generic/entry.cpp
+diff --git a/sysdeps/owlos/generic/entry.cpp b/sysdeps/owlos/generic/entry.cpp
 new file mode 100644
-index 0000000..a59b55a
+index 00000000..a59b55a5
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/generic/entry.cpp
++++ b/sysdeps/owlos/generic/entry.cpp
 @@ -0,0 +1,32 @@
 +#include <stdint.h>
 +#include <stdlib.h>
@@ -137,12 +216,12 @@ index 0000000..a59b55a
 +	exit(result);
 +}
 \ No newline at end of file
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/generic/generic.cpp b/mlibc-2.3.0-owlos/sysdeps/owlos/generic/generic.cpp
+diff --git a/sysdeps/owlos/generic/generic.cpp b/sysdeps/owlos/generic/generic.cpp
 new file mode 100644
-index 0000000..aa27528
+index 00000000..5c6eea06
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/generic/generic.cpp
-@@ -0,0 +1,349 @@
++++ b/sysdeps/owlos/generic/generic.cpp
+@@ -0,0 +1,357 @@
 +#include <owlos/syscall.h>
 +#include <owlos/mmap_args.h>
 +#include <stddef.h>
@@ -175,7 +254,7 @@ index 0000000..aa27528
 +        return 0;
 +    }
 +    int sys_tcb_set(void *pointer) {
-+        mlibc::infoLogger() << "sys_tcb_set() not implemented" << frg::endlog;
++        syscall(SYS_SET_THREAD_AREA,pointer);
 +        return 0;
 +    }
 +    int sys_vm_map(void *hint, size_t size, int prot, int flags, int fd, off_t offset, void **window) {
@@ -323,6 +402,14 @@ index 0000000..aa27528
 +        __builtin_unreachable();
 +    }
 +    int sys_getentropy(void *buffer, size_t length) UNIMPLEMENTED("sys_getentropy")
++    int sys_uname(struct utsname* buf) {
++        strcpy(buf->sysname, MLIBC_SYSTEM_NAME);
++        strcpy(buf->nodename, "owlOS");
++        strcpy(buf->release, "Nightly");
++        strcpy(buf->version, __TIMESTAMP__);
++        strcpy(buf->machine, "x86_64-pc");
++        return 0;
++    }
 +    #endif
 +    // FILESYSTEM
 +    int sys_write(int fd, const void *buffer, size_t count, ssize_t *written) {
@@ -492,11 +579,11 @@ index 0000000..aa27528
 +        return 0;
 +    }
 +}
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/generic/thread.cpp b/mlibc-2.3.0-owlos/sysdeps/owlos/generic/thread.cpp
+diff --git a/sysdeps/owlos/generic/thread.cpp b/sysdeps/owlos/generic/thread.cpp
 new file mode 100644
-index 0000000..b0af65c
+index 00000000..b0af65c5
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/generic/thread.cpp
++++ b/sysdeps/owlos/generic/thread.cpp
 @@ -0,0 +1,39 @@
 +#include <mlibc/thread-entry.hpp>
 +#include <mlibc/all-sysdeps.hpp>
@@ -538,227 +625,227 @@ index 0000000..b0af65c
 +
 +}
 \ No newline at end of file
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/abi.h b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/abi.h
+diff --git a/sysdeps/owlos/include/abi-bits/abi.h b/sysdeps/owlos/include/abi-bits/abi.h
 new file mode 120000
-index 0000000..c945860
+index 00000000..c9458601
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/abi.h
++++ b/sysdeps/owlos/include/abi-bits/abi.h
 @@ -0,0 +1 @@
 +../../../../abis/mlibc/abi.h
 \ No newline at end of file
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/access.h b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/access.h
+diff --git a/sysdeps/owlos/include/abi-bits/access.h b/sysdeps/owlos/include/abi-bits/access.h
 new file mode 120000
-index 0000000..171f75f
+index 00000000..171f75f8
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/access.h
++++ b/sysdeps/owlos/include/abi-bits/access.h
 @@ -0,0 +1 @@
 +../../../../abis/mlibc/access.h
 \ No newline at end of file
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/auxv.h b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/auxv.h
+diff --git a/sysdeps/owlos/include/abi-bits/auxv.h b/sysdeps/owlos/include/abi-bits/auxv.h
 new file mode 120000
-index 0000000..b7bb109
+index 00000000..b7bb1093
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/auxv.h
++++ b/sysdeps/owlos/include/abi-bits/auxv.h
 @@ -0,0 +1 @@
 +../../../../abis/qword/auxv.h
 \ No newline at end of file
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/blkcnt_t.h b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/blkcnt_t.h
+diff --git a/sysdeps/owlos/include/abi-bits/blkcnt_t.h b/sysdeps/owlos/include/abi-bits/blkcnt_t.h
 new file mode 120000
-index 0000000..e9d9f1b
+index 00000000..e9d9f1b4
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/blkcnt_t.h
++++ b/sysdeps/owlos/include/abi-bits/blkcnt_t.h
 @@ -0,0 +1 @@
 +../../../../abis/mlibc/blkcnt_t.h
 \ No newline at end of file
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/blksize_t.h b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/blksize_t.h
+diff --git a/sysdeps/owlos/include/abi-bits/blksize_t.h b/sysdeps/owlos/include/abi-bits/blksize_t.h
 new file mode 120000
-index 0000000..c6dfb6e
+index 00000000..c6dfb6e0
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/blksize_t.h
++++ b/sysdeps/owlos/include/abi-bits/blksize_t.h
 @@ -0,0 +1 @@
 +../../../../abis/mlibc/blksize_t.h
 \ No newline at end of file
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/dev_t.h b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/dev_t.h
+diff --git a/sysdeps/owlos/include/abi-bits/dev_t.h b/sysdeps/owlos/include/abi-bits/dev_t.h
 new file mode 120000
-index 0000000..0c1143b
+index 00000000..0c1143b9
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/dev_t.h
++++ b/sysdeps/owlos/include/abi-bits/dev_t.h
 @@ -0,0 +1 @@
 +../../../../abis/mlibc/dev_t.h
 \ No newline at end of file
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/errno.h b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/errno.h
+diff --git a/sysdeps/owlos/include/abi-bits/errno.h b/sysdeps/owlos/include/abi-bits/errno.h
 new file mode 120000
-index 0000000..589859f
+index 00000000..589859fb
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/errno.h
++++ b/sysdeps/owlos/include/abi-bits/errno.h
 @@ -0,0 +1 @@
 +../../../../abis/mlibc/errno.h
 \ No newline at end of file
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/fcntl.h b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/fcntl.h
+diff --git a/sysdeps/owlos/include/abi-bits/fcntl.h b/sysdeps/owlos/include/abi-bits/fcntl.h
 new file mode 120000
-index 0000000..ea5323a
+index 00000000..ea5323ad
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/fcntl.h
++++ b/sysdeps/owlos/include/abi-bits/fcntl.h
 @@ -0,0 +1 @@
 +../../../../abis/mlibc/fcntl.h
 \ No newline at end of file
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/gid_t.h b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/gid_t.h
+diff --git a/sysdeps/owlos/include/abi-bits/gid_t.h b/sysdeps/owlos/include/abi-bits/gid_t.h
 new file mode 120000
-index 0000000..6a77218
+index 00000000..6a772180
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/gid_t.h
++++ b/sysdeps/owlos/include/abi-bits/gid_t.h
 @@ -0,0 +1 @@
 +../../../../abis/mlibc/gid_t.h
 \ No newline at end of file
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/in.h b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/in.h
+diff --git a/sysdeps/owlos/include/abi-bits/in.h b/sysdeps/owlos/include/abi-bits/in.h
 new file mode 120000
-index 0000000..b58c683
+index 00000000..b58c683f
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/in.h
++++ b/sysdeps/owlos/include/abi-bits/in.h
 @@ -0,0 +1 @@
 +../../../../abis/mlibc/in.h
 \ No newline at end of file
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/ino_t.h b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/ino_t.h
+diff --git a/sysdeps/owlos/include/abi-bits/ino_t.h b/sysdeps/owlos/include/abi-bits/ino_t.h
 new file mode 120000
-index 0000000..10d644e
+index 00000000..10d644e7
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/ino_t.h
++++ b/sysdeps/owlos/include/abi-bits/ino_t.h
 @@ -0,0 +1 @@
 +../../../../abis/mlibc/ino_t.h
 \ No newline at end of file
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/limits.h b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/limits.h
+diff --git a/sysdeps/owlos/include/abi-bits/limits.h b/sysdeps/owlos/include/abi-bits/limits.h
 new file mode 120000
-index 0000000..1aa5894
+index 00000000..1aa58942
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/limits.h
++++ b/sysdeps/owlos/include/abi-bits/limits.h
 @@ -0,0 +1 @@
 +../../../../abis/mlibc/limits.h
 \ No newline at end of file
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/mode_t.h b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/mode_t.h
+diff --git a/sysdeps/owlos/include/abi-bits/mode_t.h b/sysdeps/owlos/include/abi-bits/mode_t.h
 new file mode 120000
-index 0000000..29d7733
+index 00000000..29d77331
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/mode_t.h
++++ b/sysdeps/owlos/include/abi-bits/mode_t.h
 @@ -0,0 +1 @@
 +../../../../abis/mlibc/mode_t.h
 \ No newline at end of file
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/nlink_t.h b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/nlink_t.h
+diff --git a/sysdeps/owlos/include/abi-bits/nlink_t.h b/sysdeps/owlos/include/abi-bits/nlink_t.h
 new file mode 120000
-index 0000000..7618c27
+index 00000000..7618c27f
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/nlink_t.h
++++ b/sysdeps/owlos/include/abi-bits/nlink_t.h
 @@ -0,0 +1 @@
 +../../../../abis/mlibc/nlink_t.h
 \ No newline at end of file
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/pid_t.h b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/pid_t.h
+diff --git a/sysdeps/owlos/include/abi-bits/pid_t.h b/sysdeps/owlos/include/abi-bits/pid_t.h
 new file mode 120000
-index 0000000..3fd26a7
+index 00000000..3fd26a7f
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/pid_t.h
++++ b/sysdeps/owlos/include/abi-bits/pid_t.h
 @@ -0,0 +1 @@
 +../../../../abis/mlibc/pid_t.h
 \ No newline at end of file
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/reboot.h b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/reboot.h
+diff --git a/sysdeps/owlos/include/abi-bits/reboot.h b/sysdeps/owlos/include/abi-bits/reboot.h
 new file mode 120000
-index 0000000..ecc3ddb
+index 00000000..ecc3ddb9
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/reboot.h
++++ b/sysdeps/owlos/include/abi-bits/reboot.h
 @@ -0,0 +1 @@
 +../../../../abis/linux/x86_64/reboot.h
 \ No newline at end of file
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/resource.h b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/resource.h
+diff --git a/sysdeps/owlos/include/abi-bits/resource.h b/sysdeps/owlos/include/abi-bits/resource.h
 new file mode 120000
-index 0000000..3e59c75
+index 00000000..3e59c750
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/resource.h
++++ b/sysdeps/owlos/include/abi-bits/resource.h
 @@ -0,0 +1 @@
 +../../../../abis/mlibc/resource.h
 \ No newline at end of file
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/seek-whence.h b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/seek-whence.h
+diff --git a/sysdeps/owlos/include/abi-bits/seek-whence.h b/sysdeps/owlos/include/abi-bits/seek-whence.h
 new file mode 120000
-index 0000000..3bd41ef
+index 00000000..3bd41efd
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/seek-whence.h
++++ b/sysdeps/owlos/include/abi-bits/seek-whence.h
 @@ -0,0 +1 @@
 +../../../../abis/mlibc/seek-whence.h
 \ No newline at end of file
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/signal.h b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/signal.h
+diff --git a/sysdeps/owlos/include/abi-bits/signal.h b/sysdeps/owlos/include/abi-bits/signal.h
 new file mode 120000
-index 0000000..b20e511
+index 00000000..b20e5119
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/signal.h
++++ b/sysdeps/owlos/include/abi-bits/signal.h
 @@ -0,0 +1 @@
 +../../../../abis/mlibc/signal.h
 \ No newline at end of file
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/socket.h b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/socket.h
+diff --git a/sysdeps/owlos/include/abi-bits/socket.h b/sysdeps/owlos/include/abi-bits/socket.h
 new file mode 120000
-index 0000000..0e1d6be
+index 00000000..0e1d6be9
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/socket.h
++++ b/sysdeps/owlos/include/abi-bits/socket.h
 @@ -0,0 +1 @@
 +../../../../abis/mlibc/socket.h
 \ No newline at end of file
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/stat.h b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/stat.h
+diff --git a/sysdeps/owlos/include/abi-bits/stat.h b/sysdeps/owlos/include/abi-bits/stat.h
 new file mode 120000
-index 0000000..82642c3
+index 00000000..82642c3c
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/stat.h
++++ b/sysdeps/owlos/include/abi-bits/stat.h
 @@ -0,0 +1 @@
 +../../../../abis/mlibc/stat.h
 \ No newline at end of file
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/termios.h b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/termios.h
+diff --git a/sysdeps/owlos/include/abi-bits/termios.h b/sysdeps/owlos/include/abi-bits/termios.h
 new file mode 120000
-index 0000000..cfcfe76
+index 00000000..cfcfe763
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/termios.h
++++ b/sysdeps/owlos/include/abi-bits/termios.h
 @@ -0,0 +1 @@
 +../../../../abis/mlibc/termios.h
 \ No newline at end of file
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/time.h b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/time.h
+diff --git a/sysdeps/owlos/include/abi-bits/time.h b/sysdeps/owlos/include/abi-bits/time.h
 new file mode 120000
-index 0000000..97f3d52
+index 00000000..97f3d52d
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/time.h
++++ b/sysdeps/owlos/include/abi-bits/time.h
 @@ -0,0 +1 @@
 +../../../../abis/mlibc/time.h
 \ No newline at end of file
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/uid_t.h b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/uid_t.h
+diff --git a/sysdeps/owlos/include/abi-bits/uid_t.h b/sysdeps/owlos/include/abi-bits/uid_t.h
 new file mode 120000
-index 0000000..1113eba
+index 00000000..1113eba6
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/uid_t.h
++++ b/sysdeps/owlos/include/abi-bits/uid_t.h
 @@ -0,0 +1 @@
 +../../../../abis/mlibc/uid_t.h
 \ No newline at end of file
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/utsname.h b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/utsname.h
+diff --git a/sysdeps/owlos/include/abi-bits/utsname.h b/sysdeps/owlos/include/abi-bits/utsname.h
 new file mode 120000
-index 0000000..17b993f
+index 00000000..17b993fe
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/utsname.h
++++ b/sysdeps/owlos/include/abi-bits/utsname.h
 @@ -0,0 +1 @@
 +../../../../abis/mlibc/utsname.h
 \ No newline at end of file
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/vm-flags.h b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/vm-flags.h
+diff --git a/sysdeps/owlos/include/abi-bits/vm-flags.h b/sysdeps/owlos/include/abi-bits/vm-flags.h
 new file mode 120000
-index 0000000..f1a985e
+index 00000000..f1a985e6
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/vm-flags.h
++++ b/sysdeps/owlos/include/abi-bits/vm-flags.h
 @@ -0,0 +1 @@
 +../../../../abis/mlibc/vm-flags.h
 \ No newline at end of file
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/wait.h b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/wait.h
+diff --git a/sysdeps/owlos/include/abi-bits/wait.h b/sysdeps/owlos/include/abi-bits/wait.h
 new file mode 120000
-index 0000000..6d911c7
+index 00000000..6d911c7f
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/include/abi-bits/wait.h
++++ b/sysdeps/owlos/include/abi-bits/wait.h
 @@ -0,0 +1 @@
 +../../../../abis/mlibc/wait.h
 \ No newline at end of file
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/include/mlibc/thread-entry.hpp b/mlibc-2.3.0-owlos/sysdeps/owlos/include/mlibc/thread-entry.hpp
+diff --git a/sysdeps/owlos/include/mlibc/thread-entry.hpp b/sysdeps/owlos/include/mlibc/thread-entry.hpp
 new file mode 100644
-index 0000000..ed5d7d3
+index 00000000..ed5d7d30
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/include/mlibc/thread-entry.hpp
++++ b/sysdeps/owlos/include/mlibc/thread-entry.hpp
 @@ -0,0 +1,10 @@
 +#pragma once
 +
@@ -770,11 +857,11 @@ index 0000000..ed5d7d3
 +namespace mlibc {
 +void *prepare_stack(void *entry, void *user_arg, void *tcb);
 +} // namespace mlibc
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/include/owlos/mmap_args.h b/mlibc-2.3.0-owlos/sysdeps/owlos/include/owlos/mmap_args.h
+diff --git a/sysdeps/owlos/include/owlos/mmap_args.h b/sysdeps/owlos/include/owlos/mmap_args.h
 new file mode 100644
-index 0000000..6b65a6c
+index 00000000..6b65a6c5
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/include/owlos/mmap_args.h
++++ b/sysdeps/owlos/include/owlos/mmap_args.h
 @@ -0,0 +1,15 @@
 +#ifndef _OWLOS_MMAP_ARGS_H
 +#define _OWLOS_MMAP_ARGS_H
@@ -792,12 +879,12 @@ index 0000000..6b65a6c
 +
 +#endif
 \ No newline at end of file
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/include/owlos/syscall.h b/mlibc-2.3.0-owlos/sysdeps/owlos/include/owlos/syscall.h
+diff --git a/sysdeps/owlos/include/owlos/syscall.h b/sysdeps/owlos/include/owlos/syscall.h
 new file mode 100644
-index 0000000..8ff127b
+index 00000000..b7810927
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/include/owlos/syscall.h
-@@ -0,0 +1,106 @@
++++ b/sysdeps/owlos/include/owlos/syscall.h
+@@ -0,0 +1,107 @@
 +
 +#ifndef SYSCALL_H
 +#define SYSCALL_H
@@ -845,6 +932,7 @@ index 0000000..8ff127b
 +#define SYS_MUNMAP 38
 +#define SYS_FUTEX_WAIT 39
 +#define SYS_FUTEX_WAKE 40
++#define SYS_SET_THREAD_AREA 41
 +#define SYS_FOXKERNEL_POWERCTL 0xf0
 +#define SYS_FOXKERNEL_LOG 0xf1
 +
@@ -904,12 +992,11 @@ index 0000000..8ff127b
 +#endif
 +
 +#endif
-\ No newline at end of file
-diff --git a/mlibc-2.3.0-owlos/sysdeps/owlos/meson.build b/mlibc-2.3.0-owlos/sysdeps/owlos/meson.build
+diff --git a/sysdeps/owlos/meson.build b/sysdeps/owlos/meson.build
 new file mode 100644
-index 0000000..8edfc38
+index 00000000..8edfc38a
 --- /dev/null
-+++ b/mlibc-2.3.0-owlos/sysdeps/owlos/meson.build
++++ b/sysdeps/owlos/meson.build
 @@ -0,0 +1,66 @@
 +
 +rtdl_sources += files(
@@ -977,3 +1064,6 @@ index 0000000..8edfc38
 +	endif
 +endif
 +
+-- 
+2.34.1
+

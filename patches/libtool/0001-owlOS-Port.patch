@@ -1,0 +1,60 @@
+From a9a63269337d4f80f663207f0c18bc8f312e25ff Mon Sep 17 00:00:00 2001
+From: Talon396 <105325988+Talon396@users.noreply.github.com>
+Date: Mon, 25 Jul 2022 18:38:44 -0500
+Subject: [PATCH] owlOS Port
+
+Signed-off-by: Talon396 <105325988+Talon396@users.noreply.github.com>
+---
+ build-aux/ltmain.in |  2 +-
+ m4/libtool.m4       | 15 +++++++++++++++
+ 2 files changed, 16 insertions(+), 1 deletion(-)
+
+diff --git a/build-aux/ltmain.in b/build-aux/ltmain.in
+index a5f21a1d..c06d55c4 100644
+--- a/build-aux/ltmain.in
++++ b/build-aux/ltmain.in
+@@ -6497,7 +6497,7 @@ func_mode_link ()
+ 	      fi
+ 	    else
+ 	      # We cannot seem to hardcode it, guess we'll fake it.
+-	      add_dir=-L$libdir
++	      add_dir=-L$lt_sysroot$libdir
+ 	      # Try looking first in the location we're being installed to.
+ 	      if test -n "$inst_prefix_dir"; then
+ 		case $libdir in
+diff --git a/m4/libtool.m4 b/m4/libtool.m4
+index 79a2451e..7b12a878 100644
+--- a/m4/libtool.m4
++++ b/m4/libtool.m4
+@@ -2925,6 +2925,17 @@ netbsd*)
+   hardcode_into_libs=yes
+   ;;
+ 
++owlos*)
++  version_type=linux # correct to gnu/linux during the next big refactor
++  need_lib_prefix=no
++  need_version=no
++  library_names_spec='$libname$release$shared_ext$versuffix $libname$release$shared_ext$major $libname$shared_ext'
++  soname_spec='$libname$release$shared_ext$major'
++  shlibpath_var=LD_LIBRARY_PATH
++  shlibpath_overrides_runpath=no
++  hardcode_into_libs=yes
++  ;;
++
+ newsos6)
+   version_type=linux # correct to gnu/linux during the next big refactor
+   library_names_spec='$libname$release$shared_ext$versuffix $libname$release$shared_ext$major $libname$shared_ext'
+@@ -3566,6 +3577,10 @@ linux* | k*bsd*-gnu | kopensolaris*-gnu | gnu*)
+   lt_cv_deplibs_check_method=pass_all
+   ;;
+ 
++owlos*)
++  lt_cv_deplibs_check_method=pass_all
++  ;;
++
+ netbsd*)
+   if echo __ELF__ | $CC -E - | $GREP __ELF__ > /dev/null; then
+     lt_cv_deplibs_check_method='match_pattern /lib[[^/]]+(\.so\.[[0-9]]+\.[[0-9]]+|_pic\.a)$'
+-- 
+2.34.1
+

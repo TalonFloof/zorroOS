@@ -60,7 +60,7 @@ fn main(ramdisks: Vec<(String,&[u8])>) -> ! {
         Ok(entry) => {
             drop(seg);
             let pid = Process::Process::AddProcess(proc);
-            Process::Process::StartProcess(pid,entry,0x800000000000-(8*5));
+            Process::Process::StartProcess(pid,entry.0,0x800000000000-(8*5));
         }
         Err(_) => {
             panic!("No command");
