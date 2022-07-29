@@ -145,6 +145,7 @@ elif args[0] == "run":
         os.system("qemu-system-x86_64 \
         -cdrom owlOS.iso \
         -m 1G \
+        -s \
         -smp 4 \
         -no-reboot \
         -no-shutdown \

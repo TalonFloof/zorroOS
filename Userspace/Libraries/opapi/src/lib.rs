@@ -23,20 +23,24 @@ pub mod macros;
 pub mod arch;
 
 ////////////////////////////////////////////////
+#[repr(C)]
 pub struct Stat {
+    pub device_id: u64,
     pub inode_id: i64,
     pub mode: i32,
     pub nlinks: i32,
     pub uid: u32,
     pub gid: u32,
-    pub rdev: u64,
+    pub rdev: u64, // Device ID (optional)
     pub size: i64,
+    pub atime: i64,
+    pub reserved1: u64,
+    pub mtime: i64,
+    pub reserved2: u64,
+    pub ctime: i64,
+    pub reserved3: u64,
     pub blksize: i64,
     pub blocks: i64,
-
-    pub atime: i64,
-    pub mtime: i64,
-    pub ctime: i64,
 }
 ////////////////////////////////////////////////
 #[panic_handler]

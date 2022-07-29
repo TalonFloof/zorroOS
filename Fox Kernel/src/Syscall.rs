@@ -506,7 +506,7 @@ pub fn SystemCall(regs: &mut State) {
                 return;
             }
             let stat = file.ok().unwrap().Stat().ok().unwrap();
-            unsafe {core::ptr::copy(&stat as *const VFS::Metadata,regs.GetSC2() as *mut VFS::Metadata,core::mem::size_of::<VFS::Metadata>());}
+            unsafe {core::ptr::copy(&stat as *const _ as *const u8,regs.GetSC2() as *mut u8,core::mem::size_of::<VFS::Metadata>());}
             drop(plock);
             regs.SetSC0(0);
         }
@@ -520,7 +520,7 @@ pub fn SystemCall(regs: &mut State) {
                 return;
             }
             let stat = fd.unwrap().inode.Stat().ok().unwrap();
-            unsafe {core::ptr::copy(&stat as *const VFS::Metadata,regs.GetSC2() as *mut VFS::Metadata,core::mem::size_of::<VFS::Metadata>());}
+            unsafe {core::ptr::copy(&stat as *const _ as *const u8,regs.GetSC2() as *mut u8,core::mem::size_of::<VFS::Metadata>());}
             drop(plock);
             regs.SetSC0(0);
         }
@@ -1078,13 +1078,25 @@ pub fn SystemCall(regs: &mut State) {
                 unsafe {crate::Console::QUIET = true;}
                 log::info!("It is now safe to turn off your computer");
                 if let Some(fb) = crate::Framebuffer::MainFramebuffer.lock().as_mut() {
-                    fb.Clear(0);
+                    let ptr = fb.pointer as *mut u32;
+                    for i in 0..(fb.width*fb.height) {
+                        let pxl = unsafe {ptr.offset(i as isize).read()};
+                        let val = ((((pxl & 0xFF0000) >> 16)+((pxl & 0xFF00) >> 8)+(pxl & 0xFF))/3)/2;
+                        unsafe {ptr.offset(i as isize).write((val << 16) | (val << 8) | val)};
+                    }
                     let msg = "It is now safe to turn off your computer";
                     fb.DrawString((fb.width/2)-(msg.len()*8),fb.height/2-16,msg,0xFFFFFF,2);
                 }
                 crate::halt_other_harts!();
                 crate::halt!();
                 unreachable!();
+            } else if regs.GetSC1() as u32 == 1468614837 { // FOXKERNEL_GETSYSV_LEVEL
+                if crate::CommandLine::OPTIONS.get().unwrap().contains_key("--sysvlevel") {
+                    regs.SetSC0(crate::CommandLine::OPTIONS.get().unwrap().get("--sysvlevel").unwrap().trim().parse().unwrap_or_else(|_| 5));
+                } else {
+                    regs.SetSC0(5);
+                }
+                return
             }
             regs.SetSC0((-Errors::EINVAL as isize) as usize);
         }

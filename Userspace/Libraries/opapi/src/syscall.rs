@@ -73,15 +73,15 @@ pub fn unlink(path: &str) -> isize {
     ret
 }
 
-pub fn stat(path: &str, buf: &mut Stat) -> isize {
+pub fn stat(path: &str, buf: *mut Stat) -> isize {
     let cpath = CString::new(path).expect("owlOS Programmer API: String conversion failed");
     let ptr = cpath.into_raw();
-    let ret = Syscall(0x0b,ptr as usize,buf as *mut _ as usize,0);
+    let ret = Syscall(0x0b,ptr as usize,buf as usize,0);
     let _ = unsafe {CString::from_raw(ptr)}; // This prevents memory leaking from occuring.
     ret
 }
 
-pub fn fstat(fd: isize, buf: &mut Stat) -> isize {
+pub fn fstat(fd: isize, buf: *mut Stat) -> isize {
     Syscall(0x0c,fd as usize,buf as *mut _ as usize,0)
 }
 

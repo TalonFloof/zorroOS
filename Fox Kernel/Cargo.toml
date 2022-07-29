@@ -16,19 +16,19 @@ tinytga = "*"
 [dependencies.spin]
 version = "*"
 default-features = false
-features = ["once","mutex","spin_mutex"]
+features = ["once","mutex","use_ticket_mutex"]
 
 [dependencies.lazy_static]
 version = "*"
 features = ["spin_no_std"]
 
 [profile.dev]
-opt-level = 3
-debug = 0
+opt-level = 0
+debug = 2
 
 [profile.dev.package."*"]
-opt-level = 3
-debug = 0
+opt-level = 0
+debug = 2
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
 x86_64 = {version="*",features=["nightly"]}

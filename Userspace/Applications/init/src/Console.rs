@@ -4,6 +4,7 @@ use spin::Mutex;
 use alloc::vec;
 use core::sync::atomic::{AtomicBool,Ordering};
 use opapi::sys::termios::*;
+use crate::RUNLEVEL;
 
 pub static ALT: AtomicBool = AtomicBool::new(false);
 pub static CTRL: AtomicBool = AtomicBool::new(false);
@@ -26,7 +27,7 @@ pub(crate) fn SetupConsole() -> bool {
         reserved2: 0,
     };
     opapi::syscall::ioctl(1,TIOCGWINSZ,core::ptr::addr_of_mut!(ttysize) as usize);
-    println!("owlOS SysV Init running with {}x{} TTY\n", ttysize.col, ttysize.row);
+    println!("owlOS SysV Init (level: {}) running with {}x{} TTY\n", RUNLEVEL.get().unwrap(), ttysize.col, ttysize.row);
     return true;
 }
 
@@ -92,7 +93,11 @@ pub fn Loop() -> ! {
                     if let Some(key) = keyboard.HandleKeyEvent(key_event) {
                         match key {
                             DecodedKey::Unicode('\u{7f}') if is_alt && is_ctrl => {
-                                SESSION_STARTED.store(true, Ordering::Relaxed);
+                                if !SESSION_STARTED.load(Ordering::SeqCst) {
+                                    SESSION_STARTED.store(true, Ordering::SeqCst);
+                                } else {
+                                    opapi::syscall::foxkernel_powerctl(926892958);
+                                }
                             },
                             DecodedKey::Unicode(c) => {
                                 if has_started {
