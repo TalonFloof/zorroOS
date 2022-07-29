@@ -61,7 +61,7 @@ To compile owlOS, you need to know what architecture you want to
 target. For this example we'll use `AMD64` (aka x86_64). This is the CPU
 architecture that PCs use. Run the following command to build owlOS:
 ```sh
-$ python3 build.py build AMD64 NewWorldPC --distro
+$ python3 build.py build AMD64 NewWorldPC
 ```
 The build script will automatically create a bootable image for you.
 

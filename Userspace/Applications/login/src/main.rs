@@ -31,14 +31,14 @@ fn main() {
                 println!("{}", msg);
             }
         }
-        let shell_pid = opapi::syscall::fork();
-        if shell_pid != 0 {
-            let mut status: usize = 0;
-            opapi::syscall::waitpid(shell_pid,&mut status,0);
-            println!("exit {}", status as isize);
-        } else {
-            let result = opapi::process::exec("/bin/osh");
-            panic!("Failed to load shell: {}", result);
-        }
+        let mut status: usize = 0;
+        opapi::syscall::forkat(RunShell as usize);
+        opapi::syscall::wait(&mut status);
+        println!("exit {}", status as isize);
     }
+}
+
+fn RunShell() {
+    let result = opapi::process::exec("/bin/osh");
+    panic!("Failed to load shell: {}", result);
 }

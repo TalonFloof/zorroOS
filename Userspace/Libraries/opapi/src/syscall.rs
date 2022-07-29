@@ -8,13 +8,17 @@ pub fn sched_yield() {
     Syscall(0x00,0,0,0);
 }
 
-pub(crate) fn exit(status: u8) -> ! {
+pub fn exit(status: u8) -> ! {
     Syscall(0x01,status as usize,0,0);
     unreachable!();
 }
 
 pub fn fork() -> i32 {
     Syscall(0x02,0,0,0) as i32
+}
+
+pub fn forkat(addr: usize) -> i32 {
+    Syscall(0x02,addr,0,0) as i32
 }
 
 pub fn open(path: &str, mode: usize) -> isize {

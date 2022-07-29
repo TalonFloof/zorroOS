@@ -175,13 +175,19 @@ impl Process {
         if slock.get(&CurrentHart()).unwrap().current_proc_id.load(Ordering::SeqCst) == pid {
             proc.task_state.Exit();
         }
-        let mut pqlock = slock.get(&proc.hart.load(Ordering::SeqCst)).unwrap().process_queue.lock();
-        if pqlock.contains(&pid) {
-            pqlock.retain(|&x| x != pid);
+        let pqlock = &slock.get(&proc.hart.load(Ordering::SeqCst)).expect("No process queue attached to PID").process_queue;
+        if pqlock.lock().contains(&pid) {
+            let index = pqlock.lock().iter().position(|&r| r == pid).expect("Couldn't find PID in Hart Process Queue");
+            pqlock.lock().remove(index);
         }
-        drop(proc);
         drop(pqlock);
+        let ppid = proc.parent_id;
+        drop(proc);
         drop(slock);
+        if let Some(parent) = lock.get_mut(&ppid) {
+            let index = parent.children.iter().position(|&r| r == pid).expect("Couldn't find PID in Parent Child List");
+            parent.children.remove(index);
+        }
         lock.remove(&pid);
         drop(lock);
     }

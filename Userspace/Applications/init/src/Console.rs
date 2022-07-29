@@ -75,7 +75,7 @@ pub fn Loop() -> ! {
         let kbd = File::Open("/dev/kbd",O_RDWR | O_CLOEXEC).expect("NO KEYBOARD CHARACTER STREAM?");
         let pt_server = File::Open("/dev/ptmx",O_RDWR | O_CLOEXEC).expect("NO PTMX?");
         PTY_READY.store(true, Ordering::Relaxed);
-        let mut buf = vec![0u8; 1];
+        let mut buf = vec![0u8; 32];
         loop {
             let has_started = SESSION_STARTED.load(Ordering::Relaxed);
             if kbd.Read(&mut buf[0..=0]).ok().unwrap() > 0 {

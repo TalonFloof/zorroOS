@@ -214,7 +214,7 @@ pub fn SystemCall(regs: &mut State) {
             if regs.GetSC1() == 0 {proc.task_state.Save(regs);}
             let forked_proc = Process::Fork(proc,regs.GetSC2());
             let forked_ip = if regs.GetSC1() > 0 {regs.GetSC1()} else {forked_proc.task_state.GetIP()};
-            let forked_sp = if regs.GetSC2() > 0 {regs.GetSC2()} else {forked_proc.task_state.GetSP()};
+            let forked_sp = if regs.GetSC2() > 0 {regs.GetSC2()} else {if regs.GetSC1() > 0 {0x8000_0000_0000-8} else {forked_proc.task_state.GetSP()}};
             drop(plock);
             let val = Process::AddProcess(forked_proc);
             if val > 0 {
