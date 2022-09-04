@@ -1,4 +1,4 @@
-
+use alloc::boxed::Box;
 
 pub trait ArchAPI {
     fn GetMachine() -> Box<dyn MachineAPI>;
