@@ -10,6 +10,7 @@ build = "build.rs"
 cc = "*"
 
 [dependencies]
+interfaces = { path = "../arch/interfaces" }
 
 [target.'cfg(target_arch = "riscv64")'.dependencies]
 arch = { path = "../arch/RiscV64" }
