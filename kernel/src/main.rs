@@ -3,8 +3,6 @@
 
 //extern crate alloc;
 
-//pub mod interfaces;
-
 #[no_mangle]
 extern "C" fn main() {
 
