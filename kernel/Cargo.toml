@@ -11,6 +11,7 @@ cc = "*"
 
 [dependencies]
 interfaces = { path = "../arch/interfaces" }
+static-linkedlist = "*"
 
 [target.'cfg(target_arch = "riscv64")'.dependencies]
 arch = { path = "../arch/RiscV64" }
