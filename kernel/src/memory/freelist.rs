@@ -3,7 +3,7 @@ The free list allocator used here is adopted from eduOS-rs.
 The original source code can be found here: https://github.com/RWTH-OS/eduOS-rs/blob/master/src/mm/freelist.rs
 eduOS-rs is dual licensed under either the Apache License 2.0 or the MIT License.
 */
-use static_linkedlist::{Clear, StaticLinkedListBackingArray};
+use static_linkedlist::{Clear, StaticLinkedListBackingArray, StaticLinkedList};
 use alloc::collections::LinkedList;
 
 struct EntryClear(pub u64,pub u64);
@@ -17,7 +17,7 @@ impl Clear for EntryClear {
 
 const FREEALLOC_BUFFER_SIZE: usize = StaticLinkedListBackingArray::<EntryClear>::capacity_for(64);
 
-pub struct FreeAlloc(pub LinkedList<(usize,usize)>);
+pub struct FreeAlloc(pub StaticLinkedList<EntryClear>);
 
 impl FreeAlloc {
 	pub const fn new() -> Self {
