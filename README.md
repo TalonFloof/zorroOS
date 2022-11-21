@@ -5,8 +5,7 @@
 
 # **zorroOS**: An elegant, microkernel-based operating system
 
-**zorroOS** is a hobby operating system written in Rust, currently targeting RISC-V boards and AMD64.
-The new rewrite of **zorroOS** is currently a WIP and can't even be built yet.
+**zorroOS** is a hobby operating system written in V, currently targeting RISC-V boards and AMD64.
 
 ## License
 
