@@ -1,2 +1,14 @@
-target
-Cargo.lock
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.so
+*.dylib
+*.dll
+*.o
+ZorroKernel
+
+# Ignore common editor/system specific metadata
+.DS_Store
+.idea/
+.vscode/
+*.iml
