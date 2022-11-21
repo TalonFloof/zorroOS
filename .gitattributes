@@ -6,4 +6,4 @@
 **/*.vsh linguist-language=V
 **/v.mod linguist-language=V
 
-**/Makefile linguist-vendored
+**/Makefile -linguist-vendored
