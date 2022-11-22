@@ -32,9 +32,9 @@ INTERNALCFLAGS :=                 \
 	-Icheaders
 
 build: freestanding_headers
-	v -freestanding -enable-globals -nofloat -autofree -gc none -d no_backtrace -o kernel.c .
+	v -os vinix -enable-globals -nofloat -autofree -gc none -d no_backtrace -o kernel.c .
 	$(CC) -D__zorro__ -O2 -g -pipe $(INTERNALCFLAGS) -w -c kernel.c -o kernel.o
-	rm kernel.c
+	# rm kernel.c
 
 x86_64-PC: build
 	$(LD) kernel.o -Tlink_scripts/x86_64-PC.ld -nostdlib -zmax-page-size=0x1000 -static -gc-sections -o ZorroKernel

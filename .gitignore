@@ -6,6 +6,9 @@
 *.dll
 *.o
 ZorroKernel
+zorroOS.iso
+kernel/freestanding_headers/
+kernel.c
 
 # Ignore common editor/system specific metadata
 .DS_Store

@@ -35,6 +35,7 @@ pub fn (z Framebuffer) get(x int, y int) u32 {
 	}
 }
 
+[unsafe]
 pub fn (x Framebuffer) get_unsafe_pointer() &u8 {
 	return &u8(fb.address)
 }
@@ -47,7 +48,6 @@ pub fn (z Framebuffer) set(x int, y int, color u32) {
 	}
 }
 
-pub fn initialize() fb_interface.IZorroFramebuffer {
+pub fn initialize() {
 	fb = unsafe { fb_request.response.framebuffers[0] }
-	return Framebuffer{}
 }
