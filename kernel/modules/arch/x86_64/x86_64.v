@@ -1,10 +1,9 @@
 module x86_64
 
-import limine
 import framebuffer
-import panic
+import ksync
+import arch
 
 pub fn zorro_arch_initialize() {
 	framebuffer.initialize()
-	panic.panic(panic.ZorroPanicCategory.ramdisk,"No Ramdisk")
 }

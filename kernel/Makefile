@@ -1,5 +1,3 @@
-CFLAGS ?= -O2 -Wall -Wextra -g -pipe
-
 VFILES := $(shell find ./ -type f -name '*.v')
 
 INTERNALCFLAGS :=                 \
@@ -31,9 +29,11 @@ INTERNALCFLAGS :=                 \
 	-Ifreestanding_headers        \
 	-Icheaders
 
+CFLAGS ?= -O2 -Wall -Wextra -g -pipe
+
 build: freestanding_headers
-	v -freestanding -bare-builtin-dir modules/zorro_builtin -enable-globals -nofloat -autofree -gc none -d no_backtrace -o kernel.c .
-	$(CC) -D__zorro__ -O2 -g -pipe $(INTERNALCFLAGS) -w -c kernel.c -o kernel.o
+	v -os linux -freestanding -bare-builtin-dir modules/zorro_builtin -enable-globals -nofloat -autofree -gc none -d no_backtrace -o kernel.c .
+	clang -D__zorro__ -O2 -g -pipe $(INTERNALCFLAGS) -w -c kernel.c -o kernel.o
 	# rm kernel.c
 
 x86_64-PC: build
@@ -46,3 +46,4 @@ freestanding_headers:
 clean:
 	rm -r freestanding_headers
 	rm ZorroKernel
+	rm kernel.c

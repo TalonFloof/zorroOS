@@ -1,5 +1,6 @@
 module builtin
 
+[noreturn]
 pub fn C.kpanic(u8,string)
 
 pub fn bare_print(buf &byte, len u64) {
@@ -16,21 +17,21 @@ pub fn bare_panic(msg string) {
 
 [export: 'malloc']
 pub fn __malloc(n usize) &C.void {
-	panic("Attempt to allocate memory")
+	C.kpanic(3,"Attempt to allocate memory")
 }
 
 [export: 'free']
 pub fn __free(ptr &C.void) {
-	panic("Attempt to free memory")
+	C.kpanic(3,"Attempt to free memory")
 }
 
 pub fn realloc(old_area &C.void, new_size usize) &C.void {
-	panic("Attempt to reallocate memory")
+	C.kpanic(3,"Attempt to reallocate memory")
 }
 
 [export: 'calloc']
 pub fn __calloc(nmemb usize, size usize) &C.void {
-	panic("Attempt to allocate memory")
+	C.kpanic(3,"Attempt to allocate memory")
 }
 
 [unsafe]
