@@ -1,6 +1,5 @@
 module main
 
-import stubs
 import arch.interfaces.framebuffer
 import arch.x86_64
 

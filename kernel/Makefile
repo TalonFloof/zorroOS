@@ -32,7 +32,7 @@ INTERNALCFLAGS :=                 \
 	-Icheaders
 
 build: freestanding_headers
-	v -os vinix -enable-globals -nofloat -autofree -gc none -d no_backtrace -o kernel.c .
+	v -freestanding -bare-builtin-dir modules/zorro_builtin -enable-globals -nofloat -autofree -gc none -d no_backtrace -o kernel.c .
 	$(CC) -D__zorro__ -O2 -g -pipe $(INTERNALCFLAGS) -w -c kernel.c -o kernel.o
 	# rm kernel.c
 
