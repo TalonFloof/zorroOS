@@ -1,2 +1,0 @@
-module framebuffer_impl
-
