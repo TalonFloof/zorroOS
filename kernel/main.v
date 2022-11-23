@@ -9,6 +9,10 @@ pub fn main() { // To make the V compiler shut up.
 }
 
 pub fn zorro_kernel_main() {
-	x86_64.zorro_arch_initialize()
+	zorro_arch.initialize_early()
+	logger := zorro_arch.get_logger() or { panic("Couldn't get logger") }
+	logger.info("Zorro Kernel")
+	logger.info("Copyright (C) 2020-2022 TalonFox and contributors")
+	zorro_arch.initialize()
 	panic.panic(panic.ZorroPanicCategory.ramdisk,"No Ramdisk")
 }

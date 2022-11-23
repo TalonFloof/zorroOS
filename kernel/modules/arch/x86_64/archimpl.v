@@ -16,7 +16,10 @@ pub fn (arch &Arch) get_framebuffer() ?&i_framebuf.IZorroFramebuffer {
 }
 
 pub fn (arch &Arch) get_logger() ?&i_log.IZorroLogger {
-	return none
+	if usize(terminal_request.response) == 0 {
+		return none
+	}
+	return &log.zorro_logger
 }
 
 [noreturn]

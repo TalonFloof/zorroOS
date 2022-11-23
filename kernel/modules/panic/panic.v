@@ -201,9 +201,17 @@ const (
 [export: "kpanic"]
 [noreturn]
 fn kpanic_(category ZorroPanicCategory, msg string) {
+	log := zorro_arch.get_logger() or { unsafe { goto panic_framebuffer } return}
+	log.fatal("Kernel Panic (hart 0x0)")
+	log.fatal(msg)
+panic_framebuffer:
 	fb := zorro_arch.get_framebuffer() or { unsafe { goto panic_halt } return }
 	res := fb.get_resolution()
-	fb.clear(0x000000)
+	for y in 0 .. res.h { // Dim Screen
+		for x in 0 .. res.w {
+			fb.set(x,y,(fb.get(x,y) >> 1) & 0x7f7f7f7f)
+		}
+	}
 	match category {
 		.generic {
 			fb.render_monochrome_bitmap(int(res.w)/2-(35*3/2),int(res.h)/2-(45*3/2),35,45,3,0xffffff,5,&generic_panic_img)
