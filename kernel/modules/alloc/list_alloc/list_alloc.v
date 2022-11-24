@@ -5,7 +5,7 @@ import panic
 [noinit]
 struct LinkedListEntry {
 mut:
-	is_used bool = false
+	is_used bool
 pub mut:
 	prev int = -1
 	next int = -1
@@ -33,14 +33,12 @@ fn new_cursor() LinkedListCursor {
 
 fn (mut self LinkedListCursor) next() ?&LinkedListEntry {
 	if self.current != -1 {
-		return &allocation_memory_segments[self.current]
+		current := self.current
+		self.current = (&allocation_memory_segments[self.current]).next
+		return &allocation_memory_segments[current]
 	} else {
 		return none
 	}
-}
-
-fn (mut self LinkedListCursor) advance() {
-	self.current = (&allocation_memory_segments[self.current]).next
 }
 
 fn (mut self LinkedListCursor) peek_next() ?&LinkedListEntry {
@@ -94,7 +92,7 @@ fn (mut self LinkedListCursor) remove_current() {
 }
 
 fn push_back(entry MemSegmentEntry) {
-	mut i := allocation_head_index
+	mut i := if allocation_head_index == -1 {0} else {allocation_head_index}
 	for {
 		if allocation_memory_segments[i].next == -1 {
 			next_entry := find_next_free_entry()
@@ -120,6 +118,7 @@ pub mut:
 	end usize
 }
 
+[cinit]
 __global (
 	allocation_memory_segments = [LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}]!
 	allocation_head_index = int(-1)
@@ -163,7 +162,6 @@ pub fn alloc(n usize, align usize) voidptr {
 				return voidptr(segment_start)
 			}
 		}
-		cursor.advance()
 	}
 	allocation_lock.release()
 	panic.panic(panic.ZorroPanicCategory.out_of_memory,"Kernel Heap Deprived")
@@ -205,7 +203,6 @@ pub fn free(addr voidptr, n usize) {
 			allocation_lock.release()
 			return
 		}
-		cursor.advance()
 	}
 	push_back(MemSegmentEntry{start: usize(addr), end: end})
 	allocation_lock.release()

@@ -1,16 +1,14 @@
 module x86_64
 
 import framebuffer
-import ksync
-import arch
-import panic
 import alloc
+import pmm
 
 pub fn (a &Arch) initialize_early() {
 	framebuffer.initialize()
-	alloc.early_init()
+	pmm.initialize()
 }
 
 pub fn (a &Arch) initialize() {
-	
+	//hi := [1,2,3,4] // Testing Memory Allocation
 }

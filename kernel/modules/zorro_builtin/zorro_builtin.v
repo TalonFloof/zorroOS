@@ -7,7 +7,7 @@ pub fn C.kalloc(n usize, align usize) voidptr
 pub fn C.kfree(addr voidptr, n usize)
 
 pub fn bare_print(buf &byte, len u64) {
-
+	
 }
 
 pub fn bare_eprint(buf &byte, len u64) {
@@ -32,10 +32,17 @@ pub fn __free(ptr &C.void) {
 }
 
 pub fn realloc(old_area &C.void, new_size usize) &C.void {
+	if usize(old_area) == 0 {
+		return __malloc(new_size)
+	}
 	unsafe {
-	old_size := *&u32(usize(old_area)-4)
+		old_size := *&u32(usize(old_area)-4)
 		if old_size == new_size {
 			return old_area
+		} else if new_size < old_size {
+			panic("realloc shrink not supported yet")
+		} else if new_size > old_size {
+			panic("realloc grow not supported yet")
 		}
 		return &C.void(0)
 	}

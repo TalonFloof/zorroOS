@@ -202,8 +202,10 @@ const (
 [noreturn]
 pub fn panic(category ZorroPanicCategory, msg string) {
 	log := zorro_arch.get_logger() or { unsafe { goto panic_framebuffer } return}
-	log.fatal("Kernel Panic (hart 0x0)")
-	log.fatal(msg)
+	if category != .ramdisk {
+		log.fatal("Kernel Panic (hart 0x0)")
+		log.fatal(msg)
+	}
 panic_framebuffer:
 	fb := zorro_arch.get_framebuffer() or { unsafe { goto panic_halt } return }
 	res := fb.get_resolution()
