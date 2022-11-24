@@ -32,11 +32,13 @@ pub fn __free(ptr &C.void) {
 }
 
 pub fn realloc(old_area &C.void, new_size usize) &C.void {
-	old_size := unsafe {*&u32(usize(old_area)-4)}
-	if old_size == new_size {
-		return old_area
+	unsafe {
+	old_size := *&u32(usize(old_area)-4)
+		if old_size == new_size {
+			return old_area
+		}
+		return &C.void(0)
 	}
-	return &C.void(0)
 }
 
 [export: 'calloc']
