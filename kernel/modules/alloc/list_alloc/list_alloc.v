@@ -86,7 +86,7 @@ fn (mut self LinkedListCursor) remove_current() {
 			if prev != -1 {
 				panic("Kernel Heap Freelist is in an unusual and unrecoverable state")
 			}
-			allocation_head_index = 0
+			allocation_head_index = -1
 		} else {
 			allocation_head_index = next
 		}
@@ -98,6 +98,9 @@ fn push_back(entry MemSegmentEntry) {
 	for {
 		if allocation_memory_segments[i].next == -1 {
 			next_entry := find_next_free_entry()
+			if allocation_head_index == -1 {
+				allocation_head_index = next_entry
+			}
 			allocation_memory_segments[i].next = next_entry
 			allocation_memory_segments[next_entry].is_used = true
 			allocation_memory_segments[next_entry].prev = i
@@ -119,9 +122,10 @@ pub mut:
 
 __global (
 	allocation_memory_segments = [LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}, LinkedListEntry{}]!
-	allocation_head_index = int(0)
+	allocation_head_index = int(-1)
 )
 
+[export: "kalloc"]
 pub fn alloc(n usize, align usize) voidptr {
 	allocation_lock.acquire()
 	size := n+align
@@ -165,6 +169,7 @@ pub fn alloc(n usize, align usize) voidptr {
 	panic.panic(panic.ZorroPanicCategory.out_of_memory,"Kernel Heap Deprived")
 }
 
+[export: "kfree"]
 pub fn free(addr voidptr, n usize) {
 	allocation_lock.acquire()
 	end := usize(addr) + n
@@ -196,6 +201,7 @@ pub fn free(addr voidptr, n usize) {
 			return
 		} else if end < segment_start {
 			new_entry := MemSegmentEntry{start: usize(addr), end: end}
+			cursor.insert_before(new_entry)
 			allocation_lock.release()
 			return
 		}

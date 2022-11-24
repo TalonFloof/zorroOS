@@ -3,6 +3,9 @@ module builtin
 [noreturn]
 pub fn C.kpanic(u8,string)
 
+pub fn C.kalloc(n usize, align usize) voidptr
+pub fn C.kfree(addr voidptr, n usize)
+
 pub fn bare_print(buf &byte, len u64) {
 
 }
@@ -17,21 +20,28 @@ pub fn bare_panic(msg string) {
 
 [export: 'malloc']
 pub fn __malloc(n usize) &C.void {
-	C.kpanic(3,"Attempt to allocate memory")
+	memory := C.kalloc(n+4,0)
+	unsafe {*(&u32(memory)) = u32(n)+4}
+	return &C.void(usize(memory)+4)
 }
 
 [export: 'free']
 pub fn __free(ptr &C.void) {
-	C.kpanic(3,"Attempt to free memory")
+	size := unsafe {*&u32(usize(ptr)-4)}
+	C.kfree(voidptr(usize(ptr)-4),size)
 }
 
 pub fn realloc(old_area &C.void, new_size usize) &C.void {
-	C.kpanic(3,"Attempt to reallocate memory")
+	old_size := unsafe {*&u32(usize(old_area)-4)}
+	if old_size == new_size {
+		return old_area
+	}
+	return &C.void(0)
 }
 
 [export: 'calloc']
 pub fn __calloc(nmemb usize, size usize) &C.void {
-	C.kpanic(3,"Attempt to allocate memory")
+	return __malloc(nmemb * size)
 }
 
 [unsafe]
