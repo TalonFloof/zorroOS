@@ -17,6 +17,7 @@ pub fn zorro_kernel_main() {
 	logger.info("Zorro Kernel")
 	logger.info("Copyright (C) 2020-2022 TalonFox and contributors")
 	zorro_arch.initialize()
-	logger.error("No ramdisk was provided, cannot continue boot!")
-	panic.panic(panic.ZorroPanicCategory.ramdisk,"No Ramdisk")
+	zorro_arch.halt()
+	//logger.error("No ramdisk was provided, cannot continue boot!")
+	//panic.panic(panic.ZorroPanicCategory.ramdisk,"No Ramdisk")
 }

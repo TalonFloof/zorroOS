@@ -198,9 +198,8 @@ const (
 	]!
 )
 
-[export: "kpanic"]
 [noreturn]
-pub fn panic(category ZorroPanicCategory, msg string) {
+pub fn panic_multiline(category ZorroPanicCategory, msg &string, len int) {
 	log := zorro_arch.get_logger() or { unsafe { goto panic_framebuffer } return}
 	if category != .ramdisk {
 		log.fatal("Kernel Panic (hart 0x0)")
@@ -230,10 +229,24 @@ panic_framebuffer:
 	}
 	if category != .ramdisk {
 		fb.draw_centered_text_literal(int(res.w)/2,int(res.h)/2+(45*3/2),1,0xffffff,"Kernel Panic")
-		fb.draw_centered_text(int(res.w)/2,(int(res.h)/2+(45*3/2))+16,1,0xffffff,&msg)
+		for i := 0; i < len; i++ {
+			unsafe {
+				fb.draw_centered_text(int(res.w)/2,(int(res.h)/2+(45*3/2))+16+(i*16),1,0xffffff,&(msg[i]))
+			}
+		}
 	} else {
-		fb.draw_centered_text(int(res.w)/2,int(res.h)/2+(45*3/2),1,0xffffff,&msg)
+		for i := 0; i < len; i++ {
+			unsafe {
+				fb.draw_centered_text(int(res.w)/2,int(res.h)/2+(45*3/2)+(i*16),1,0xffffff,&(msg[i]))
+			}
+		}
 	}
 panic_halt:
 	zorro_arch.halt()
+}
+
+[export: "kpanic"]
+[noreturn]
+pub fn panic(category ZorroPanicCategory, msg string) {
+	panic_multiline(category,&msg,1)
 }

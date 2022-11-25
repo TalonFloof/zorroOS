@@ -1,6 +1,7 @@
 module ksync
 
 import arch.interfaces.logger as log
+import panic
 
 pub struct Lock {
 pub mut:
@@ -25,7 +26,10 @@ pub fn (mut l Lock) acquire() {
 	logger.raw_log(l.id)
 	logger.raw_log("\"\n")
 panic_routine:
-	panic("Kernel is Deadlocked!")
+	arr := ["Kernel is Deadlocked!",l.id]!
+	unsafe {
+		panic.panic_multiline(panic.ZorroPanicCategory.generic,&string(&arr),2)
+	}
 }
 
 pub fn (mut l Lock) release() {

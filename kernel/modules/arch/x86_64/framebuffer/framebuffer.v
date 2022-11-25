@@ -6,9 +6,6 @@ import arch.x86_64.limine
 [cinit]
 __global (
 	volatile fb_request = limine.LimineFramebufferRequest{response: 0}
-)
-
-__global (
 	limine_fb = &limine.LimineFramebuffer(0)
 )
 
