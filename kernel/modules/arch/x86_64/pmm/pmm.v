@@ -2,6 +2,7 @@ module pmm
 
 import limine
 import utils
+import panic
 
 pub fn C.kfree(addr voidptr, n usize)
 
@@ -16,7 +17,7 @@ pub fn initialize() {
 	if usize(memmap_request.response) == 0 {
 		panic("Limine didn't pass a valid memory map, cannot continue booting!")
 	}
-	logger := zorro_arch.get_logger() or { panic("No logger? (Imagine putting a meme in a panic message)") }
+	logger := zorro_arch.get_logger() or { panic.panic(panic.ZorroPanicCategory.invalid_setup,"No logger?") }
 	entries := memmap_request.response.entries
 	for ind := 0; ind < memmap_request.response.entry_count; ind++ {
 		unsafe {

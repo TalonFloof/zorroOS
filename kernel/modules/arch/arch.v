@@ -2,6 +2,7 @@ module arch
 
 import interfaces.framebuffer
 import interfaces.logger
+import interfaces.paging
 
 [no_init]
 pub interface IZorroArch {
@@ -9,5 +10,6 @@ pub interface IZorroArch {
 	initialize()
 	get_framebuffer() ?&framebuffer.IZorroFramebuffer
 	get_logger() ?&logger.IZorroLogger
+	create_vm_space() ?&paging.VMSpace
 	halt()
 }
