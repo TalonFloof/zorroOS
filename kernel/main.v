@@ -2,7 +2,6 @@ module main
 
 import arch.x86_64
 import arch
-import panic
 
 pub fn main() { // To make the V compiler shut up.
 	zorro_kernel_main()
@@ -11,7 +10,7 @@ pub fn main() { // To make the V compiler shut up.
 fn C._vinit(argc int, argv voidptr)
 
 pub fn zorro_kernel_main() {
-	zorro_arch.initialize_early()
+	arch.IZorroArch(zorro_arch).initialize_early() // The casting acts as a checker to see if the architecture implementation complies with the IZorroArch interface.
 	C._vinit(0, 0)
 	logger := zorro_arch.get_logger() or { panic("Couldn't get logger") }
 	logger.info("Zorro Kernel")

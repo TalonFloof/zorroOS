@@ -3,6 +3,7 @@ module arch
 import interfaces.framebuffer
 import interfaces.logger
 import interfaces.paging
+import api
 
 [no_init]
 pub interface IZorroArch {

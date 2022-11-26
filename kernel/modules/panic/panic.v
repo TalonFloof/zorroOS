@@ -298,6 +298,7 @@ panic_framebuffer:
 	}
 panic_halt:
 	zorro_arch.halt()
+	for {}
 }
 
 [export: "kpanic"]

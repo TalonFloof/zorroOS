@@ -32,7 +32,7 @@ INTERNALCFLAGS :=                 \
 CFLAGS ?= -O0 -Wall -Wextra -g -pipe
 
 build: freestanding_headers
-	v -os linux -freestanding -bare-builtin-dir modules/zorro_builtin -enable-globals -nofloat -autofree -gc none -d no_backtrace -o kernel.c .
+	v -os linux -freestanding -bare-builtin-dir modules/zorro_builtin -enable-globals -nofloat -autofree -gc none -d no_backtrace -prod -o kernel.c .
 	clang -D__zorro__ -O0 -g -pipe $(INTERNALCFLAGS) -w -c kernel.c -o kernel.o
 	# rm kernel.c
 

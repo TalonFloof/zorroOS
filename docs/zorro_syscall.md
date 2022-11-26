@@ -13,7 +13,7 @@ Syscall ID: 0x44df433d6ec2cfad
 -----
 Description:
 Creates a new object.
-If successful, the return value should be the handle ID of the object that
+If successful, the return value should be a strong handle for the object that
 was just created.
 ```
 
@@ -31,7 +31,7 @@ uint64_t ZorroObjectGrant(
 Syscall ID: 0xc9969df620c3641d
 -----
 Description:
-Grant a thread the privilage to use a handle if the set right flags are
+Grant a thread the privilege to use a handle if the set right flags are
 also set on the target thread. (If 0 the condition will always pass)
 ```
 
@@ -46,7 +46,7 @@ uint64_t ZorroObjectReference(VoidHandle handle);
 Syscall ID: 0x890074221b7afef4
 -----
 Description:
-Creates a new handle to the object pointed by the given handle.
+Creates a new weak handle to the object pointed by the given handle.
 ```
 
 ---
@@ -60,7 +60,7 @@ uint64_t ZorroObjectDereference(VoidHandle handle);
 Syscall ID: 0x06756960036071ae
 -----
 Description:
-Destroys the given handle. If all handles of an object are destroyed,
+Destroys the given handle. If all strong handles of an object are destroyed,
 the object is also destroyed.
 ```
 ---
@@ -118,7 +118,7 @@ Syscall ID: 0x6578036eaf605a13
 -----
 Description:
 Begins execution of the given thread using the given parameters
-and intruction pointer.
+and instruction pointer.
 ```
 ---
 ## `ZorroThreadExit`
@@ -135,7 +135,62 @@ Syscall ID: 0x136b091b5d834bf4
 -----
 Description:
 Exits the thread with the given exit code.
-Any threads waiting for the given thread to exit will recieve
+Any threads waiting for the given thread to exit will receive
 the given exit code.
 ```
 ---
+## `ZorroThreadKill`
+
+```c
+uint64_t ZorroThreadKill(ThreadHandle handle);
+```
+
+```
+Syscall ID: 0x1ef47cdab52acfcf
+-----
+Description:
+Immediately stops a thread's execution and triggers any threads
+waiting for an event from the thread. The thread is not destroyed, rather
+ZorroThreadKill halts a thread. Use ZorroObjectDereference to destroy
+the thread from memory.
+```
+---
+## `ZorroThreadRightsPledge`
+
+```c
+uint64_t ZorroThreadRightsPledge(ThreadHandle handle, uint64_t rights);
+```
+
+```
+Syscall ID: 0xbe277c5c68052ee1
+-----
+Description:
+Grants the given thread the given rights if the calling thread
+also has the set rights.
+```
+---
+## `ZorroEventBind`
+
+```c
+uint64_t ZorroEventBind(Event eventid, uint64_t parameter);
+```
+
+```
+Syscall ID: 0x52df341a8174f5d9
+-----
+Description:
+Binds an event to the thread if it has the rights to do such.
+```
+---
+## `ZorroEventUnbind`
+
+```c
+uint64_t ZorroEventUnbind(EventHandle handle);
+```
+
+```
+Syscall ID: 0x720c927fff237b4e
+-----
+Description:
+Unbinds an event from a thread.
+```
