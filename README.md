@@ -1,7 +1,7 @@
-<p align="center">
+<!--<p align="center">
     <a href="https://github.com/Talon396/zorroOS/tree/legacy">Looking for owlOS? You can find it here.</a><br>
     <!--<img align="center" height="128" src="docs/zorroOS.svg"><br>-->
-</p>
+</p>-->
 
 # **zorroOS**: An elegant, microkernel-based operating system
 
