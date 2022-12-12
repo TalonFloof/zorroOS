@@ -9,6 +9,7 @@ ZorroKernel
 zorroOS.iso
 kernel/freestanding_headers/
 kernel.c
+vosLang/
 
 # Ignore common editor/system specific metadata
 .DS_Store

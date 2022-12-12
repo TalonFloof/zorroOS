@@ -1,11 +1,8 @@
-<!--<p align="center">
-    <a href="https://github.com/Talon396/zorroOS/tree/legacy">Looking for owlOS? You can find it here.</a><br>
-    <!--<img align="center" height="128" src="docs/zorroOS.svg"><br>-->
-</p>-->
+<!--<p align="center"><a href="https://github.com/Talon396/zorroOS/tree/legacy">Looking for owlOS? You can find it here.</a><br><img align="center" height="128" src="docs/zorroOS.svg"><br></p>-->
 
 # **zorroOS**: An elegant, microkernel-based operating system
 
-**zorroOS** is a hobby operating system written in V, currently targeting AMD64 and plans to also target RISC-V boards.
+**zorroOS** is a hobby operating system written in C99, currently targeting AMD64 and plans to also target RISC-V boards.
 
 ## License
 

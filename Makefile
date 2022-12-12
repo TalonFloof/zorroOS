@@ -1,5 +1,8 @@
-build:
+build: vosLang
 	cd kernel; make x86_64-PC; cd ..
+
+vosLang:
+    git clone https://github.com/Talon396/vosLang
 
 iso: build
 	git clone --branch v4.x-branch-binary --depth 1 https://github.com/limine-bootloader/limine /tmp/limine
