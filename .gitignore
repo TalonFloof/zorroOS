@@ -8,6 +8,8 @@
 ZorroKernel
 zorroOS.iso
 /kernel/modules/
+/kernel/main.v
+/kernel/v.mod
 
 # Ignore common editor/system specific metadata
 .DS_Store

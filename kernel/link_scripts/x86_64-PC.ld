@@ -1,7 +1,7 @@
 OUTPUT_FORMAT(elf64-x86-64)
 OUTPUT_ARCH(i386:x86-64)
 
-ENTRY(main__zorro_kernel_main)
+ENTRY(ZorroKernelMain)
 
 PHDRS
 {
