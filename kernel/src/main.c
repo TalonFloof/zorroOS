@@ -9,7 +9,7 @@ import alloc
 pub fn main() { // To make the V compiler shut up.
     zorro_kernel_main()
 }
-
+z
 fn C._vinit(argc int, argv voidptr)
 
 pub fn zorro_kernel_main() {
@@ -29,10 +29,17 @@ pub fn zorro_kernel_main() {
 #ifdef _ZORRO_ARCH_X86_64
 #include "arch/x86_64/x86_64.h"
 #endif
-#include "arch/interfaces.h"
+#include "arch/arch.h"
 
 void ZorroKernelMain()
 {
     /* Ensure that the IZorroArch signature is present */
-    if ()
+    if (zorroArch.signature != 0x72416f72726f5a49)
+    {
+        /* The kernel cannot properly operate without a valid IZorroArch Implementation, Halt Hart 0x00 */
+        while (1)
+        {
+        };
+    }
+    zorroArch.initialize_early(); /* Initialize some early architectural features that are immediately needed at boot. */
 }

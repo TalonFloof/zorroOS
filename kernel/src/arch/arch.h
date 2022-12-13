@@ -16,4 +16,6 @@ typedef struct
 
 } IZorroArch;
 
+extern IZorroArch zorroArch;
+
 #endif

@@ -1,4 +1,4 @@
-VFILES := $(shell find ./ -type f -name '*.v')
+CFILES := $(shell find ./ -type f -name '*.c')
 
 INTERNALCFLAGS :=                 \
 	-ffreestanding                \
@@ -31,19 +31,12 @@ INTERNALCFLAGS :=                 \
 
 CFLAGS ?= -O0 -Wall -Wextra -g -pipe
 
-build: freestanding_headers
-	v -os linux -freestanding -bare-builtin-dir modules/zorro_builtin -enable-globals -nofloat -autofree -gc none -d no_backtrace -prod -o kernel.c .
+build:
 	gcc -D__zorro__ -O0 -g -pipe $(INTERNALCFLAGS) -w -c kernel.c -o kernel.o
-	# rm kernel.c
 
 x86_64-PC: build
 	$(LD) kernel.o -Tlink_scripts/x86_64-PC.ld -nostdlib -zmax-page-size=0x1000 -static -gc-sections -o ZorroKernel
 	rm *.o
 
-freestanding_headers:
-	git clone https://github.com/mintsuki/freestanding_headers.git
-
 clean:
-	rm -r freestanding_headers
 	rm ZorroKernel
-	rm kernel.c

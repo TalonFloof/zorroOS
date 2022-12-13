@@ -1,10 +1,5 @@
 * text=auto eol=lf
 *.bat eol=crlf
 
-**/*.v linguist-language=V
-**/*.vv linguist-language=V
-**/*.vsh linguist-language=V
-**/v.mod linguist-language=V
-
 kernel/Makefile -linguist-vendored
 Makefile -linguist-vendored
