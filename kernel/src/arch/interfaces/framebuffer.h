@@ -12,9 +12,16 @@ pub interface IZorroFramebuffer {
     set(int,int,u32)
 }*/
 
+typedef uint32_t (*IZorroArch_Get)(int, int);
+typedef void (*IZorroArch_Set)(int, int, uint32_t);
+
 typedef struct
 {
     uint64_t signature; /* "IZorroFB", or 0x42466f72726f5a49 */
+    int resolution[2];
+    uint8_t depth;
+    void *pointer;
+
 } IZorroFramebuffer;
 
 #endif
