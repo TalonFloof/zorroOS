@@ -21,7 +21,8 @@ typedef struct
     int resolution[2];
     uint8_t depth;
     void *pointer;
-
+    IZorroArch_Get get;
+    IZorroArch_Set set;
 } IZorroFramebuffer;
 
 #endif
