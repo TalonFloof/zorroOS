@@ -4,7 +4,39 @@
 
 **zorroOS** is a hobby operating system written in C99, currently targeting AMD64 and plans to also target RISC-V boards.
 
+## Building
+
+Ensure that you have a cross compiler installed before attempting to build.
+
+On Arch Linux you can get it using yay:
+```sh
+$ yay -S x86_64-elf-gcc
+```
+
+On macOS you can use brew to install it:
+```sh
+$ brew install x86_64-elf-gcc
+```
+
+Afterwards clone the repository:
+```sh
+$ git clone --recursive https://github.com/Talon396/zorroOS
+```
+
+Finally enter the directory and run `make iso`:
+```sh
+$ cd zorroOS
+$ make iso
+```
+
+It will then generate an ISO named, `zorroOS.iso`. 
+
+You can then run it using `qemu-system-x86_64`:
+```sh
+$ qemu-system-x86_64 -cdrom zorroOS.iso -M q35 -enable-kvm -serial stdio
+```
+
 ## License
 
-zorroOS is licensed under the [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0).<br>
+zorroOS is licensed under the MIT License.    
 The full text of the license is included in the license file of this software package, which can be accessed [here](COPYING).
