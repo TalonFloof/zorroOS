@@ -5,7 +5,7 @@
 *.dylib
 *.dll
 *.o
-ZorroKernel
+OwlKernel
 zorroOS.iso
 /kernel/modules/
 /kernel/main.v

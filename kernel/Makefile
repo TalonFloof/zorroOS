@@ -1,9 +1,19 @@
-CFILES := $(shell find ./ -type f -name '*.c')
+CC=x86_64-elf-gcc
+LD=x86_64-elf-ld
+ARCH=x86_64
+CFILES := $(shell find ./src -type f -name '*.c')
+
+ifeq ($(ARCH),x86_64)
+	CFILES := $(CFILES) $(shell find ./architectures/x86_64/ -type f -name '*.c')
+endif
+
+OBJFILES := $(patsubst %.c,%.o,$(CFILES))
+
+
 
 INTERNALCFLAGS :=                 \
 	-ffreestanding                \
-	-std=gnu99                    \
-	-nostdinc                     \
+	-ansi                         \
 	-fno-omit-frame-pointer       \
 	-fno-stack-protector          \
 	-fno-stack-check              \
@@ -21,22 +31,22 @@ INTERNALCFLAGS :=                 \
 	-mno-red-zone                 \
 	-mcmodel=kernel               \
 	-Wno-address-of-packed-member \
-	-Wno-unused-value             \
-	-Wno-unused-label             \
-	-Wno-unused-function          \
-	-Wno-unused-variable          \
-	-Wno-unused-parameter         \
-	-Ifreestanding_headers        \
-	-Icheaders
+	-Isrc
 
-CFLAGS ?= -O0 -Wall -Wextra -g -pipe
 
-build:
-	gcc -D__zorro__ -O0 -g -pipe $(INTERNALCFLAGS) -w -c kernel.c -o kernel.o
+CFLAGS ?= -O0 -Wall -Wextra -g
+
+build: $(OBJFILES)
+
+.PHONY: build x86_64-PC clean
+
+%.o: %.c
+	$(CC) -D_OWL_ARCH_X86_64 -D__owl__ $(INTERNALCFLAGS) $(CFLAGS) -c $< -o $@
 
 x86_64-PC: build
-	$(LD) kernel.o -Tlink_scripts/x86_64-PC.ld -nostdlib -zmax-page-size=0x1000 -static -gc-sections -o ZorroKernel
-	rm *.o
+	$(LD) $(OBJFILES) -Tlink_scripts/x86_64-PC.ld -nostdlib -zmax-page-size=0x1000 -static -gc-sections -o OwlKernel
+	rm $(OBJFILES)
 
 clean:
-	rm ZorroKernel
+	rm -f OwlKernel
+	rm -f $(OBJFILES)

@@ -1,21 +1,20 @@
-#ifndef _KZORRO_ARCH_H
-#define _KZORRO_ARCH_H 1
+#ifndef _OWL_ARCH_H
+#define _OWL_ARCH_H 1
 
 #include <stdint.h>
 #include "interfaces/framebuffer.h"
-#include "interfaces/framebuffer.h"
 
-typedef void (*IZorroArch_Init)(void);
+typedef void (*IOwlArch_Init)(void);
 
 typedef struct
 {
-    uint64_t signature; /* Set to "IZorroAr", 0x72416f72726f5a49 */
+    uint64_t signature; /* Set to "IOwlArch", 0x686372416c774f49 */
 
-    IZorroArch_Init initialize_early;
-    IZorroArch_Init initialize;
+    IOwlArch_Init initialize_early;
+    IOwlArch_Init initialize;
 
-} IZorroArch;
+} IOwlArch;
 
-extern IZorroArch zorroArch;
+extern IOwlArch owlArch;
 
 #endif

@@ -26,20 +26,17 @@ pub fn zorro_kernel_main() {
 */
 
 #include <stdint.h>
-#ifdef _ZORRO_ARCH_X86_64
-#include "arch/x86_64/x86_64.h"
-#endif
-#include "arch/arch.h"
+#include <arch/arch.h>
 
-void ZorroKernelMain()
+void OwlKernelMain()
 {
-    /* Ensure that the IZorroArch signature is present */
-    if (zorroArch.signature != 0x72416f72726f5a49)
+    /* Ensure that the IOwlArch signature is present */
+    if (owlArch.signature != 0x686372416c774f49)
     {
-        /* The kernel cannot properly operate without a valid IZorroArch Implementation, Halt Hart 0x00 */
+        /* The kernel cannot properly operate without a valid IOwlArch Implementation, Halt Hart 0x00 */
         while (1)
         {
         };
     }
-    zorroArch.initialize_early(); /* Initialize some early architectural features that are immediately needed at boot. */
+    owlArch.initialize_early(); /* Initialize some early architectural features that are immediately needed at boot. */
 }

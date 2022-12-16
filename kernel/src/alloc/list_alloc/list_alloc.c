@@ -1,8 +1,12 @@
-#include "../alloc.h"
+#include <alloc/alloc.h>
 
-#if ZORRO_DEFAULT_ALLOCATOR == (AllocatorType)LINKED_LIST_ALLOCATOR
+#if OWL_DEFAULT_ALLOCATOR == LINKED_LIST_ALLOCATOR
 
 void *malloc(size_t size)
+{
+}
+
+void free(void *ptr)
 {
 }
 
