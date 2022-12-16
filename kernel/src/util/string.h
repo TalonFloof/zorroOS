@@ -1,8 +1,8 @@
 #ifndef _OWL_STRING_H
 #define _OWL_STRING_H 1
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 void *memset(void *src, int c, size_t count);
 void *memcpy(void *dest, const void *src, size_t count);
