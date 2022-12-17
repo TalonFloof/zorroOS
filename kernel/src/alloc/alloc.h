@@ -1,7 +1,8 @@
 #ifndef _OWL_ALLOC_H
 #define _OWL_ALLOC_H 1
 
-#include <stddef.h>
+#include <stdint.h>
+#include <sync/lock.h>
 
 typedef enum {
   NO_ALLOCATOR = 0,
@@ -12,7 +13,7 @@ typedef enum {
   LINKED_LIST_ALLOCATOR /* You can change this to a different allocator if you \
                            want to. */
 
-extern void *malloc(size_t size);
+extern void *malloc(uintptr_t size, uintptr_t align);
 extern void free(void *ptr);
 
 #endif

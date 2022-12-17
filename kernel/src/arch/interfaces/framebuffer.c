@@ -25,7 +25,7 @@ void Framebuffer_RenderMonochromeBitmap(IOwlFramebuffer *fb, int x, int y,
       uint64_t byte_offset = (i * line_size) + (j / 8);
       uint64_t bit_offset = j % 8;
       uint8_t dat = ptr[byte_offset];
-      if (dat & (1 << (7 - bit_offset)) != 0) {
+      if ((dat & (1 << (7 - bit_offset))) != 0) {
         Framebuffer_Rect(fb, x + (j * scale), y + (i * scale), scale, scale,
                          color);
       }

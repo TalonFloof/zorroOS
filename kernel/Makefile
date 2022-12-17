@@ -9,11 +9,9 @@ endif
 
 OBJFILES := $(patsubst %.c,%.o,$(CFILES))
 
-
-
 INTERNALCFLAGS :=                 \
 	-ffreestanding                \
-	-ansi                         \
+	-std=gnu90                    \
 	-fno-omit-frame-pointer       \
 	-fno-stack-protector          \
 	-fno-stack-check              \
@@ -33,6 +31,9 @@ INTERNALCFLAGS :=                 \
 	-Wno-address-of-packed-member \
 	-Isrc
 
+ifeq ($(ARCH),x86_64)
+	INTERNALCFLAGS := $(INTERNALCFLAGS) -D_OWL_ARCH_X86_64
+endif
 
 CFLAGS ?= -O0 -Wall -Wextra -g
 
@@ -41,7 +42,7 @@ build: $(OBJFILES)
 .PHONY: build x86_64-PC clean
 
 %.o: %.c
-	$(CC) -D_OWL_ARCH_X86_64 -D__owl__ $(INTERNALCFLAGS) $(CFLAGS) -c $< -o $@
+	$(CC) -D__owl__ $(INTERNALCFLAGS) $(CFLAGS) -c $< -o $@
 
 x86_64-PC: build
 	$(LD) $(OBJFILES) -Tlink_scripts/x86_64-PC.ld -nostdlib -zmax-page-size=0x1000 -static -gc-sections -o OwlKernel

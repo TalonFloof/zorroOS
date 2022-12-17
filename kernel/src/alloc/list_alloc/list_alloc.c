@@ -94,7 +94,7 @@ int FindNextFreeEntry() {
       return i;
     }
   }
-  /* TODO: Add panic here */
+  /* TODO: Panic, Msg: "Kernel Heap Freelist Deprived" */
 }
 
 LinkedListCursor NewCursor() {
@@ -128,6 +128,65 @@ LinkedListEntry* CursorPeekPrev(LinkedListCursor* self) {
         [owlAllocationMemorySegments[self->current].prev];
   } else {
     return 0;
+  }
+}
+
+void CursorInsertBefore(LinkedListCursor* self, MemSegmentEntry entry) {
+  int prev = owlAllocationMemorySegments[self->current].prev;
+  int next_entry = FindNextFreeEntry();
+  if (prev != -1) {
+    owlAllocationMemorySegments[prev].next = next_entry;
+  }
+  owlAllocationMemorySegments[next_entry].isUsed = 1;
+  owlAllocationMemorySegments[next_entry].prev = prev;
+  owlAllocationMemorySegments[next_entry].next = self->current;
+  owlAllocationMemorySegments[next_entry].data = entry;
+  if (owlAllocationHeadIndex == self->current) {
+    owlAllocationHeadIndex = next_entry;
+  }
+}
+
+void CursorRemoveCurrent(LinkedListCursor* self) {
+  int prev = owlAllocationMemorySegments[self->current].prev;
+  int next = owlAllocationMemorySegments[self->current].next;
+  if (prev != -1) {
+    owlAllocationMemorySegments[prev].next = next;
+  }
+  if (next != -1) {
+    owlAllocationMemorySegments[next].prev = prev;
+  }
+  owlAllocationMemorySegments[self->current].isUsed = 0;
+  owlAllocationMemorySegments[self->current].prev = -1;
+  owlAllocationMemorySegments[self->current].next = -1;
+  if (owlAllocationHeadIndex == self->current) {
+    if (next == -1) {
+      if (prev != -1) {
+        /* TODO: Panic, Msg: "Kernel Heap Freelist is in an unusual and
+         * unrecoverable state" */
+      }
+      owlAllocationHeadIndex = -1;
+    } else {
+      owlAllocationHeadIndex = next;
+    }
+  }
+}
+
+void ListAlloc_PushBack(MemSegmentEntry entry) {
+  int i = (owlAllocationHeadIndex == -1) ? 0 : owlAllocationHeadIndex;
+  for (;;) {
+    if (owlAllocationMemorySegments[i].next == -1) {
+      int next_entry = FindNextFreeEntry();
+      if (owlAllocationHeadIndex == -1) {
+        owlAllocationHeadIndex = next_entry;
+      }
+      owlAllocationMemorySegments[i].next = next_entry;
+      owlAllocationMemorySegments[next_entry].isUsed = 1;
+      owlAllocationMemorySegments[next_entry].prev = i;
+      owlAllocationMemorySegments[next_entry].next = -1;
+      owlAllocationMemorySegments[next_entry].data = entry;
+      return;
+    }
+    i = owlAllocationMemorySegments[i].next;
   }
 }
 
@@ -356,7 +415,55 @@ pub fn free(addr voidptr, n usize) {
 }
 */
 
-void* malloc(size_t size) {}
+extern Lock owlAllocationLock;
+
+void* malloc(uintptr_t n, uintptr_t align) {
+  /*
+  allocation_lock.acquire()
+  size := n+align
+  mut cursor := new_cursor()
+  for mut i in cursor {
+      segment_start := i.data.start
+      segment_size := i.data.end - i.data.start
+      if segment_size > size {
+          // (value + (alignment - 1)) & ~(alignment - 1)
+          if align > 0 {
+              new_addr := (segment_start + (align - 1)) & ~(align - 1)
+              i.data.start += n + (new_addr - segment_start)
+              if new_addr != segment_start {
+                  new_entry := MemSegmentEntry{segment_start, new_addr}
+                  cursor.insert_before(new_entry)
+              }
+              allocation_lock.release()
+              return voidptr(new_addr)
+          } else {
+              i.data.start += size
+              allocation_lock.release()
+              return voidptr(segment_start)
+          }
+      } else if segment_size == size {
+          if align > 0 {
+              new_addr := (segment_start + (align - 1)) & ~(align - 1)
+              if new_addr != segment_start {
+                  i.data.end = new_addr
+              }
+              allocation_lock.release()
+              return voidptr(new_addr)
+          } else {
+              cursor.remove_current()
+              allocation_lock.release()
+              return voidptr(segment_start)
+          }
+      }
+  }
+  allocation_lock.release()
+  panic.panic(panic.ZorroPanicCategory.out_of_memory,"Kernel Heap Deprived")
+  */
+  Lock_Acquire(&owlAllocationLock);
+  int size = n + align;
+
+  Lock_Release(&owlAllocationLock);
+}
 
 void free(void* ptr) {}
 
