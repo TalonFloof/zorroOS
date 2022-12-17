@@ -4,8 +4,11 @@
 #include <stdint.h>
 
 #include "interfaces/framebuffer.h"
+#include "interfaces/logger.h"
 
 typedef void (*IOwlArch_NoArgFn)(void);
+typedef IOwlFramebuffer (*IOwlArch_GetFB)(void);
+typedef IOwlLogger (*IOwlArch_GetLog)(void);
 
 typedef struct {
   uint64_t signature; /* Set to "IOwlArch", 0x686372416c774f49 */
@@ -15,6 +18,9 @@ typedef struct {
 
   IOwlArch_NoArgFn disable_interrupts;
   IOwlArch_NoArgFn enable_interrupts;
+
+  IOwlArch_GetFB get_framebuffer;
+  IOwlArch_GetLog get_logger;
 } IOwlArch;
 
 extern IOwlArch owlArch;

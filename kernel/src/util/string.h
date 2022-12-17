@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+char *itoa(unsigned long long num, char *str, int base);
 void *memset(void *src, int c, size_t count);
 void *memcpy(void *dest, const void *src, size_t count);
 int memcmp(const void *s1, const void *s2, size_t n);

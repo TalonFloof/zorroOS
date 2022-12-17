@@ -13,7 +13,10 @@ typedef enum {
   LINKED_LIST_ALLOCATOR /* You can change this to a different allocator if you \
                            want to. */
 
-extern void *malloc(uintptr_t size, uintptr_t align);
+extern void *alloc(uintptr_t n, uintptr_t align);
+extern void dealloc(void *ptr, uintptr_t n, uintptr_t align);
+
+extern void *malloc(uintptr_t n);
 extern void free(void *ptr);
 
 #endif

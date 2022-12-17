@@ -35,7 +35,7 @@ ifeq ($(ARCH),x86_64)
 	INTERNALCFLAGS := $(INTERNALCFLAGS) -D_OWL_ARCH_X86_64
 endif
 
-CFLAGS ?= -O0 -Wall -Wextra -g
+CFLAGS ?= -O0 -Wall -Wextra -Wno-unused-function -g
 
 build: $(OBJFILES)
 

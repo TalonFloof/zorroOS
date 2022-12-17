@@ -87,7 +87,7 @@ LinkedListEntry owlAllocationMemorySegments[64] = {
 };
 int owlAllocationHeadIndex = -1;
 
-int FindNextFreeEntry() {
+static int FindNextFreeEntry() {
   int i;
   for (i = 0; i < 64; i++) {
     if (!owlAllocationMemorySegments[i].isUsed) {
@@ -97,13 +97,13 @@ int FindNextFreeEntry() {
   /* TODO: Panic, Msg: "Kernel Heap Freelist Deprived" */
 }
 
-LinkedListCursor NewCursor() {
+static LinkedListCursor NewCursor() {
   return (LinkedListCursor){
       .current = owlAllocationHeadIndex,
   };
 }
 
-LinkedListEntry* CursorNext(LinkedListCursor* self) {
+static LinkedListEntry* CursorNext(LinkedListCursor* self) {
   if (self->current != -1) {
     int current = self->current;
     self->current = owlAllocationMemorySegments[self->current].next;
@@ -113,7 +113,7 @@ LinkedListEntry* CursorNext(LinkedListCursor* self) {
   }
 }
 
-LinkedListEntry* CursorPeekNext(LinkedListCursor* self) {
+static LinkedListEntry* CursorPeekNext(LinkedListCursor* self) {
   if (owlAllocationMemorySegments[self->current].next != -1) {
     return &owlAllocationMemorySegments
         [owlAllocationMemorySegments[self->current].next];
@@ -122,7 +122,7 @@ LinkedListEntry* CursorPeekNext(LinkedListCursor* self) {
   }
 }
 
-LinkedListEntry* CursorPeekPrev(LinkedListCursor* self) {
+static LinkedListEntry* CursorPeekPrev(LinkedListCursor* self) {
   if (owlAllocationMemorySegments[self->current].prev != -1) {
     return &owlAllocationMemorySegments
         [owlAllocationMemorySegments[self->current].prev];
@@ -131,7 +131,7 @@ LinkedListEntry* CursorPeekPrev(LinkedListCursor* self) {
   }
 }
 
-void CursorInsertBefore(LinkedListCursor* self, MemSegmentEntry entry) {
+static void CursorInsertBefore(LinkedListCursor* self, MemSegmentEntry entry) {
   int prev = owlAllocationMemorySegments[self->current].prev;
   int next_entry = FindNextFreeEntry();
   if (prev != -1) {
@@ -146,7 +146,7 @@ void CursorInsertBefore(LinkedListCursor* self, MemSegmentEntry entry) {
   }
 }
 
-void CursorRemoveCurrent(LinkedListCursor* self) {
+static void CursorRemoveCurrent(LinkedListCursor* self) {
   int prev = owlAllocationMemorySegments[self->current].prev;
   int next = owlAllocationMemorySegments[self->current].next;
   if (prev != -1) {
@@ -171,7 +171,7 @@ void CursorRemoveCurrent(LinkedListCursor* self) {
   }
 }
 
-void ListAlloc_PushBack(MemSegmentEntry entry) {
+static void ListAlloc_PushBack(MemSegmentEntry entry) {
   int i = (owlAllocationHeadIndex == -1) ? 0 : owlAllocationHeadIndex;
   for (;;) {
     if (owlAllocationMemorySegments[i].next == -1) {
@@ -417,53 +417,46 @@ pub fn free(addr voidptr, n usize) {
 
 extern Lock owlAllocationLock;
 
-void* malloc(uintptr_t n, uintptr_t align) {
-  /*
-  allocation_lock.acquire()
-  size := n+align
-  mut cursor := new_cursor()
-  for mut i in cursor {
-      segment_start := i.data.start
-      segment_size := i.data.end - i.data.start
-      if segment_size > size {
-          // (value + (alignment - 1)) & ~(alignment - 1)
-          if align > 0 {
-              new_addr := (segment_start + (align - 1)) & ~(align - 1)
-              i.data.start += n + (new_addr - segment_start)
-              if new_addr != segment_start {
-                  new_entry := MemSegmentEntry{segment_start, new_addr}
-                  cursor.insert_before(new_entry)
-              }
-              allocation_lock.release()
-              return voidptr(new_addr)
-          } else {
-              i.data.start += size
-              allocation_lock.release()
-              return voidptr(segment_start)
-          }
-      } else if segment_size == size {
-          if align > 0 {
-              new_addr := (segment_start + (align - 1)) & ~(align - 1)
-              if new_addr != segment_start {
-                  i.data.end = new_addr
-              }
-              allocation_lock.release()
-              return voidptr(new_addr)
-          } else {
-              cursor.remove_current()
-              allocation_lock.release()
-              return voidptr(segment_start)
-          }
-      }
-  }
-  allocation_lock.release()
-  panic.panic(panic.ZorroPanicCategory.out_of_memory,"Kernel Heap Deprived")
-  */
+void* alloc(uintptr_t n, uintptr_t align) {
   Lock_Acquire(&owlAllocationLock);
-  int size = n + align;
-
+  uintptr_t size = n + align;
+  LinkedListCursor cursor = NewCursor();
+  LinkedListEntry* i = CursorNext(&cursor);
+  while ((uintptr_t)i != 0) {
+    uintptr_t segment_start = i->data.start;
+    uintptr_t segment_size = i->data.end - i->data.start;
+    if (segment_size > size) {
+      if (align > 0) {
+        uintptr_t new_addr = (segment_start + (align - 1)) & ~(align - 1);
+        i->data.start += n + (new_addr - segment_start);
+        if (new_addr != segment_start) {
+          CursorInsertBefore(&cursor, (MemSegmentEntry){
+                                          .start = segment_start,
+                                          .end = new_addr,
+                                      });
+        }
+        Lock_Release(&owlAllocationLock);
+        return (void*)new_addr;
+      } else if (segment_size == size) {
+        if (align > 0) {
+          uintptr_t new_addr = (segment_start + (align - 1)) & ~(align - 1);
+          if (new_addr != segment_start) {
+            i->data.start = new_addr;
+          }
+          Lock_Release(&owlAllocationLock);
+          return (void*)segment_start;
+        }
+      }
+    }
+    i = CursorNext(&cursor);
+  }
   Lock_Release(&owlAllocationLock);
+  // panic.panic(panic.ZorroPanicCategory.out_of_memory,"Kernel Heap Deprived");
 }
+
+void dealloc(void* ptr, uintptr_t n, uintptr_t align) {}
+
+void* malloc(uintptr_t n) {}
 
 void free(void* ptr) {}
 

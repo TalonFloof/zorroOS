@@ -1,5 +1,41 @@
 #include <util/string.h>
 
+void reverse(char *str, size_t length) {
+  char *end = str + length - 1;
+  size_t i;
+
+  for (i = 0; i < length / 2; i++) {
+    char c = *end;
+    *end = *str;
+    *str = c;
+
+    str++;
+    end--;
+  }
+}
+
+char *itoa(unsigned long long num, char *str, int base) {
+  int i = 0;
+
+  if (num == 0) {
+    str[i++] = '0';
+    str[i] = '\0';
+    return str;
+  }
+
+  while (num != 0) {
+    int rem = num % base;
+    str[i++] = (rem > 9) ? (rem - 10) + 'a' : rem + '0';
+    num = num / base;
+  }
+
+  str[i] = '\0';
+
+  reverse(str, i);
+
+  return str;
+}
+
 void *memset(void *src, int c, size_t count) {
   uint8_t *xs = (uint8_t *)src;
 
