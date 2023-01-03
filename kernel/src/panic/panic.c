@@ -17,7 +17,6 @@ typedef struct {
 
 uintptr_t GetSymbol(uintptr_t addr, const char** name) {
   Symbol* ptr = ((Symbol*)&Owl_SymbolTable_Start);
-  int index;
   *name = (const char*)(&"???");
   uintptr_t best_match = 0;
   while(ptr < ((Symbol*)&Owl_SymbolTable_End)) {
@@ -46,25 +45,67 @@ __attribute__((noreturn)) void PanicMultiline(OwlPanicCategory category,
       for(i=1; i < len; i++) {
         LogFatal(logger, "debug info: %s", msgs[i]);
       }
+      #ifdef _OWL_ARCH_X86_64
+      uint64_t* stack_ptr = (uint64_t*)__builtin_frame_address(0);
+      LogFatal(logger, "Stack Backtrace:");
+      uint32_t frame;
+      for(frame = 0; stack_ptr != 0 && frame < 32; ++frame) {
+        if(stack_ptr[1] < 0xffffffff80000000UL) break;
+        const char* name = 0;
+        uintptr_t offset = GetSymbol(stack_ptr[1],&name);
+        LogFatal(logger, "  %x <%s+%x>", stack_ptr[1], name, offset);
+        stack_ptr = (uint64_t*)stack_ptr[0];
+      }
+      if(frame == 32) {
+        LogFatal(logger, "...Backtrace may continue past this point");
+      }
+      #else
+      LogFatal(logger, "NOTICE: Stack Backtracing is not available on this CPU Architecture");
+      #endif
+    } else if(category == PANIC_RAMDISK) {
+      LogError(logger, "%s", msgs[0]);
     }
   }
-#ifdef _OWL_ARCH_X86_64
-  uint64_t* stack_ptr = (uint64_t*)__builtin_frame_address(0);
-  LogFatal(logger, "Stack Backtrace:");
-  uint32_t frame;
-  for(frame = 0; stack_ptr != 0 && frame < 32; ++frame) {
-    if(stack_ptr[1] < 0xffffffff80000000UL) break;
-    const char* name = 0;
-    uintptr_t offset = GetSymbol(stack_ptr[1],&name);
-    LogFatal(logger, "  %x <%s+%x>", stack_ptr[1], name, offset);
-    stack_ptr = (uint64_t*)stack_ptr[0];
+  #ifndef _DEBUG_BUILD_
+  IOwlFramebuffer* fb = owlArch.get_framebuffer();
+  if(fb != 0) {
+    int x,y;
+    for(y=0;y<fb->resolution[1];y++) { // Dim Screen
+		  for(x=0;x<fb->resolution[0];x++) {
+			  fb->set(x,y,(fb->get(x,y) >> 1) & 0x7f7f7f7f);
+		  }
+	  }
+    switch(category) {
+      case PANIC_GENERIC:
+        Framebuffer_RenderMonochromeBitmap(fb,fb->resolution[0]/2-(35*3/2),fb->resolution[1]/2-(45*3/2),35,45,3,0xffffff,5,(uint8_t*)&OwlGenericPanicImage);
+        break;
+      case PANIC_INCOMPATABLE_HARDWARE:
+        Framebuffer_RenderMonochromeBitmap(fb,fb->resolution[0]/2-(35*3/2),fb->resolution[1]/2-(45*3/2),35,45,3,0xffffff,5,(uint8_t*)&OwlIncompatibleHardwareImage);
+        break;
+      case PANIC_OUT_OF_MEMORY:
+        Framebuffer_RenderMonochromeBitmap(fb,fb->resolution[0]/2-(35*3/2),fb->resolution[1]/2-(45*3/2),35,45,3,0xffffff,5,(uint8_t*)&OwlOutOfMemoryImage);
+        break;
+      case PANIC_RAMDISK:
+        Framebuffer_RenderMonochromeBitmap(fb,fb->resolution[0]/2-(35*3/2),fb->resolution[1]/2-(45*3/2),35,45,3,0xffffff,5,(uint8_t*)&OwlRamdiskImage);
+        break;
+      default:
+        Framebuffer_RenderMonochromeBitmap(fb,fb->resolution[0]/2-(35*3/2),fb->resolution[1]/2-(45*3/2),35,45,3,0xffffff,5,(uint8_t*)&OwlGenericPanicImage);
+        break;
+    }
   }
-  if(frame == 32) {
-    LogFatal(logger, "...Backtrace may continue past this point");
-  }
-#else
-  LogFatal(logger, "NOTICE: Stack Backtracing is not available on this CPU Architecture");
-#endif
+  if(category == PANIC_RAMDISK) {
+    int i;
+		for(i=0;i<len;i++) {
+			Framebuffer_RenderCenteredText(fb, fb->resolution[0]/2,fb->resolution[1]/2+(45*3/2)+(i*16),1,0xffffff,msgs[i]);
+		}
+	} else {
+		Framebuffer_RenderCenteredText(fb, fb->resolution[0]/2,fb->resolution[1]/2+(45*3/2),1,0xffffff,"Kernel Panic");
+		int i;
+		for(i=0;i<len;i++) {
+			Framebuffer_RenderCenteredText(fb, fb->resolution[0]/2,fb->resolution[1]/2+(45*3/2)+16+(i*16),1,0xffffff,msgs[i]);
+		}
+	}
+  #endif
   for(;;) {
     owlArch.disable_interrupts();
     owlArch.halt();

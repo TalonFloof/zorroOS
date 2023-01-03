@@ -7,7 +7,7 @@
 #include "interfaces/logger.h"
 
 typedef void (*IOwlArch_NoArgFn)(void);
-typedef IOwlFramebuffer (*IOwlArch_GetFB)(void);
+typedef IOwlFramebuffer* (*IOwlArch_GetFB)(void);
 typedef IOwlLogger (*IOwlArch_GetLog)(void);
 
 typedef struct {
@@ -24,6 +24,6 @@ typedef struct {
   IOwlArch_GetLog get_logger;
 } IOwlArch;
 
-extern IOwlArch owlArch;
+extern const IOwlArch owlArch;
 
 #endif

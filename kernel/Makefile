@@ -11,7 +11,7 @@ endif
 
 OBJFILES := $(patsubst %.c,%.o,$(CFILES))
 
-INTERNALCFLAGS :=                 \
+INTERNALCFLAGS :=               \
 	-ffreestanding                \
 	-std=gnu90                    \
 	-fno-omit-frame-pointer       \
@@ -37,14 +37,14 @@ ifeq ($(ARCH),x86_64)
 	INTERNALCFLAGS := $(INTERNALCFLAGS) -D_OWL_ARCH_X86_64
 endif
 
-CFLAGS ?= -O0 -Wall -Wextra -Wno-unused-function -g
+CFLAGS ?= -O2 -Wall -Wextra -Wno-unused-function -g
 
 build: $(OBJFILES)
 
 .PHONY: build x86_64-PC clean
 
 %.o: %.c
-	$(CC) -D__owl__ $(INTERNALCFLAGS) $(CFLAGS) -c $< -o $@
+	$(CC) -D_DEBUG_BUILD_ -D__owl__ $(INTERNALCFLAGS) $(CFLAGS) -c $< -o $@
 
 x86_64-PC: build
 	$(LD) $(OBJFILES) -r -o OwlKernel.o

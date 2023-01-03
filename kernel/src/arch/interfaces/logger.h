@@ -14,6 +14,7 @@ typedef void (*IOwlLogger)(const char*, size_t);
 
 static void LogWrite(IOwlLogger logger, const char* __restrict format,
                      va_list args) {
+  if(logger == NULL) return;
   char buf[64];
   while (*format != '\0') {
     if (format[0] != '%' || format[1] == '%') {
@@ -114,6 +115,7 @@ static void LogWrite(IOwlLogger logger, const char* __restrict format,
 
 static inline void LogDebug(IOwlLogger logger, const char* __restrict fmt,
                             ...) {
+  if(logger == NULL) return;
   logger("\x1b[0;32m[DEBUG] | -> ", 20);
   va_list args;
   va_start(args, fmt);
@@ -123,6 +125,7 @@ static inline void LogDebug(IOwlLogger logger, const char* __restrict fmt,
 }
 
 static inline void LogInfo(IOwlLogger logger, const char* __restrict fmt, ...) {
+  if(logger == NULL) return;
   logger("\x1b[0;36m[INFO] | -> ", 19);
   va_list args;
   va_start(args, fmt);
@@ -132,6 +135,7 @@ static inline void LogInfo(IOwlLogger logger, const char* __restrict fmt, ...) {
 }
 
 static inline void LogWarn(IOwlLogger logger, const char* __restrict fmt, ...) {
+  if(logger == NULL) return;
   logger("\x1b[0;33m[WARN] | -> ", 19);
   va_list args;
   va_start(args, fmt);
@@ -142,6 +146,7 @@ static inline void LogWarn(IOwlLogger logger, const char* __restrict fmt, ...) {
 
 static inline void LogError(IOwlLogger logger, const char* __restrict fmt,
                             ...) {
+  if(logger == NULL) return;
   logger("\x1b[0;31m[ERROR] | -> ", 20);
   va_list args;
   va_start(args, fmt);
@@ -152,6 +157,7 @@ static inline void LogError(IOwlLogger logger, const char* __restrict fmt,
 
 static inline void LogFatal(IOwlLogger logger, const char* __restrict fmt,
                             ...) {
+  if(logger == NULL) return;
   logger("\x1b[0;1;31m[FATAL] | -> ", 22);
   va_list args;
   va_start(args, fmt);

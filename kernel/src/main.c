@@ -20,5 +20,6 @@ void OwlKernelMain() {
   LogInfo(logger,"Owl Microkernel (for zorroOS)");
   LogInfo(logger,"(C) 2020-2023 TalonFox and contributors");
   owlArch.initialize();
+  PanicCat(PANIC_RAMDISK,"No Ramdisk");
   for(;;) {};
 }

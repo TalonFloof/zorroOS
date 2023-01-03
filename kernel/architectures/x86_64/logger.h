@@ -4,13 +4,13 @@
 #include <arch/arch.h>
 #include "limine.h"
 
-static volatile struct limine_terminal_request owl_limine_terminal_request = {
+static volatile struct limine_terminal_request limine_terminal_request = {
     .id = LIMINE_TERMINAL_REQUEST,
     .revision = 0
 };
 
 void OwlRawLog(const char* s, size_t c) {
-  owl_limine_terminal_request.response->write(owl_limine_terminal_request.response->terminals[0],s,(uint64_t)c);
+  limine_terminal_request.response->write(limine_terminal_request.response->terminals[0],s,(uint64_t)c);
 }
 
 IOwlLogger x86_64_GetLogger() {
