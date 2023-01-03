@@ -18,6 +18,7 @@ typedef struct {
 
   IOwlArch_NoArgFn disable_interrupts;
   IOwlArch_NoArgFn enable_interrupts;
+  IOwlArch_NoArgFn halt;
 
   IOwlArch_GetFB get_framebuffer;
   IOwlArch_GetLog get_logger;

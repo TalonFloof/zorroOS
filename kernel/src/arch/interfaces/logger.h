@@ -119,6 +119,7 @@ static inline void LogDebug(IOwlLogger logger, const char* __restrict fmt,
   va_start(args, fmt);
   LogWrite(logger, fmt, args);
   va_end(args);
+  logger("\n", 1);
 }
 
 static inline void LogInfo(IOwlLogger logger, const char* __restrict fmt, ...) {
@@ -127,6 +128,7 @@ static inline void LogInfo(IOwlLogger logger, const char* __restrict fmt, ...) {
   va_start(args, fmt);
   LogWrite(logger, fmt, args);
   va_end(args);
+  logger("\n", 1);
 }
 
 static inline void LogWarn(IOwlLogger logger, const char* __restrict fmt, ...) {
@@ -135,6 +137,7 @@ static inline void LogWarn(IOwlLogger logger, const char* __restrict fmt, ...) {
   va_start(args, fmt);
   LogWrite(logger, fmt, args);
   va_end(args);
+  logger("\n", 1);
 }
 
 static inline void LogError(IOwlLogger logger, const char* __restrict fmt,
@@ -144,6 +147,7 @@ static inline void LogError(IOwlLogger logger, const char* __restrict fmt,
   va_start(args, fmt);
   LogWrite(logger, fmt, args);
   va_end(args);
+  logger("\n", 1);
 }
 
 static inline void LogFatal(IOwlLogger logger, const char* __restrict fmt,
@@ -153,6 +157,7 @@ static inline void LogFatal(IOwlLogger logger, const char* __restrict fmt,
   va_start(args, fmt);
   LogWrite(logger, fmt, args);
   va_end(args);
+  logger("\n", 1);
 }
 
 #endif

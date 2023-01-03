@@ -7,6 +7,7 @@ void x86_64_Initialize() {}
 
 void x86_64_CLI() { asm volatile("cli"); }
 void x86_64_STI() { asm volatile("sti"); }
+void x86_64_HLT() { asm volatile("hlt"); }
 
 IOwlArch owlArch = {
   .signature = 0x686372416c774f49,
@@ -15,6 +16,7 @@ IOwlArch owlArch = {
 
   .disable_interrupts = x86_64_CLI,
   .enable_interrupts = x86_64_STI,
+  .halt = x86_64_HLT,
 
   .get_logger = x86_64_GetLogger,
 };

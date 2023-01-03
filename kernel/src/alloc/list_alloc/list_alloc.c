@@ -454,7 +454,49 @@ void* alloc(uintptr_t n, uintptr_t align) {
   // panic.panic(panic.ZorroPanicCategory.out_of_memory,"Kernel Heap Deprived");
 }
 
-void dealloc(void* ptr, uintptr_t n, uintptr_t align) {}
+void dealloc(void* ptr, uintptr_t n, uintptr_t align) {
+  Lock_Acquire(&owlAllocationLock);
+  uintptr_t end = ((uintptr_t)ptr) + n;
+  LinkedListCursor cursor = NewCursor();
+  LinkedListEntry* i = CursorNext(&cursor);
+  while ((uintptr_t)i != 0) {
+    uintptr_t segment_start = i->data.start;
+    uintptr_t segment_end = i->data.end;
+    if(segment_start == end) {
+      i->data.start = ((uintptr_t)ptr);
+      if(CursorPeekPrev(&cursor) != NULL) {
+        LinkedListEntry* prev_node = CursorPeekPrev(&cursor);
+        uintptr_t prev_segment_end = prev_node->data.end;
+        if(prev_segment_end == ((uintptr_t)ptr)) {
+          prev_node->data.end = segment_end;
+          CursorRemoveCurrent(&cursor);
+        }
+      }
+      Lock_Release(&owlAllocationLock);
+      return;
+    } else if(segment_end == ((uintptr_t)ptr)) {
+      i->data.end = end;
+      if(CursorPeekNext(&cursor) != NULL) {
+        LinkedListEntry* next_node = CursorPeekPrev(&cursor);
+        uintptr_t next_segment_start = next_node->data.start;
+        if(next_segment_start == end) {
+          next_node->data.start = segment_start;
+          CursorRemoveCurrent(&cursor);
+        }
+      }
+      Lock_Release(&owlAllocationLock);
+      return;
+    } else if(end < segment_start) {
+      MemSegmentEntry new_entry = (MemSegmentEntry){.start=((uintptr_t)ptr), .end=end};
+      CursorInsertBefore(&cursor,new_entry);
+      Lock_Release(&owlAllocationLock);
+      return;
+    }
+    i = CursorNext(&cursor);
+  }
+  ListAlloc_PushBack((MemSegmentEntry){.start=((uintptr_t)ptr), .end=end});
+  Lock_Release(&owlAllocationLock);
+}
 
 void* malloc(uintptr_t n) {}
 
