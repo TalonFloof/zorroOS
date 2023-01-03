@@ -9,4 +9,9 @@ typedef enum {
   PANIC_INVALID_SETUP = 5,
 } OwlPanicCategory;
 
+__attribute__((noreturn)) void Panic(const char* msg);
+__attribute__((noreturn)) void PanicMultiline(OwlPanicCategory category,
+                                              const char** msgs, int len);
+__attribute__((noreturn)) void PanicCat(OwlPanicCategory category, const char* msg);
+
 #endif

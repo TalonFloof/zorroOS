@@ -1,4 +1,5 @@
 #include <arch/arch.h>
+#include <panic/panic.h>
 #include <stdint.h>
 
 void OwlKernelMain() {
@@ -18,6 +19,6 @@ void OwlKernelMain() {
   }
   LogInfo(logger,"Owl Microkernel (for zorroOS)");
   LogInfo(logger,"(C) 2020-2023 TalonFox and contributors");
-  owlArch.disable_interrupts();
-  owlArch.halt();
+  owlArch.initialize();
+  for(;;) {};
 }

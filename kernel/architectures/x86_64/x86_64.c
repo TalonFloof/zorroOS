@@ -1,9 +1,12 @@
 #include <arch/arch.h>
+#include <panic/panic.h>
 #include "logger.h"
 
 void x86_64_EarlyInitialize() {}
 
-void x86_64_Initialize() {}
+void x86_64_Initialize() {
+  Panic("Testing x86_64 backtrace functionality");
+}
 
 void x86_64_CLI() { asm volatile("cli"); }
 void x86_64_STI() { asm volatile("sti"); }

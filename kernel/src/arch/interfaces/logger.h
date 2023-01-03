@@ -114,7 +114,7 @@ static void LogWrite(IOwlLogger logger, const char* __restrict format,
 
 static inline void LogDebug(IOwlLogger logger, const char* __restrict fmt,
                             ...) {
-  logger("\x1b[0;32m[DEBUG] | -> ", 21);
+  logger("\x1b[0;32m[DEBUG] | -> ", 20);
   va_list args;
   va_start(args, fmt);
   LogWrite(logger, fmt, args);
@@ -123,7 +123,7 @@ static inline void LogDebug(IOwlLogger logger, const char* __restrict fmt,
 }
 
 static inline void LogInfo(IOwlLogger logger, const char* __restrict fmt, ...) {
-  logger("\x1b[0;36m[INFO] | -> ", 20);
+  logger("\x1b[0;36m[INFO] | -> ", 19);
   va_list args;
   va_start(args, fmt);
   LogWrite(logger, fmt, args);
@@ -132,7 +132,7 @@ static inline void LogInfo(IOwlLogger logger, const char* __restrict fmt, ...) {
 }
 
 static inline void LogWarn(IOwlLogger logger, const char* __restrict fmt, ...) {
-  logger("\x1b[0;33m[WARN] | -> ", 20);
+  logger("\x1b[0;33m[WARN] | -> ", 19);
   va_list args;
   va_start(args, fmt);
   LogWrite(logger, fmt, args);
@@ -152,7 +152,7 @@ static inline void LogError(IOwlLogger logger, const char* __restrict fmt,
 
 static inline void LogFatal(IOwlLogger logger, const char* __restrict fmt,
                             ...) {
-  logger("\x1b[0;1;31m[FATAL] | -> ", 20);
+  logger("\x1b[0;1;31m[FATAL] | -> ", 22);
   va_list args;
   va_start(args, fmt);
   LogWrite(logger, fmt, args);

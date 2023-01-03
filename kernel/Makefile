@@ -1,5 +1,7 @@
 CC=x86_64-elf-gcc
 LD=x86_64-elf-ld
+NM=x86_64-elf-nm
+AS=x86_64-elf-as
 ARCH=x86_64
 CFILES := $(shell find ./src -type f -name '*.c')
 
@@ -45,9 +47,12 @@ build: $(OBJFILES)
 	$(CC) -D__owl__ $(INTERNALCFLAGS) $(CFLAGS) -c $< -o $@
 
 x86_64-PC: build
-	$(LD) $(OBJFILES) -Tlink_scripts/x86_64-PC.ld -nostdlib -zmax-page-size=0x1000 -static -gc-sections -o OwlKernel
-	rm $(OBJFILES)
+	$(LD) $(OBJFILES) -r -o OwlKernel.o
+	$(NM) -g --format=bsd OwlKernel.o | ./generate_symbols.py | $(AS) -c -o symbols.o
+	$(LD) OwlKernel.o symbols.o -Tlink_scripts/x86_64-PC.ld -g -zmax-page-size=0x1000 -static -o OwlKernel
+	rm -f symbols.o OwlKernel.o
+	rm -f $(OBJFILES)
 
 clean:
-	rm -f OwlKernel
+	rm -f OwlKernel OwlKernel.o symbols.o
 	rm -f $(OBJFILES)
