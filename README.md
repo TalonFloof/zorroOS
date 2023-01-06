@@ -36,6 +36,8 @@ You can then run it using `qemu-system-x86_64`:
 $ qemu-system-x86_64 -cdrom zorroOS.iso -M q35 -enable-kvm -serial stdio
 ```
 
+### Note that zorroOS is currently a WIP and many features are not complete yet.
+
 ## License
 
 zorroOS is licensed under the MIT License.    
