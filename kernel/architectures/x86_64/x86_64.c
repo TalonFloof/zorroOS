@@ -2,10 +2,11 @@
 #include <panic/panic.h>
 #include "logger.h"
 #include "framebuffer.h"
+#include "pmm.h"
 
 void x86_64_EarlyInitialize() {
   x86_64_FBInit();
-  
+  x86_64_PMM_Initialize();
 }
 
 void x86_64_Initialize() {
