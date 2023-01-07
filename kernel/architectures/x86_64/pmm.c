@@ -42,6 +42,6 @@ void x86_64_PMM_Initialize() {
         entry_type = "Framebuffer";
         break;
     }
-    LogDebug(logger, "Memory map entry No. %i: Base: %x | Length: %x | Type: %s", ind, entries[ind]->base, entries[ind]->length, entry_type);
+    LogDebug(logger, "Memory map entry No. %i: Base: %x | Length: %x | Type: %s", ind+1, entries[ind]->base, entries[ind]->length, entry_type);
   }
 }

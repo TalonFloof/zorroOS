@@ -37,7 +37,7 @@ ifeq ($(ARCH),x86_64)
 	INTERNALCFLAGS := $(INTERNALCFLAGS) -D_OWL_ARCH_X86_64
 endif
 
-CFLAGS ?= -O2 -Wall -Wextra -Wno-unused-function -g
+CFLAGS ?= -O3 -Wall -Wextra -Wno-unused-function -g
 
 build: $(OBJFILES)
 
@@ -47,7 +47,7 @@ build: $(OBJFILES)
 	$(CC) -D_DEBUG_BUILD_ -D__owl__ $(INTERNALCFLAGS) $(CFLAGS) -c $< -o $@
 
 x86_64-PC: build
-	$(LD) $(OBJFILES) -r -o OwlKernel.o
+	$(CC) $(OBJFILES) -O3 -r -o OwlKernel.o
 	$(NM) -g --format=bsd OwlKernel.o | ./generate_symbols.py | $(AS) -c -o symbols.o
 	$(LD) OwlKernel.o symbols.o -Tlink_scripts/x86_64-PC.ld -g -zmax-page-size=0x1000 -static -o OwlKernel
 	rm -f symbols.o OwlKernel.o
