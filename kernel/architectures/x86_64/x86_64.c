@@ -3,14 +3,16 @@
 #include "logger.h"
 #include "framebuffer.h"
 #include "pmm.h"
+#include "gdt.h"
 
 void x86_64_EarlyInitialize() {
+  x86_64_Log_Initialize();
   x86_64_FBInit();
   x86_64_PMM_Initialize();
+  x86_64_GDT_Initialize();
 }
 
 void x86_64_Initialize() {
-  
 }
 
 void x86_64_CLI() { asm volatile("cli"); }

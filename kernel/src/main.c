@@ -18,14 +18,14 @@ void OwlKernelMain() {
     };
   }
   va_list fake_args;
-  LogWrite(logger,"\e[49m      \e[38;5;15;49m▄▄\e[49;38;5;15m▀▀▀\e[38;5;15;49m▄▄\e[49m \e[m\n",fake_args);
-  LogWrite(logger,"\e[49m \e[49;38;5;15m▀\e[49m \e[38;5;15;49m▄\e[49m \e[48;5;15m \e[49m \e[38;5;15;49m▄\e[49m   \e[38;5;15;49m▄\e[49m \e[48;5;15m \e[m\n",fake_args);
-  LogWrite(logger,"\e[49m \e[49;38;5;15m▀\e[49m \e[38;5;15;49m▄\e[49m \e[48;5;15m \e[49m \e[49;38;5;15m▀\e[48;5;15m \e[38;5;15;49m▄\e[48;5;15m \e[49;38;5;15m▀\e[49m \e[48;5;15m \e[m\n",fake_args);
-  LogWrite(logger,"\e[49;38;5;15m▀\e[49m \e[49;38;5;15m▀\e[38;5;15;49m▄\e[49;38;5;15m▀\e[38;5;15;49m▄\e[49;38;5;15m▀\e[49m  \e[49;38;5;15m▀\e[49m   \e[48;5;15m \e[m  Owl Microkernel (for zorroOS)\n",fake_args);
-  LogWrite(logger,"\e[49;38;5;15m▀\e[49m \e[49;38;5;15m▀\e[38;5;15;49m▄\e[49;38;5;15m▀\e[49m \e[38;5;15;49m▄\e[49;38;5;15m▀\e[49m   \e[38;5;15;49m▄\e[48;5;15m  \e[m  (C) 2020-2023 TalonFox and contributors\n",fake_args);
-  LogWrite(logger,"\e[49;38;5;15m▀\e[49m \e[49;38;5;15m▀\e[38;5;15;49m▄\e[49;38;5;15m▀\e[49m \e[38;5;15;49m▄\e[49m \e[38;5;15;49m▄\e[49m \e[48;5;15m \e[49;38;5;15m▀\e[49m \e[48;5;15m \e[m\n",fake_args);
-  LogWrite(logger,"\e[49;38;5;15m▀\e[49m \e[49;38;5;15m▀\e[38;5;15;49m▄\e[49;38;5;15m▀\e[49m  \e[49;38;5;15m▀\e[49m  \e[48;5;15m \e[49m  \e[48;5;15m \e[m\n",fake_args);
-  LogWrite(logger,"\e[49;38;5;15m▀\e[49m \e[49;38;5;15m▀\e[49m \e[49;38;5;15m▀\e[49m     \e[49;38;5;15m▀▀▀\e[49m \e[m\n",fake_args);
+  LogWrite(logger,"\e[49m   \e[38;5;15;49m▄▄\e[49;38;5;15m▀▀▀\e[38;5;15;49m▄▄\e[49m  \e[38;5;15;49m▄\e[49;38;5;15m▀▀\e[38;5;15;49m▄\e[m\n",fake_args);
+  LogWrite(logger,"\e[49m  \e[48;5;15m \e[49m \e[38;5;15;49m▄\e[49m   \e[38;5;15;49m▄\e[49m \e[48;5;15m \e[49m \e[49;38;5;15m▀\e[38;5;15;49m▄▄\e[49;38;5;15m▀\e[m\n",fake_args);
+  LogWrite(logger,"\e[38;5;15;49m▄▄\e[48;5;15m \e[49m \e[49;38;5;15m▀\e[48;5;15m \e[38;5;15;49m▄\e[48;5;15m \e[49;38;5;15m▀\e[49m \e[48;5;15m \e[49m  \e[38;5;15;49m▄\e[49m  \e[m\n",fake_args);
+  LogWrite(logger,"\e[48;5;15m   \e[49m   \e[49;38;5;15m▀\e[49m  \e[38;5;15;49m▄\e[49;38;5;15m▀\e[49m  \e[38;5;15;49m▄\e[49m  \e[m  Owl Microkernel (for zorroOS)\n",fake_args);
+  LogWrite(logger,"\e[48;5;15m   \e[49m  \e[49;38;5;15m▀\e[38;5;15;49m▄\e[49;38;5;15m▀\e[49m \e[48;5;15m \e[49m \e[49;38;5;15m▀▀\e[38;5;15;49m▄\e[49m  \e[m  (C) 2020-2023 TalonFox and contributors\n",fake_args);
+  LogWrite(logger,"\e[48;5;15m   \e[49m     \e[38;5;15;49m▄\e[49;38;5;15m▀\e[49m   \e[38;5;15;49m▄\e[49m  \e[m\n",fake_args);
+  LogWrite(logger,"\e[48;5;15m \e[49;38;5;15m▀\e[49m \e[49;38;5;15m▀\e[38;5;15;49m▄\e[49;38;5;15m▀\e[49m \e[38;5;15;49m▄\e[49;38;5;15m▀\e[49m   \e[38;5;15;49m▄\e[49;38;5;15m▀▀\e[38;5;15;49m▄\e[m\n",fake_args);
+  LogWrite(logger,"\e[48;5;15m \e[49m     \e[38;5;15;49m▄\e[48;5;15m \e[49m    \e[49;38;5;15m▀\e[38;5;15;49m▄▄\e[49;38;5;15m▀\e[m\n",fake_args);
   owlArch.initialize();
   PanicCat(PANIC_RAMDISK,"No Ramdisk");
   for(;;) {};
