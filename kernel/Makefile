@@ -1,14 +1,18 @@
-CC=/opt/riscv-c/bin/riscv64-unknown-elf-gcc
-LD=/opt/riscv-c/bin/riscv64-unknown-elf-ld
-NM=/opt/riscv-c/bin/riscv64-unknown-elf-nm
-AS=/opt/riscv-c/bin/riscv64-unknown-elf-as
 ARCH=RiscV64
 CFILES := $(shell find ./src -type f -name '*.c')
 
 ifeq ($(ARCH),x86_64)
+	CC=x86_64-unknown-elf-gcc
+	LD=x86_64-unknown-elf-ld
+	NM=x86_64-unknown-elf-nm
+	AS=x86_64-unknown-elf-as
 	CFILES := $(CFILES) $(shell find ./architectures/x86_64/ -type f -name '*.c')
 endif
 ifeq ($(ARCH),RiscV64)
+	CC=/opt/riscv-c/bin/riscv64-unknown-elf-gcc
+	LD=/opt/riscv-c/bin/riscv64-unknown-elf-ld
+	NM=/opt/riscv-c/bin/riscv64-unknown-elf-nm
+	AS=/opt/riscv-c/bin/riscv64-unknown-elf-as
 	CFILES := $(CFILES) $(shell find ./architectures/riscv64/ -type f -name '*.c')
 endif
 

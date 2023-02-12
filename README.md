@@ -12,7 +12,9 @@ $ git clone --recursive https://github.com/TalonFox/zorroOS
 ```
 Then, enter the directory and follow the instructions for the architecture you want to target.
 
-## RiscV64 (Recommended)
+## RiscV64
+
+First, modify the constant `ARCH` in `kernel/Makefile` to be set to `RiscV64`.
 
 Insure that you have a RISC-V toolchain installed.
 If you don't, you get one here: [https://github.com/riscv-collab/riscv-gnu-toolchain](https://github.com/riscv-collab/riscv-gnu-toolchain).
@@ -31,9 +33,9 @@ $ qemu-system-risv64 -kernel [Path to Kernel] -serial stdio
 
 ## x86_64
 
-First, modify `kernel/Makefile` so that the CC, LD, NM, AS, and ARCH constants are all set to their x86_64 counterparts.
+First, modify the constant `ARCH` in `kernel/Makefile` to be set to `x86_64`.
 
-Then, insure that you have a x86_64 cross-compiler.
+Then, ensure that you have a x86_64 cross-compiler.
 
 On Arch Linux you can get it using yay:
 ```sh
