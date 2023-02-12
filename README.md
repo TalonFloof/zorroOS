@@ -16,8 +16,8 @@ Then, enter the directory and follow the instructions for the architecture you w
 
 First, modify the constant `ARCH` in `kernel/Makefile` to be set to `RiscV64`.
 
-Insure that you have a RISC-V toolchain installed.
-If you don't, you get one here: [https://github.com/riscv-collab/riscv-gnu-toolchain](https://github.com/riscv-collab/riscv-gnu-toolchain).
+Ensure that you have a RISC-V toolchain installed.
+If you don't, you can get one here: [https://github.com/riscv-collab/riscv-gnu-toolchain](https://github.com/riscv-collab/riscv-gnu-toolchain).
 
 Then run `make build-rv64`:
 ```sh
