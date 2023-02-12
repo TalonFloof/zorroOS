@@ -1,5 +1,6 @@
 #ifndef _RV64_SBI_H
 #define _RV64_SBI_H 1
+#include <arch/arch.h>
 #include <stdint.h>
 
 typedef enum {
@@ -58,5 +59,7 @@ static intptr_t SBICallLegacy5(uintptr_t extID, uintptr_t arg1, uintptr_t arg2, 
 #define SBICallLegacy4(extID, arg1, arg2, arg3, arg4) SBICallLegacy5(extID, arg1, arg2, arg3, arg4, 0)
 
 void Rv64_SBI_Initialize();
+
+IOwlLogger Rv64_GetLogger();
 
 #endif

@@ -26,7 +26,7 @@ $ make build-rv64
 
 You can then run the kernel using `qemu-system-riscv64`:
 ```sh
-$ qemu-system-risv64 -kernel [Path to Kernel] -serial stdio
+$ qemu-system-riscv64 -kernel [Path to Kernel] -serial stdio
 ```
 
 > Note: The build system for RISC-V will be improved in the future.
