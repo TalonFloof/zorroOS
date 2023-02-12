@@ -66,7 +66,7 @@ __attribute__((noreturn)) void PanicMultiline(OwlPanicCategory category,
       LogError(logger, "%s", msgs[0]);
     }
   }
-  #ifndef _DEBUG_BUILD_
+  #ifndef _OWL_ARCH_X86_64
   IOwlFramebuffer* fb = owlArch.get_framebuffer();
   if(fb != 0) {
     int x,y;

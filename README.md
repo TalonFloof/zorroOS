@@ -2,11 +2,38 @@
 
 # **zorroOS**: An elegant, microkernel-based operating system
 
-**zorroOS** is a hobby operating system written in ANSI C (with the GNU Extensions), currently targeting AMD64 and plans to also target RISC-V boards.
+**zorroOS** is a hobby operating system written in ANSI C (with the GNU Extensions), currently targeting x86_64 and 64-bit RISC-V boards.
 
 ## Building
 
-Ensure that you have a cross compiler installed before attempting to build.
+First, clone the repository
+```sh
+$ git clone --recursive https://github.com/TalonFox/zorroOS
+```
+Then, enter the directory and follow the instructions for the architecture you want to target.
+
+## RiscV64 (Recommended)
+
+Insure that you have a RISC-V toolchain installed.
+If you don't, you get one here: [https://github.com/riscv-collab/riscv-gnu-toolchain](https://github.com/riscv-collab/riscv-gnu-toolchain).
+
+Then run `make build-rv64`:
+```sh
+$ make build-rv64
+```
+
+You can then run the kernel using `qemu-system-riscv64`:
+```sh
+$ qemu-system-risv64 -kernel [Path to Kernel] -serial stdio
+```
+
+> Note: The build system for RISC-V will be improved in the future.
+
+## x86_64
+
+First, modify `kernel/Makefile` so that the CC, LD, NM, AS, and ARCH constants are all set to their x86_64 counterparts.
+
+Then, insure that you have a x86_64 cross-compiler.
 
 On Arch Linux you can get it using yay:
 ```sh
@@ -18,14 +45,8 @@ On macOS you can use brew to install it:
 $ brew install x86_64-elf-gcc
 ```
 
-Afterwards clone the repository:
+Finally run `make iso`:
 ```sh
-$ git clone --recursive https://github.com/Talon396/zorroOS
-```
-
-Finally enter the directory and run `make iso`:
-```sh
-$ cd zorroOS
 $ make iso
 ```
 

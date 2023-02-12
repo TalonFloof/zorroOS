@@ -1,6 +1,9 @@
 build:
 	cd kernel; make x86_64-PC; cd ..
 
+build-rv64:
+	cd kernel; make RiscV64-Generic; cd ..
+
 iso: build
 	git clone --branch v4.x-branch-binary --depth 1 https://github.com/limine-bootloader/limine /tmp/limine
 	mkdir -p /tmp/zorro_iso/EFI/BOOT
@@ -12,4 +15,4 @@ iso: build
 	rm -r --force /tmp/limine
 	rm -r --force /tmp/zorro_iso
 
-.PHONY: build iso
+.PHONY: build build-rv64 iso
