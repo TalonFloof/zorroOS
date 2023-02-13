@@ -22,11 +22,6 @@ SECTIONS
         *(.data .data.*)
     }
 
-    . = ALIGN(4096);
-    PROVIDE(__rv64_init_stack_bottom = .);
-    . += 0x2000;
-    PROVIDE(__rv64_init_stack_top = .);
-
     .bss : {
         *(COMMON)
         *(.bss .bss.*)
