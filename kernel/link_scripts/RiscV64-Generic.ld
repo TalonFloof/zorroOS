@@ -28,4 +28,8 @@ SECTIONS
     }
 
     . = ALIGN(4096);
+
+    __memory_begin = .;
+    . = 0x80000000+128M; /* Change this to the size of the memory within your board*/
+    __memory_end = .;
 }
