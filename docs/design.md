@@ -47,11 +47,11 @@ So what does the Alpha Server actually do then? Well it starts up the other serv
 | 0x00000001  | CreateObjType | The tag `OwlDfObj` | `typeID objSize` | Creates a new object type. The objSize field will be used to determine the size of the object's data. This data can be accessed using `ObjDataAccess`. |
 | 0x00000002  | ObjDataAccess | The thread must be the one that created the object type | `objID op offset data \| data` | Reads or writes data from the given object.<br>**Note**<br>`0-3: Read Byte/Short/Int/Long 4-7: Write Byte/Short/Int/Long` |
 | 0x00000003  | ObjAttachMethod | The thread must be the one that created the object type | `typeID funcID handlePtr` | Adds a method to an existing object type. The `handlePtr` will be the function which is called when the method is triggered. If the pointer is null, than the method will be detached. <br>**Note**<br>Please ensure that the method is thread-safe. This will prevent race conditions from occurring, which can lead to unpredictable behavior. |
-| 0x00000010 | ThreadHasTag | The tag <code>OwlThrd&nbsp;</code> | `objID tag \| hasTag` | Returns a 1 if the given thread has the given tag.<br>**Note**<br>This is not implemented in the Thread Object because this method bypasses the kernel's permission check.
-| 0xffffffff | MethodReturn | The current hart's method call stack must have a length greater than 0 | `statusCode ret1 ret2 ret3 ret4 ret5` | Returns from a method. The Owl Kernel uses a call stack, so nested object calls are allowed. |
+| 0x00000010 | ThreadHasTag | The tag <code>OwlThrd&nbsp;</code> | `objID tag \| hasTag` | Returns a 1 if the given thread has the given tag.<br>**Note**<br>This is not implemented in the Thread Object because this method bypasses the kernel's permission check. |
 ## All Objects
 | Function ID |     Name     | Requirements  | Arguments | Description |
 |-------------|--------------|---------------|-----------|-------------|
 | 0xfffffffe  | ObjDereference | The tag <code>OwlObj&nbsp;&nbsp;</code> | None | Dereferences the current object. This will destroy all references to it.
+| 0xffffffff | MethodReturn | The current hart's method call stack must have a length greater than 0 | `statusCode ret1 ret2 ret3 ret4 ret5` | Returns from a method. The Owl Kernel uses a call stack, so nested object calls are allowed. |
 
 # This document is a work in progress!
