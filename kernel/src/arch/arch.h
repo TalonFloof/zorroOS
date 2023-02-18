@@ -5,6 +5,7 @@
 
 #include "interfaces/framebuffer.h"
 #include "interfaces/logger.h"
+#include "interfaces/addrspace.h"
 
 typedef void (*IOwlArch_NoArgFn)(void);
 typedef IOwlFramebuffer* (*IOwlArch_GetFB)(void);

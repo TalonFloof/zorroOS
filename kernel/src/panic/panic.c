@@ -70,9 +70,10 @@ __attribute__((noreturn)) void PanicMultiline(OwlPanicCategory category,
   IOwlFramebuffer* fb = owlArch.get_framebuffer();
   if(fb != 0) {
     int x,y;
-    for(y=0;y<fb->resolution[1];y++) { // Dim Screen
+    for(y=0;y<fb->resolution[1];y+=2) { // Dim Screen
 		  for(x=0;x<fb->resolution[0];x++) {
-			  fb->set(x,y,(fb->get(x,y) >> 1) & 0x7f7f7f7f);
+			  //fb->set(x,y,(fb->get(x,y) >> 1) & 0x7f7f7f7f);
+        fb->set(x,y,0);
 		  }
 	  }
     switch(category) {

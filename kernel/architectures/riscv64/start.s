@@ -20,6 +20,7 @@ __rv64_init_stack_bottom:
 __rv64_init_stack_top:
 .section .data
 .align 12 # Make sure the entries are aligned
+.global __rv64_init_stack_top
 rv64_boot_page_table:
   .quad (0x000000 << 10) | 0xcf # VRWXAD
   .quad (0x040000 << 10) | 0xcf # VRWXAD
