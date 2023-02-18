@@ -48,6 +48,10 @@ So what does the Alpha Server actually do then? Well it starts up the other serv
 | 0x00000002  | ObjDataAccess | The thread must be the one that created the object type | `objID op offset data \| data` | Reads or writes data from the given object.<br>**Note**<br>`0-3: Read Byte/Short/Int/Long 4-7: Write Byte/Short/Int/Long` |
 | 0x00000003  | ObjAttachMethod | The thread must be the one that created the object type | `typeID funcID handlePtr` | Adds a method to an existing object type. The `handlePtr` will be the function which is called when the method is triggered. If the pointer is null, than the method will be detached. <br>**Note**<br>Please ensure that the method is thread-safe. This will prevent race conditions from occurring, which can lead to unpredictable behavior. |
 | 0x00000010 | ThreadHasTag | The tag <code>OwlThrd&nbsp;</code> | `objID tag \| hasTag` | Returns a 1 if the given thread has the given tag.<br>**Note**<br>This is not implemented in the Thread Object because this method bypasses the kernel's permission check. |
+## Thread
+| Function ID |     Name     | Requirements  | Arguments | Description |
+|-------------|--------------|---------------|-----------|-------------|
+| 0x00000000 | ThreadHasTag | The tag <code>OwlThrd&nbsp;</code> | `objID tag \| hasTag` | Returns a 1 if the given thread has the given tag.<br>**Note**<br>This is not implemented in the Thread Object because this method bypasses the kernel's permission check. |
 ## All Objects
 | Function ID |     Name     | Requirements  | Arguments | Description |
 |-------------|--------------|---------------|-----------|-------------|
