@@ -19,10 +19,9 @@ static int max(int a, int b) {
 }
 
 // Create a node
-struct AVLNode *AVLNewNode(uint64_t key, void* value) {
-  struct AVLNode *node = (struct AVLNode *)malloc(sizeof(struct AVLNode));
+struct AVLNode *AVLNewNode(uint64_t key, size_t data) {
+  struct AVLNode *node = (struct AVLNode *)malloc(sizeof(struct AVLNode)+data);
   node->key = key;
-  node->value = value;
   node->left = NULL;
   node->right = NULL;
   node->height = 1;
@@ -65,15 +64,15 @@ int AVLGetBalance(struct AVLNode *N) {
 }
 
 // Insert node
-struct AVLNode *AVLInsertNode(struct AVLNode *node, uint64_t key, void* value) {
+struct AVLNode *AVLInsertNode(struct AVLNode *node, uint64_t key, size_t data) {
   // Find the correct position to insertNode the node and insertNode it
   if (node == NULL)
-    return (AVLNewNode(key,value));
+    return (AVLNewNode(key,data));
 
   if (key < node->key)
-    node->left = AVLInsertNode(node->left, key, value);
+    node->left = AVLInsertNode(node->left, key, data);
   else if (key > node->key)
-    node->right = AVLInsertNode(node->right, key, value);
+    node->right = AVLInsertNode(node->right, key, data);
   else
     return node;
 
@@ -132,12 +131,11 @@ struct AVLNode *AVLDeleteNode(struct AVLNode *root, uint64_t key) {
         root = NULL;
       } else
         *root = *temp;
-        free(temp);
+      free(temp);
     } else {
       struct AVLNode *temp = AVLMinValueNode(root->right);
 
       root->key = temp->key;
-      root->value = temp->value;
 
       root->right = AVLDeleteNode(root->right, temp->key);
     }
@@ -183,5 +181,5 @@ void* AVLSearch(struct AVLNode* node, uint64_t key) {
       return NULL;
     }
   }
-  return node->value;
+  return (void*)(((uintptr_t)node)+sizeof(struct AVLNode));
 }

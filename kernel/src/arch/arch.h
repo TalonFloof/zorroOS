@@ -10,6 +10,7 @@
 typedef void (*IOwlArch_NoArgFn)(void);
 typedef IOwlFramebuffer* (*IOwlArch_GetFB)(void);
 typedef IOwlLogger (*IOwlArch_GetLog)(void);
+typedef OwlAddressSpace* (*IOwlArch_CreateAddrSpace)(void);
 
 typedef struct {
   uint64_t signature; /* Set to "IOwlArch", 0x686372416c774f49 */
@@ -23,6 +24,8 @@ typedef struct {
 
   IOwlArch_GetFB get_framebuffer;
   IOwlArch_GetLog get_logger;
+  IOwlArch_CreateAddrSpace create_addrspace;
+  IOwlArch_CreateAddrSpace get_kernspace;
 } IOwlArch;
 
 extern const IOwlArch owlArch;

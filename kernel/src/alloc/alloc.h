@@ -18,4 +18,14 @@ extern void dealloc(void *ptr, uintptr_t n);
 extern void *malloc(uintptr_t n);
 extern void free(void *ptr);
 
+static void* realloc(void *ptr, uintptr_t n) {
+  uintptr_t oldSize = *(uintptr_t*)(((uintptr_t)ptr)-sizeof(uintptr_t));
+  void* newPtr = malloc(n);
+  if(newPtr == NULL)
+    return NULL;
+  memcpy(newPtr,ptr,oldSize);
+  free(ptr);
+  return newPtr;
+}
+
 #endif

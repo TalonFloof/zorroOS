@@ -1,9 +1,11 @@
 #include <arch/arch.h>
 #include <alloc/alloc.h>
 #include "sbi.h"
+#include "paging.h"
 
 extern void* __memory_begin;
 extern void* __memory_end;
+extern void* rv64_boot_page_table;
 
 void Rv64_EarlyInitialize() {
     Rv64_SBI_Initialize();
@@ -17,6 +19,15 @@ void Rv64_Initialize() {
 void Rv64_WFI() { asm volatile("wfi"); }
 int Stub() { return 0; }
 
+OwlAddressSpace kspace = {
+    .pageTableBase = (void*)&rv64_boot_page_table,
+    .map = OwlMapPages,
+    .setActive = OwlSetActiveSpace,
+    .free = (IOwlAddrSpace_Free)Stub,
+};
+
+OwlAddressSpace* Rv64_GetKernelSpace() { return &kspace; }
+
 const IOwlArch owlArch = {
     .signature = 0x686372416c774f49,
     .initialize_early = Rv64_EarlyInitialize,
@@ -28,4 +39,5 @@ const IOwlArch owlArch = {
 
     .get_logger = Rv64_GetLogger,
     .get_framebuffer = Stub,
+    .get_kernspace = Rv64_GetKernelSpace,
 };

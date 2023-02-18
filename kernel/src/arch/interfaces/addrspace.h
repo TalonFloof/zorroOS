@@ -7,10 +7,11 @@ typedef enum {
   PGFLAG_WRITE = 2,
   PGFLAG_EXECUTE = 4,
   PGFLAG_USER = 8,
-  PGFLAG_SHARED = 16,
-  PGFLAG_SIZE1 = 32,
-  PGFLAG_SIZE2 = 64,
-  PGFLAG_SIZE3 = 128,
+  PGFLAG_UNCACHED = 16,
+  PGFLAG_WRITETHROUGH = 32,
+  PGFLAG_SIZE1 = 64,
+  PGFLAG_SIZE2 = 128,
+  PGFLAG_SIZE3 = 256,
 } PageFlags;
 
 typedef int (*IOwlAddrSpace_Map)(void*, uintptr_t, uintptr_t, size_t, int);
