@@ -23,8 +23,17 @@ OwlAddressSpace kspace = {
     .pageTableBase = (void*)&rv64_boot_page_table,
     .map = OwlMapPages,
     .setActive = OwlSetActiveSpace,
-    .free = (IOwlAddrSpace_Free)Stub,
+    .free = OwlFreeSpace,
 };
+
+OwlAddressSpace* Rv64_CreateAddrSpace() {
+    OwlAddressSpace* space = malloc(sizeof(OwlAddressSpace));
+    space->pageTableBase = alloc(4096,4096);
+    space->map = OwlMapPages;
+    space->setActive = OwlSetActiveSpace;
+    space->free = OwlFreeSpace;
+    return space;
+}
 
 OwlAddressSpace* Rv64_GetKernelSpace() { return &kspace; }
 
@@ -39,5 +48,6 @@ const IOwlArch owlArch = {
 
     .get_logger = Rv64_GetLogger,
     .get_framebuffer = Stub,
+    .create_addrspace = Rv64_CreateAddrSpace,
     .get_kernspace = Rv64_GetKernelSpace,
 };

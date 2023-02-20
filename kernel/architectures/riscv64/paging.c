@@ -80,6 +80,24 @@ void OwlMapPages(void* ptr, uintptr_t vaddr, uintptr_t paddr, size_t pages, int 
 }
 
 void OwlSetActiveSpace(void* ptr) {
-  register uintptr_t t0 asm ("t0") = ((uintptr_t)ptr) | (8 << 60);
+  register uintptr_t t0 asm ("t0") = (((uintptr_t)ptr) >> 12) | (8 << 60);
   asm volatile("csrw satp, t0" :: "r"(t0));
+}
+
+void OwlFreeSpace(void* ptr) {
+  OwlAddressSpace* addrSpace = (OwlAddressSpace*)ptr;
+  PageTableEntry* pageTable = addrSpace->pageTableBase;
+  int i, j;
+  for(i=0; i < 512;i++) {
+    if(pageTable[i].valid && (!pageTable[i].read && !pageTable[i].write && !pageTable[i].execute)) {
+      PageTableEntry* subPageTable = (PageTableEntry*)(pageTable[i].ppn<<12);
+      for(j=0;j < 512;j++) {
+        if(subPageTable[j].valid && (!subPageTable[j].read && !subPageTable[j].write && !subPageTable[j].execute)) {
+          dealloc((void*)(subPageTable[j].ppn << 12),4096);
+        }
+      }
+      dealloc((void*)(pageTable[i].ppn << 12),4096);
+    }
+  }
+  dealloc(pageTable,4096);
 }

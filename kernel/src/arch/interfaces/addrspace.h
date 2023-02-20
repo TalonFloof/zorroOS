@@ -15,14 +15,13 @@ typedef enum {
 } PageFlags;
 
 typedef int (*IOwlAddrSpace_Map)(void*, uintptr_t, uintptr_t, size_t, int);
-typedef void (*IOwlAddrSpace_Switch)(void*);
-typedef void (*IOwlAddrSpace_Free)(void*);
+typedef void (*IOwlAddrSpace_SwitchFree)(void*);
 
 typedef struct {
   void* pageTableBase;
   IOwlAddrSpace_Map map;
-  IOwlAddrSpace_Switch setActive;
-  IOwlAddrSpace_Free free;
+  IOwlAddrSpace_SwitchFree setActive;
+  IOwlAddrSpace_SwitchFree free;
 } OwlAddressSpace;
 
 #endif
