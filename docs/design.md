@@ -1,3 +1,5 @@
+# THIS DOCUMENTATION IS OUTDATED! THE DESIGN HAS BEEN SLIGHTLY MODIFIED!
+
 # The Design of zorroOS
 ## Initial Startup
 The Owl Microkernel when first initialized, starts up a short boot procedure. Architecture specific initializion is preformed, and then the splash text is printed out to the debug console. After this, the rest of the architecture initialization is preformed (if there is any). Note that it is required to start up all Harts (Hardware Threads) in order for the Alpha Server to implement an SMP (Symmetric Multiprocessing) based scheduler. We then search for a bootable RAM Disk containing the Alpha Server. The Alpha Server is required in order for the rest of the operating system to properly function. If there is a RAM Disk containing the Alpha Server, then Hart #0 will hand over full control to it. The other Harts will be running Thread #0 (the Idle Thread).
