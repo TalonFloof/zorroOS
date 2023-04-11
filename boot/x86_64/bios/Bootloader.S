@@ -1,24 +1,30 @@
-BITS 16
-stack_end:
-    jmp 0x7c0:stage1
+[BITS 16]
+jmp 0x7c0:stage1
 stage1:
     cld
-    mov ax, 0 ; Set the stack to before the boot sector
+    jmp $
+    xor ax, ax
     mov ds, ax
     mov ss, ax
     mov es, ax
-    mov sp, stack_end
-    mov ax, 0x8000
+    mov sp, 0x7c00
+.loop:
+    cli
+    hlt
+    jmp .loop
 
     ; Load the rest of the bootloader
-    xor bx, bx
+    mov bx, 0x8000
     mov ah, 2
     mov al, 63
     mov ch, 0
     mov cl, 2
     mov dh, 0
     mov dl, 80h
-    int 13h
+    ;int 13h
+
+    mov si, splashmsg
+    call print
 
     call checkIBF
 	mov al, 0xd0
@@ -39,9 +45,9 @@ stage1:
 	call checkOBE
 	in al, 0x60
 	test al, 2
-	jz a20err
+	jnz a20err
 
-    jmp 0x800:0
+    jmp stage2
 
 checkOBE:
 	in al, 0x64
@@ -73,6 +79,7 @@ print:
 	ret
 
 ; The rest of this sector will be used for storing extra data
+splashmsg db "zorroOS BIOS Bootloader", 10, 13, "Copyright (C) 2023 TalonFox", 10, 13, 0
 a20failmsg db "A20 Gate refusing to open! (that's just rude...)", 10, 13,0
 
 times 510-($-$$) db 0 
@@ -81,3 +88,5 @@ dw 0AA55h
 ; From here we'll enter 32-bit mode and load the ZorroKernel. Then we'll enter 64-bit mode and jump into it
 stage2:
     jmp $
+
+times 32768-($-$$) db 0 
