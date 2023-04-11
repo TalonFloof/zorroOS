@@ -2,16 +2,11 @@
 jmp 0x7c0:stage1
 stage1:
     cld
-    jmp $
     xor ax, ax
     mov ds, ax
     mov ss, ax
     mov es, ax
     mov sp, 0x7c00
-.loop:
-    cli
-    hlt
-    jmp .loop
 
     ; Load the rest of the bootloader
     mov bx, 0x8000
