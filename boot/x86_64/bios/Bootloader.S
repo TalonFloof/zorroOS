@@ -133,10 +133,11 @@ stage2:
     mov eax, dword [video_mode]
     test eax, eax
     jz .noconfig
-    jmp .afterloop
+    jmp .afterconfig
 .noconfig:
     mov si, novmode
     call print
+.rep:
 	push es
 	mov ax, 0x4F00
     mov di, buffer
@@ -148,7 +149,7 @@ stage2:
 .loop:
     mov ax, word [fs:si]
 	cmp ax, 0xffff
-    jz .noconfig
+    jz .rep
 	pushad
     mov cx, ax
     mov ax, 0x4f01
@@ -216,6 +217,11 @@ stage2:
 	jmp .loop
 .afterloop:
 	mov word [video_mode], bx
+.afterconfig:
+	mov si, kloadmsg
+	call print
+kernelload:
+	
     jmp $
 
 
@@ -263,10 +269,12 @@ mode1 db "mode ", 0
 mode2 db " (", 0
 mode3 db "x", 0
 mode4 db ") (Y/N)? ", 0
-nl db 13, 10, 0
+nl db 13, 0
 novmode db "Please select a video mode (this can be reconfigured later)", 13, 10, 0
+kloadmsg db 13, 10, "Loading Kernel...", 13, 10, 0
 
 buffer times 512 db 0
+
 
 times (32768-512)-($-$$) nop
 config_magic db "zorroCfg"
