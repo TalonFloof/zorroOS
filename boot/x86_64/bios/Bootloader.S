@@ -137,34 +137,42 @@ stage2:
 .noconfig:
     mov si, novmode
     call print
-    mov ax, 0x4F00
+	push es
+	mov ax, 0x4F00
     mov di, buffer
     int 0x10
+	pop es
     mov si, word [buffer+14]
     mov ax, word [buffer+16]
     mov fs, ax
 .loop:
     mov ax, word [fs:si]
-    cmp ax, 0xffff
-    jz .afterloop
-    push esi
+	cmp ax, 0xffff
+    jz .noconfig
+	pushad
     mov cx, ax
     mov ax, 0x4f01
     mov di, buffer
     int 10h
-    mov si, mode1
-    call print
-    pop esi
+	popad
+	mov dl, byte [es:di+25]
+	cmp dl, 32
+	jb .next
+	push ax
     push esi
-    mov ax, word [fs:si]
+	mov si, mode1
+    call print
     call int_to_string
     mov si, ax
     call print
+	pop esi
+	pop ax
+	push esi
     mov si, mode2
     call print
     mov ax, word [es:di+18]
     call int_to_string
-    mov si, ax
+	mov si, ax
     call print
     mov si, mode3
     call print
@@ -181,12 +189,33 @@ stage2:
     call print
     mov si, mode4
     call print
+	push es
+	mov ax, 0x4F00
+    mov di, buffer
+    int 0x10
+	pop es
     pop esi
     mov ah, 0
     int 0x16
+	push esi
+	mov si, nl
+	call print
+	pop esi
+	mov bx, word [fs:si]
+	cmp al, 'y'
+	jz .afterloop
     add si, 2
     jmp .loop
+.next:
+	add si, 2
+	push es
+	mov ax, 0x4F00
+    mov di, buffer
+    int 0x10
+	pop es
+	jmp .loop
 .afterloop:
+	mov word [video_mode], bx
     jmp $
 
 
@@ -234,6 +263,7 @@ mode1 db "mode ", 0
 mode2 db " (", 0
 mode3 db "x", 0
 mode4 db ") (Y/N)? ", 0
+nl db 13, 10, 0
 novmode db "Please select a video mode (this can be reconfigured later)", 13, 10, 0
 
 buffer times 512 db 0
