@@ -10,6 +10,7 @@ zorroOS.iso
 fennecfstool
 zorroOS.hd
 *.bin
+zorroOS.qcow2
 
 # Ignore common editor/system specific metadata
 .DS_Store
