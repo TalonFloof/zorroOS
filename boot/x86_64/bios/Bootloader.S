@@ -10,6 +10,8 @@ stage1:
     mov fs, ax
     mov gs, ax
     mov sp, 0x7c00
+    
+    mov [bootdsk], dl
 
     mov ax, 3
     int 10h
@@ -45,7 +47,7 @@ stage1:
     mov ch, 0
     mov cl, 2
     mov dh, 0
-    mov dl, 80h
+    mov dl, [bootdsk]
     int 13h
 
     mov si, splashmsg
@@ -106,6 +108,7 @@ print:
 
 ; The rest of this sector will be used for storing extra data
 splashmsg db "zorroOS Legacy BIOS Bootloader", 10, 13, "Copyright (C) 2023 TalonFox", 10, 13, 0
+bootdsk db 0
 
 times 440-($-$$) nop
 times 510-($-$$) db 0 
@@ -130,7 +133,7 @@ stage2:
 .unreal:
     pop ds
     sti ; We're now in unreal mode, because of this, we can access memory above the 1 MiB mark
-    mov eax, dword [video_mode]
+    mov eax, [video_mode]
     test eax, eax
     jz .noconfig
     jmp .afterconfig
@@ -143,11 +146,11 @@ stage2:
     mov di, buffer
     int 0x10
 	pop es
-    mov si, word [buffer+14]
-    mov ax, word [buffer+16]
+    mov si, [buffer+14]
+    mov ax, [buffer+16]
     mov fs, ax
 .loop:
-    mov ax, word [fs:si]
+    mov ax, [fs:si]
 	cmp ax, 0xffff
     jz .rep
 	pushad
@@ -156,7 +159,7 @@ stage2:
     mov di, buffer
     int 10h
 	popad
-	mov dl, byte [es:di+25]
+	mov dl, [es:di+25]
 	cmp dl, 32
 	jb .next
 	push ax
@@ -171,20 +174,20 @@ stage2:
 	push esi
     mov si, mode2
     call print
-    mov ax, word [es:di+18]
+    mov ax, [es:di+18]
     call int_to_string
 	mov si, ax
     call print
     mov si, mode3
     call print
-    mov ax, word [es:di+20]
+    mov ax, [es:di+20]
     call int_to_string
     mov si, ax
     call print
     mov si, mode3
     call print
     xor ax, ax
-    mov al, byte [es:di+25]
+    mov al, [es:di+25]
     call int_to_string
     mov si, ax
     call print
@@ -202,7 +205,7 @@ stage2:
 	mov si, nl
 	call print
 	pop esi
-	mov bx, word [fs:si]
+	mov bx, [fs:si]
 	cmp al, 'y'
 	jz .afterloop
     add si, 2
@@ -216,14 +219,87 @@ stage2:
 	pop es
 	jmp .loop
 .afterloop:
-	mov word [video_mode], bx
+	mov [video_mode], bx
 .afterconfig:
 	mov si, kloadmsg
 	call print
 kernelload:
-	
+	mov eax, 64
+    mov cx, 1
+    call read_sector
+    mov ebx, 0x10000
+    mov eax, [ebx+32]
+    cmp eax, 0x6E654680
+    jnz .badmagic
+    mov eax, [ebx+36]
+    cmp eax, 0x8063656E
+    jz .startload
+.badmagic:
+    mov si, badmagicmsg
+    call print
+.L1:
+    cli
+    hlt
+    jmp short .L1
+.startload:
+    mov eax, [ebx]
+    mov [inodes], eax
+    shr eax, 12
+    add eax, 64
+    mov [inodestart], eax
+    mov eax, [ebx+12]
+    mov [zones], eax
+    mov eax, [ebx+16]
+    add eax, 64
+    mov [zonestart], eax
+    mov eax, [ebx+24]
+    mov [zonesize], eax
+    mov eax, [zones]
+    mov ecx, [zonesize]
+    shr ecx, 2
+    div ecx
+    cmp edx, 0
+    xor ebx, ebx
+    seta bl
+    add eax, ebx
+    
     jmp $
 
+; read_sector(eax: SectorLow, cx: SectorCount)
+read_sector:
+    pushad
+    push es
+    ; Write the descriptor block for the extended read
+    mov byte [buffer], 10h
+    mov byte [buffer+1], 0
+    mov word [buffer+2], cx
+    mov word [buffer+4], 0
+    mov word [buffer+6], 1000h
+    mov dword [buffer+8], eax
+    mov dword [buffer+12], 0
+    ; Run the BIOS command
+    clc
+    mov ah, 42h
+    mov dl, [bootdsk]
+    mov si, buffer
+    int 13h
+    jc .readerr
+    pop es
+    popad
+    ret
+.readerr:
+    mov si, readfail
+    call print
+.halt:
+    cli
+    hlt
+    jmp .halt
+
+; Reads a FennecFS Zone, Returns the next Zone in the chain
+; read_zone(eax: Zone): (eax: Next Zone)
+read_zone:
+
+    ret
 
 int_to_string:
     pusha
@@ -272,9 +348,17 @@ mode4 db ") (Y/N)? ", 0
 nl db 13, 0
 novmode db "Please select a video mode (this can be reconfigured later)", 13, 10, 0
 kloadmsg db 13, 10, "Loading Kernel...", 13, 10, 0
+badmagicmsg db "Invalid FennecFS Superblock!", 13, 10, 0
+readfail db "READ FAIL", 13, 10, 0
 
 buffer times 512 db 0
 
+inodes dd 0
+zones dd 0
+zonesize dd 0
+zonestart dd 0
+inodestart dd 0
+zttstart dd 0
 
 times (32768-512)-($-$$) nop
 config_magic db "zorroCfg"

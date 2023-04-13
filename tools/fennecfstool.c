@@ -393,9 +393,10 @@ int main(int argc, char** argv) {
                 uint8_t* data = readImageAndValidate(argv[1],&fileSize,startOffset);
                 size_t bootldrSize;
                 uint8_t* boot = readImage(argv[4],&bootldrSize);
+                fprintf(stderr, "%i\n", bootldrSize);
                 memcpy(data,boot,bootldrSize);
                 free(boot);
-                writeImage(argv[1],data,bootldrSize);
+                writeImage(argv[1],data,fileSize);
                 free(data);
             } else if(strcmp(argv[3],"copy") == 0) {
                 uint8_t* data = readImageAndValidate(argv[1],&fileSize,startOffset);
