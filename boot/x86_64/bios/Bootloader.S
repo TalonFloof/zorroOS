@@ -261,7 +261,23 @@ kernelload:
     mul edx
     mov [zttsize], eax
 
-    jmp $
+    mov eax, [inodestart]
+    mov cx, 1
+    call read_sector
+
+    mov esi, 0x10000
+    mov eax, [esi+0x30]
+    cmp eax, 0xffffffff
+    je .nokrnl
+    call read_zone
+.findfile:
+    
+.nokrnl:
+    mov si, nokrnlmsg
+    call print
+    cli
+    hlt
+    jmp short $
 
 ; read_sector(eax: SectorLow, cx: SectorCount)
 read_sector:
@@ -371,6 +387,7 @@ novmode db "Please select a video mode (this can be reconfigured later)", 13, 10
 kloadmsg db 13, 10, "Loading Kernel...", 13, 10, 0
 badmagicmsg db "Invalid FennecFS Superblock!", 13, 10, 0
 readfail db "READ FAIL ", 0
+nokrnlmsg db "Please ensure that the file ", '"', "OSKernel", '"', " exists in the root directory.", 13, 10, 0
 
 buffer times 512 db 0
 
