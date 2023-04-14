@@ -276,10 +276,10 @@ read_sector:
     mov dword [buffer+8], eax
     mov dword [buffer+12], 0
     ; Run the BIOS command
-    clc
     mov ah, 42h
     mov dl, [bootdsk]
-    mov si, buffer
+    mov esi, buffer
+    clc
     int 13h
     jc .readerr
     pop es
@@ -287,6 +287,11 @@ read_sector:
     ret
 .readerr:
     mov si, readfail
+    call print
+    mov al, ah
+    xor ah, ah
+    call int_to_string
+    mov si, ax
     call print
 .halt:
     cli
@@ -365,7 +370,7 @@ nl db 13, 0
 novmode db "Please select a video mode (this can be reconfigured later)", 13, 10, 0
 kloadmsg db 13, 10, "Loading Kernel...", 13, 10, 0
 badmagicmsg db "Invalid FennecFS Superblock!", 13, 10, 0
-readfail db "READ FAIL", 13, 10, 0
+readfail db "READ FAIL ", 0
 
 buffer times 512 db 0
 
