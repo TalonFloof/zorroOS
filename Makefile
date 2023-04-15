@@ -1,6 +1,6 @@
-build:
-	cd kernel; make x86_64-PC; cd ..
+build-x86_64-Legacy:
+	cd kernel; make x86_64-Legacy; cd ..
 
-bios: build
+bios: build-x86_64-Legacy
 	./make_image.sh
-.PHONY: build
+.PHONY: build-x86_64-Legacy

@@ -23,7 +23,7 @@ INTERNALCFLAGS :=               \
 	-ffunction-sections           \
 	-fdata-sections               \
 	-fno-strict-aliasing          \
-	-Isrc
+	-Isrc/Include
 
 ifeq ($(ARCH),x86_64)
 	INTERNALCFLAGS := $(INTERNALCFLAGS) \
@@ -43,22 +43,22 @@ CFLAGS ?= -O3 -Wall -Wextra -Wno-unused-function -g
 
 build: $(OBJFILES)
 
-.PHONY: build x86_64-PC clean
+.PHONY: build x86_64-Legacy clean
 
 %.o: %.c
 	$(CC) -D_DEBUG_BUILD_ -D__zorrokrnl__ $(INTERNALCFLAGS) $(CFLAGS) -c $< -o $@
 
-x86_64-PC: build
-	nasm -f elf64 architectures/x86_64/entry.S -o architectures/x86_64/entry.o
+x86_64-Legacy: build
+	nasm -f elf64 architectures/x86_64/Protocols/Legacy/entry.S -o architectures/x86_64/Protocols/Legacy/entry.o
 	$(CC) $(OBJFILES) -O3 -r -o Kernel.o
-	$(LD) architectures/x86_64/entry.o Kernel.o -Tlink_scripts/x86_64-PC.ld -g -zmax-page-size=0x1000 -static -o ZorroKernel.o
+	$(LD) architectures/x86_64/Protocols/Legacy/entry.o Kernel.o -Tlink_scripts/x86_64-Legacy.ld -g -zmax-page-size=0x1000 -static -o ZorroKernel.o
 	$(OBJCOPY) -O binary ZorroKernel.o ZorroKernel
-	rm -f architectures/x86_64/entry.o
+	rm -f architectures/x86_64/Protocols/Legacy/entry.o
 	rm -f Kernel.o
 	rm -f ZorroKernel.o
 	rm -f $(OBJFILES)
 
 clean:
-	rm -f architectures/x86_64/entry.o
+	rm -f architectures/x86_64/Protocols/Legacy/entry.o
 	rm -f ZorroKernel.o Kernel.o
 	rm -f $(OBJFILES)

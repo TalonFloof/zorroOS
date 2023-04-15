@@ -335,6 +335,7 @@ kernelload:
     call read_sector
     mov esi, 0x10100
     mov eax, [esi+0x10]
+    mov dword [ksize], eax
     push esi
     push eax
     mov si, kload2msg
@@ -597,4 +598,5 @@ video_width dw 0
 video_height dw 0
 video_bpp db 0
 memmap dq 0
+ksize dq 0
 times 32768-($-$$) db 0
