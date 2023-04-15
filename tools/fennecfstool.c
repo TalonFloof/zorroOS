@@ -63,15 +63,17 @@ typedef enum {
 } FennecFSState;
 
 typedef struct {
-    uint32_t icount; /* Inode Count */
-    uint32_t journalsize; /* Journal Log Size (excludes metadata) */
-    uint32_t ztagsize; /* Zone Tag Table Size (in Zones) */
-    uint32_t zones; /* Number of zones */
-    uint64_t zone; /* First block in zone */
-    uint32_t zonesize; /* Zone Size (must be at least 1024) */
-    FennecFSState state; /* Filesystem State */
+    uint32_t icount; /* Inode Count 0x0 */
+    uint32_t firstinode; /* First block in Inodes 0x4 */
+    uint32_t ztagsize; /* Zone Tag Table Size (in Zones) 0x8 */
+    uint32_t zones; /* Number of zones  0xc */
+    uint64_t zone; /* First block in zone 0x10 */
+    uint32_t zonesize; /* Zone Size (must be at least 1024) 0x18 */
+    uint32_t journalsize; /* Journal Log Size (excludes metadata) 0x1c */
+    uint64_t ztt; /* First block in ZZT 0x20 */
+    FennecFSState state; /* Filesystem State 0x28 */
+    uint32_t revision; /* 1 0x2c */
     uint64_t magic; /* "\x80Fennec\x80" */
-    uint32_t revision; /* 1 */
 } FennecSuperblock;
 
 typedef struct {
@@ -334,11 +336,13 @@ uint8_t* generateImage(uint64_t kib, uint64_t begin, uint64_t zonesize, uint64_t
     super->revision = 1;
     super->state = OKAY;
     super->icount = inodes;
+    super->firstinode = 1+ibm;
     super->journalsize = 0; /* To be implemented... */
     super->zonesize = zonesize;
     super->zones = zones-ztt;
     super->zone = 1+ibm+(inodes/2)+(ztt*(zonesize/512));
     super->ztagsize = ztt;
+    super->ztt = 1+ibm+(inodes/2);
     FennecInode* root = getInode(super,1);
     root->mode = 0040755; /* drwxr-xr-x */
     root->links = 1;

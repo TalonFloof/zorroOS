@@ -122,7 +122,7 @@ stage2:
     lgdt [gdtp]
     mov eax, cr0
     or al,1
-    mov  cr0, eax
+    mov cr0, eax
     jmp 0x8:.pmode
 .pmode:
     mov bx, 0x10
@@ -228,12 +228,12 @@ kernelload:
     mov cx, 1
     call read_sector
     mov ebx, 0x10000
-    mov eax, [ebx+32]
+    mov eax, [ebx+0x30]
     cmp eax, 0x6E654680
-    jnz .badmagic
-    mov eax, [ebx+36]
+    jne .badmagic
+    mov eax, [ebx+0x34]
     cmp eax, 0x8063656E
-    jz .startload
+    je .startload
 .badmagic:
     mov si, badmagicmsg
     call print
@@ -244,18 +244,21 @@ kernelload:
 .startload:
     mov eax, [ebx]
     mov [inodes], eax
-    shr eax, 12
+    mov eax, [ebx+0x4]
     add eax, 64
     mov [inodestart], eax
-    mov eax, [ebx+12]
+    mov eax, [ebx+0xc]
     mov [zones], eax
-    mov eax, [ebx+16]
+    mov eax, [ebx+0x10]
     add eax, 64
     mov [zonestart], eax
-    mov eax, [ebx+24]
+    mov eax, [ebx+0x18]
     mov [zonesize], eax
+    mov eax, [ebx+0x20]
+    add eax, 64
+    mov [zttstart], eax
 
-    mov eax, [ebx+8]
+    mov eax, [ebx+0x8]
     mov edx, [zonesize]
     shr edx, 9
     mul edx
@@ -264,20 +267,43 @@ kernelload:
     mov eax, [inodestart]
     mov cx, 1
     call read_sector
-
-    mov esi, 0x10000
-    mov eax, [esi+0x30]
-    cmp eax, 0xffffffff
-    je .nokrnl
-    call read_zone
-.findfile:
-    
-.nokrnl:
-    mov si, nokrnlmsg
+    mov esi, 0x10100
+    mov eax, [esi+0x10]
+    push esi
+    push eax
+    mov si, kload2msg
     call print
+    call long_to_hex
+    mov si, ax
+    call print
+    mov si, kload3msg
+    call print
+    pop eax
+    pop esi
+    ; Start copying data to the 1 MiB mark
+    mov eax, [esi+0x30]
+    inc eax
+    mov edi, 0x100000
+.readloop:
+    dec eax
+    cmp eax, 0xfffffffe
+    jae bootos
+    call read_zone
+    mov ecx, [zonesize]
+    mov esi, 0x10000
+.copy:
+    mov edx, [esi]
+    mov [edi], edx
+    add esi, 4
+    add edi, 4
+    sub ecx, 4
+    cmp ecx, 0
+    ja .copy
+    jmp .readloop
+bootos:
+    
     cli
     hlt
-    jmp short $
 
 ; read_sector(eax: SectorLow, cx: SectorCount)
 read_sector:
@@ -304,9 +330,8 @@ read_sector:
 .readerr:
     mov si, readfail
     call print
-    mov al, ah
-    xor ah, ah
-    call int_to_string
+    mov eax, dword [buffer+8]
+    call long_to_hex
     mov si, ax
     call print
 .halt:
@@ -317,25 +342,35 @@ read_sector:
 ; Reads a FennecFS Zone, Returns the next Zone in the chain
 ; read_zone(eax: Zone): (eax: Next Zone)
 read_zone:
+    push ebx
     push ecx
     push edx
     push eax
-    shr eax, 9
+    shr eax, 7
     mov ebx, [zttstart]
     add eax, ebx
     mov cx, 1
     call read_sector
     pop eax
     mov ebx, eax
-    shr ebx, 2
     and ebx, 0x7f
+    shl ebx, 2
+    add ebx, 0x10000
     mov ebx, [ebx]
     pop edx
     pop ecx
+    push ecx
+    push edx
     mov ecx, [zonesize]
     shr ecx, 9
+    xor edx, edx
+    mul ecx
+    add eax, [zonestart]
     call read_sector
     mov eax, ebx
+    pop edx
+    pop ecx
+    pop ebx
     ret
 
 int_to_string:
@@ -365,6 +400,36 @@ int_to_string:
 
     .t times 7 db 0
 
+long_to_hex:
+    pushad
+    mov cl, 8
+    mov si, .t
+    mov byte [si], '0'
+    mov byte [si+1], 'x'
+    add si, 2
+.loop:
+    mov ebx, eax
+    shr ebx, 28
+    cmp bl, 9
+    ja .letter
+    add bl, '0'
+    jmp .next
+.letter:
+    add bl, 'W' ; W+10 = a (big brain time)
+.next:
+    mov byte [si], bl
+    inc si
+    shl eax, 4
+    dec cl
+    cmp cl, 0
+    ja .loop
+    mov byte [si], 0
+    popad
+    mov eax, .t
+    ret
+
+    .t times 11 db 0
+
 gdtp:
     dw gdt_end - gdt - 1
     dd gdt
@@ -384,10 +449,13 @@ mode3 db "x", 0
 mode4 db ") (Y/N)? ", 0
 nl db 13, 0
 novmode db "Please select a video mode (this can be reconfigured later)", 13, 10, 0
-kloadmsg db 13, 10, "Loading Kernel...", 13, 10, 0
-badmagicmsg db "Invalid FennecFS Superblock!", 13, 10, 0
+kloadmsg db 13, 10, "Loading Kernel ", 0
+kload2msg db "(size=", 0
+kload3msg db ")", 13, 10, 0
+badmagicmsg db 13, 10, "Invalid FennecFS Superblock!", 13, 10, 0
 readfail db "READ FAIL ", 0
-nokrnlmsg db "Please ensure that the file ", '"', "OSKernel", '"', " exists in the root directory.", 13, 10, 0
+filename db "OSKernel", 0
+nokrnlmsg db 13, 10, "Please ensure that the file ", '"', "OSKernel", '"', " exists in the root directory.", 13, 10, 0
 
 buffer times 512 db 0
 

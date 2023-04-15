@@ -13,15 +13,17 @@ typedef enum {
 } FennecFSState;
 
 typedef struct {
-    uint32_t icount; /* Inode Count */
-    uint32_t journalsize; /* Journal Log Size (excludes metadata) */
-    uint32_t ztagsize; /* Zone Tag Table Size (in Zones) */
-    uint32_t zones; /* Number of zones */
-    uint64_t zone; /* First block in zone */
-    uint32_t zonesize; /* Zone Size (must be at least 1024) */
-    FennecFSState state; /* Filesystem State */
+    uint32_t icount; /* Inode Count 0x0 */
+    uint32_t firstinode; /* First block in Inodes 0x4 */
+    uint32_t ztagsize; /* Zone Tag Table Size (in Zones) 0x8 */
+    uint32_t zones; /* Number of zones  0xc */
+    uint64_t zone; /* First block in zone 0x10 */
+    uint32_t zonesize; /* Zone Size (must be at least 1024) 0x18 */
+    uint32_t journalsize; /* Journal Log Size (excludes metadata) 0x1c */
+    uint64_t ztt; /* First block in ZZT 0x20 */
+    FennecFSState state; /* Filesystem State 0x28 */
+    uint32_t revision; /* 1 0x2c */
     uint64_t magic; /* "\x80Fennec\x80" */
-    uint32_t revision; /* 1 */
 } FennecSuperblock;
 ```
 
