@@ -1,7 +1,7 @@
 OUTPUT_FORMAT(elf64-x86-64)
 OUTPUT_ARCH(i386:x86-64)
 
-ENTRY(main)
+ENTRY(__start)
 
 PHDRS
 {
@@ -13,7 +13,7 @@ PHDRS
 
 SECTIONS
 {
-    . = 0xffffffff80000000;
+    . = 0x100000;
 
     .text : {
         *(.text .text.*)

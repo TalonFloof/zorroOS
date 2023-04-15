@@ -2,10 +2,11 @@ ARCH=x86_64
 CFILES := $(shell find ./src -type f -name '*.c')
 
 ifeq ($(ARCH),x86_64)
-	CC=x86_64-unknown-elf-gcc
-	LD=x86_64-unknown-elf-ld
-	NM=x86_64-unknown-elf-nm
-	AS=x86_64-unknown-elf-as
+	CC=x86_64-elf-gcc
+	LD=x86_64-elf-ld
+	NM=x86_64-elf-nm
+	AS=x86_64-elf-as
+	OBJCOPY=x86_64-elf-objcopy
 	CFILES := $(CFILES) $(shell find ./architectures/x86_64/ -type f -name '*.c')
 endif
 
@@ -35,24 +36,29 @@ ifeq ($(ARCH),x86_64)
 	-mno-red-zone                 \
 	-Wno-address-of-packed-member \
 	-mcmodel=kernel               \
-	-D_OWL_ARCH_X86_64
+	-D_X86_64
 endif
 
 CFLAGS ?= -O3 -Wall -Wextra -Wno-unused-function -g
 
 build: $(OBJFILES)
 
-.PHONY: build x86_64-PC RiscV64-Generic clean
+.PHONY: build x86_64-PC clean
 
 %.o: %.c
 	$(CC) -D_DEBUG_BUILD_ -D__zorrokrnl__ $(INTERNALCFLAGS) $(CFLAGS) -c $< -o $@
 
 x86_64-PC: build
+	nasm -f elf64 architectures/x86_64/entry.S -o architectures/x86_64/entry.o
 	$(CC) $(OBJFILES) -O3 -r -o Kernel.o
-	$(LD) Kernel.o -Tlink_scripts/x86_64-PC.ld -g -zmax-page-size=0x1000 -static -o ZorroKernel
+	$(LD) architectures/x86_64/entry.o Kernel.o -Tlink_scripts/x86_64-PC.ld -g -zmax-page-size=0x1000 -static -o ZorroKernel.o
+	$(OBJCOPY) -O binary ZorroKernel.o ZorroKernel
+	rm -f architectures/x86_64/entry.o
 	rm -f Kernel.o
+	rm -f ZorroKernel.o
 	rm -f $(OBJFILES)
 
 clean:
-	rm -f ZorroKernel Kernel.o
+	rm -f architectures/x86_64/entry.o
+	rm -f ZorroKernel.o Kernel.o
 	rm -f $(OBJFILES)

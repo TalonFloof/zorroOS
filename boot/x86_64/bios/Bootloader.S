@@ -221,9 +221,75 @@ stage2:
 .afterloop:
 	mov [video_mode], bx
 .afterconfig:
-	mov si, kloadmsg
-	call print
+    mov ax, 0x4f01
+    mov cx, [video_mode]
+    mov di, buffer
+    int 0x10
+    mov eax, [buffer + 0x28]
+    mov [video_addr], eax
+    mov ax, [buffer + 18]
+    mov [video_width], ax
+    mov ax, [buffer + 20]
+    mov [video_height], ax
+    mov al, [buffer + 25]
+    mov [video_bpp], al
+get_memmap:
+    mov di, buffer
+    mov esi, 0x22000
+    xor ebx, ebx
+    mov edx, 0x0534D4150
+    mov eax, 0xe820
+    mov [es:di + 20], dword 1
+    mov ecx, 24
+    int 0x15
+    jc short .failed
+    mov edx, 0x0534D4150
+    cmp eax, edx
+	jne short .failed
+	test ebx, ebx
+	je short .failed
+    jmp .loop
+.e820lp:
+    test ebx, ebx
+    je .loopend
+	mov eax, 0xe820
+	mov [es:di + 20], dword 1
+	mov ecx, 24
+	int 0x15
+	jc short .loopend
+	mov edx, 0x0534D4150
+.loop:
+    cmp byte [es:di + 16], 1
+    jne .e820lp
+    mov ecx, [es:di + 8]
+	or ecx, [es:di + 12]
+	jz .e820lp
+    mov ecx, [es:di]
+    mov [esi], ecx
+    mov ecx, [es:di+4]
+    mov [esi+4], ecx
+    mov ecx, [es:di+8]
+    mov [esi+8], ecx
+    mov ecx, [es:di+12]
+    mov [esi+12], ecx
+    add esi, 16
+    jmp .e820lp
+.failed:
+    mov si, e820fail
+    call print
+.halt:
+    cli
+    hlt
+    jmp short .halt
+.loopend:
+    mov dword [esi], 0
+    mov dword [esi+4], 0
+    mov dword [esi+8], 0
+    mov dword [esi+12], 0
+    mov dword [memmap], 0x22000
 kernelload:
+    mov si, kloadmsg
+	call print
 	mov eax, 64
     mov cx, 1
     call read_sector
@@ -301,9 +367,60 @@ kernelload:
     ja .copy
     jmp .readloop
 bootos:
-    
+    mov ax, 0x4f02
+    mov bx, [video_mode]
+    or bx, 0x4000 ; LFB
+    int 0x10
+    ; WE ARE NOW GOING TO ENTER LONG MODE, THERE'S NO GOING BACK...
     cli
-    hlt
+    mov eax, 0x20000
+    mov dword [eax], 0x21003
+    mov dword [eax+4], 0
+    mov eax, 0x21000
+    mov cx, 512
+    xor ebx, ebx
+.pageloop:
+    mov edx, ebx
+    shl edx, 30
+    or edx, 0x83
+    mov dword [eax], edx
+    mov edx, ebx
+    shr edx, 2
+    mov dword [eax+4], edx
+    add eax, 8
+    inc ebx
+    dec cx
+    cmp cx, 0
+    ja .pageloop
+
+    lidt [idtp]
+    mov eax, 10100000b ; Set PAE and PGE
+    mov cr4, eax
+
+    mov edx, 0x20000
+    mov cr3, edx
+
+    mov ecx, 0xC0000080
+    rdmsr
+    or eax, 0x00000100
+    wrmsr
+
+    mov ebx, cr0
+    or ebx,0x80000001
+    mov cr0, ebx
+    lgdt [gdtp]
+    jmp 0x18:longmode
+[BITS 64]
+longmode:
+    mov ax, 0x20
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+    mov ss, ax
+    mov rdi, config_magic
+    jmp 0x100000
+[BITS 16]
 
 ; read_sector(eax: SectorLow, cx: SectorCount)
 read_sector:
@@ -443,6 +560,10 @@ gdt:
     dq 0x0000920000000000
 gdt_end:
 
+idtp:
+    dw 0
+    dd 0
+
 mode1 db "mode ", 0
 mode2 db " (", 0
 mode3 db "x", 0
@@ -454,6 +575,7 @@ kload2msg db "(size=", 0
 kload3msg db ")", 13, 10, 0
 badmagicmsg db 13, 10, "Invalid FennecFS Superblock!", 13, 10, 0
 readfail db "READ FAIL ", 0
+e820fail db "E820 Failure", 13, 10, 0
 filename db "OSKernel", 0
 nokrnlmsg db 13, 10, "Please ensure that the file ", '"', "OSKernel", '"', " exists in the root directory.", 13, 10, 0
 
@@ -470,4 +592,9 @@ zttstart dd 0
 times (32768-512)-($-$$) nop
 config_magic db "zorroCfg"
 video_mode dd 0 ; This is used to get the configuration for video, however, its not set
+video_addr dq 0
+video_width dw 0
+video_height dw 0
+video_bpp db 0
+memmap dq 0
 times 32768-($-$$) db 0
