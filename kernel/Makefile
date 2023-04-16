@@ -50,10 +50,13 @@ build: $(OBJFILES)
 
 x86_64-Limine: build
 	$(CC) $(OBJFILES) -O3 -r -o Kernel.o
-	$(LD) Kernel.o -Tlink_scripts/x86_64-Limine.ld -g -zmax-page-size=0x1000 -static -o ZorroKernel
-	rm -f Kernel.o
+	$(OBJCOPY) -I binary -O elf64-x86-64 ../files/knxt.psf knxt.o
+	$(OBJCOPY) -I binary -O elf64-x86-64 ../files/unifont.psf unifont.o
+	$(OBJCOPY) -I binary -O elf64-x86-64 ../files/terminus.psf terminus.o
+	$(LD) knxt.o unifont.o terminus.o Kernel.o -Tlink_scripts/x86_64-Limine.ld -g -zmax-page-size=0x1000 -static -o ZorroKernel
+	rm -f Kernel.o knxt.o unifont.o terminus.o
 	rm -f $(OBJFILES)
 
 clean:
-	rm -f Kernel.o
+	rm -f Kernel.o knxt.o unifont.o terminus.o
 	rm -f $(OBJFILES)

@@ -1,5 +1,6 @@
 #define _FB_IMPL
 #include <Graphics/Framebuffer.h>
+#include <Utilities/String.h>
 
 uint8_t* fbPtr;
 uint16_t fbWidth;
@@ -37,5 +38,19 @@ void Framebuffer_RenderMonoBitmap(unsigned int x, unsigned int y, unsigned int w
         ((uint32_t*)fbPtr)[((i+y)*fbWidth)+(j+x)] = color;
       }
     }
+  }
+}
+
+void Framebuffer_RenderGlyph(unsigned int x, unsigned int y, uint32_t color, PSFHeader* font, uint8_t glyph) {
+  uint8_t* img = ((uint8_t*)font)+((font->headerSize)+((glyph-0x20)*(font->charSize)));
+  uint32_t width = (font->charSize/font->height)*8;
+  Framebuffer_RenderMonoBitmap(x,y,width,font->height,width,font->height,img,color);
+}
+
+void Framebuffer_RenderString(unsigned int x, unsigned int y, uint32_t color, PSFHeader* font, char* str) {
+  int i;
+  int len = strlen(str);
+  for(i=0;i < len;i++) {
+    Framebuffer_RenderGlyph(x+(font->width*i),y,color,font,str[i]);
   }
 }
