@@ -2,18 +2,26 @@
 #include <Arch/Arch.h>
 #include <Graphics/Framebuffer.h>
 #include <Graphics/Images.h>
+#include <Graphics/StackBlur.h>
+#include <Misc.h>
+#include <Utilities/String.h>
 
 extern void* _binary____files_knxt_psf_start;
 extern void* _binary____files_unifont_psf_start;
 extern void* _binary____files_terminus_psf_start;
 
 void main() {
+  Arch_EarlyInitialize();
+  StackBlur(fbPtr,fbWidth,32,0,fbWidth,0,fbHeight);
+  Framebuffer_RenderMonoBitmap((fbWidth/2)-64,(fbHeight/2)-64,128,128,128,128,(uint8_t*)&zorroOSLogo,0xcdd6f4);
+  Framebuffer_RenderMonoBitmap((fbWidth/2)-64,(fbHeight/2)+72,128,42,128,42,(uint8_t*)&zorroOSText,0xcdd6f4);
+  SetCurrentStatus("Welcome to zorroOS");
   Arch_Initialize();
-  Framebuffer_Clear(0x101010);
-  Framebuffer_RenderMonoBitmap((fbWidth/2)-64,(fbHeight/2)-64,128,128,128,128,(uint8_t*)&zorroOSLogo,0xcde2ff);
-  Framebuffer_RenderMonoBitmap((fbWidth/2)-64,(fbHeight/2)+72,128,42,128,42,(uint8_t*)&zorroOSText,0xcde2ff);
-  Framebuffer_RenderString(0,0,0xffffff,(PSFHeader*)&_binary____files_knxt_psf_start,"This font is knxt, and is stored in memory as a PSF (v2)!");
-  Framebuffer_RenderString(0,20,0xffffff,(PSFHeader*)&_binary____files_unifont_psf_start,"And here is GNU Unifont using a PSF file as well!");
-  Framebuffer_RenderString(0,36,0xffffff,(PSFHeader*)&_binary____files_terminus_psf_start,"Small fonts like Terminus 12pt works as well");
+  SetCurrentStatus("Boot Complete!");
   for(;;);
+}
+
+void SetCurrentStatus(char* msg) {
+  Framebuffer_DrawRect(0,fbHeight-64,fbWidth,20,0x1e1e2e);
+  Framebuffer_RenderString((fbWidth/2)-((strlen(msg)*9)/2),fbHeight-64,0xcdd6f4,(PSFHeader*)&_binary____files_knxt_psf_start,msg);
 }
