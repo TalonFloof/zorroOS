@@ -108,7 +108,16 @@ ISR_ERROR_CODE 30
 ISR_NO_ERROR_CODE 31
 
 %assign num 32
-%rep 16
+%rep 256-32
     ISR_NO_ERROR_CODE num
+%assign num (num + 1)
+%endrep
+
+section .rodata
+global ISRTable
+ISRTable:
+%assign num 32
+%rep 256-32
+    dq int%[num]
 %assign num (num + 1)
 %endrep
