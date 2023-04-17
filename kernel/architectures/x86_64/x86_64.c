@@ -10,3 +10,14 @@ void Arch_EarlyInitialize() {
 void Arch_Initialize() {
   IDT_Initialize();
 }
+
+void Arch_ClearScreen() {
+  Limine_ClearScreen();
+}
+
+void Arch_Halt() {
+  for(;;) {
+    asm volatile ("cli");
+    asm volatile ("hlt");
+  }
+}

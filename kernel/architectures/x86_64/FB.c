@@ -19,3 +19,7 @@ void Limine_InitFB() {
   fbBpp = (uint8_t)(limine_framebuffer_request.response->framebuffers[0]->bpp);
   limine_terminal_request.response->write(limine_terminal_request.response->terminals[0],"\x1b[?25l",6);
 }
+
+void Limine_ClearScreen() {
+  limine_terminal_request.response->write(limine_terminal_request.response->terminals[0],(char*)0,LIMINE_TERMINAL_FULL_REFRESH);
+}

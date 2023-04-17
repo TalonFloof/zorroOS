@@ -5,10 +5,10 @@
 #include <Graphics/StackBlur.h>
 #include <Misc.h>
 #include <Utilities/String.h>
+#include <Panic.h>
 
 extern void* _binary____files_knxt_psf_start;
 extern void* _binary____files_unifont_psf_start;
-extern void* _binary____files_terminus_psf_start;
 
 void main() {
   Arch_EarlyInitialize();
@@ -18,7 +18,7 @@ void main() {
   SetCurrentStatus("Welcome to zorroOS");
   Arch_Initialize();
   SetCurrentStatus("Boot Complete!");
-  for(;;);
+  Arch_Halt();
 }
 
 void SetCurrentStatus(char* msg) {
