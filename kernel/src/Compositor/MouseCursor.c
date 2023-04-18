@@ -60,6 +60,16 @@ void Compositor_SetMousePosition(int mouseX, int mouseY) {
   int oldX, oldY;
   oldX = ComposMouseX;
   oldY = ComposMouseY;
+  if(mouseX < 0) {
+    mouseX = 0;
+  } else if(mouseX > fbWidth) {
+    mouseX = fbWidth;
+  }
+  if(mouseY < 0) {
+    mouseY = 0;
+  } else if(mouseY > fbHeight) {
+    mouseY = fbHeight;
+  }
   ComposMouseX = mouseX;
   ComposMouseY = mouseY;
   Compositor_RedrawCursor(oldX,oldY,0);

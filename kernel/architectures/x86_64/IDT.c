@@ -1,5 +1,4 @@
 #include "IDT.h"
-#include <Misc.h>
 #include "Context.h"
 #include "PortIO.h"
 #include "Devices/PS2Mouse.h"
@@ -40,12 +39,10 @@ void IDT_Initialize() {
   int i;
   idtr.base = (uint64_t)&idt;
   idtr.limit = (uint16_t) sizeof(IDTEntry) * 256 - 1;
-  SetCurrentStatus("Loading IDT...");
   for(i=0;i<256;i++) {
     IDT_Install(i,(&ISRTable)[i],0x8E);
   }
   asm volatile ("lidt %0" :: "m" (idtr));
-  SetCurrentStatus("Enabling PIC...");
   outb(0x20, 0x11);
   outb(0xA0, 0x11);
   outb(0x21, 0x20);
