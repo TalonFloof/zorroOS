@@ -1,10 +1,28 @@
 <!--<p align="center"><a href="https://github.com/Talon396/zorroOS/tree/legacy">Looking for owlOS? You can find it here.</a><br><img align="center" height="128" src="docs/zorroOS.svg"><br></p>-->
 
-# **zorroOS**: An elegant, microkernel-based operating system
+# **zorroOS**: A hobby operating system written from scratch
 
-**zorroOS** is a hobby operating system written in ANSI C (with some inline assembly), currently targeting x86 PCs.
+**zorroOS** is a hobby operating system written in ANSI C (with some inline assembly), currently targeting x86_64 PCs.
 
-## zorroOS is being rewritten at the momment, instructions for building will be available soon
+## Building
+
+Building zorroOS is simple.    
+First, ensure that you have the following depenedencies:
+- `x86_64-elf-gcc`
+- `x86_64-elf-binutils`
+- `nasm`
+- `xorriso`
+- `git`
+- `zig` (For userspace **NOT REQUIRED YET**)
+
+Then, clone the repository
+```sh
+$ git clone https://github.com/TalonFox/zorroOS --recursive
+$ cd zorroOS
+```
+After cloning it, simply run `make iso` and a ISO named `zorroOS.iso` will be generated.    
+You can then run this using an virtual machine/emulator such as QEMU, Bochs, VirtualBox, or VMWare.
+You can also flash this onto a USB drive and boot it onto real hardware, if you would rather do that.
 
 ## License
 

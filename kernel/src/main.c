@@ -6,6 +6,7 @@
 #include <Misc.h>
 #include <Utilities/String.h>
 #include <Panic.h>
+#include <Compositor/MouseCursor.h>
 
 extern void* _binary____files_knxt_psf_start;
 extern void* _binary____files_unifont_psf_start;
@@ -18,7 +19,12 @@ void main() {
   SetCurrentStatus("Welcome to zorroOS");
   Arch_Initialize();
   SetCurrentStatus("Boot Complete!");
-  Arch_Halt();
+  Compositor_RedrawCursor(0,0,1);
+  Arch_IRQEnableDisable(1);
+  for(;;) {
+    Arch_IRQEnableDisable(1);
+    Arch_Halt();
+  }
 }
 
 void SetCurrentStatus(char* msg) {

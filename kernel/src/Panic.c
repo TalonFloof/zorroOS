@@ -15,5 +15,6 @@ void Panic(char* msg) {
   /*StackBlur(fbPtr,fbWidth,32,0,fbWidth,0,fbHeight);*/
   Framebuffer_RenderString(0,0,0xffffff,(PSFHeader*)&_binary____files_terminus_psf_start,"panic: ");
   Framebuffer_RenderString(42,0,0xffffff,(PSFHeader*)&_binary____files_terminus_psf_start,msg);
+  Arch_IRQEnableDisable(0);
   Arch_Halt();
 }

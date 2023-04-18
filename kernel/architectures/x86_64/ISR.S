@@ -39,6 +39,7 @@ section .text
     pop rax
 %endmacro
 
+extern ExceptionHandler
 extern IRQHandler
 
 %macro ISR_ERROR_CODE 1
@@ -55,7 +56,7 @@ extern IRQHandler
         mov rsi, rsp
         mov rdx, qword [rsp+20*8]
         xor rbp, rbp
-        call IRQHandler
+        call ExceptionHandler
         popaq
         iretq
 %endmacro
@@ -69,10 +70,24 @@ extern IRQHandler
         mov rsi, rsp
         xor rdx, rdx
         xor rbp, rbp
+        call ExceptionHandler
+        popaq
+        iretq
+%endmacro
+
+%macro IRQ 1
+	global int%1
+	int%1:
+		cli
+        pushaq
+        mov rdi, %1
+        mov rsi, rsp
+        xor rbp, rbp
         call IRQHandler
         popaq
         iretq
 %endmacro
+
 
 ISR_NO_ERROR_CODE  0
 ISR_NO_ERROR_CODE  1
@@ -109,14 +124,14 @@ ISR_NO_ERROR_CODE 31
 
 %assign num 32
 %rep 256-32
-    ISR_NO_ERROR_CODE num
+    IRQ num
 %assign num (num + 1)
 %endrep
 
 section .rodata
 global ISRTable
 ISRTable:
-%assign num 32
+%assign num 0
 %rep 256-32
     dq int%[num]
 %assign num (num + 1)
