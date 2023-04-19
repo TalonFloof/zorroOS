@@ -7,6 +7,29 @@ uint16_t fbWidth;
 uint16_t fbHeight;
 uint8_t fbBpp;
 
+uint8_t* oldfbPtr;
+uint16_t oldfbWidth;
+uint16_t oldfbHeight;
+uint8_t oldfbBpp;
+
+void Framebuffer_SwapBuffer(uint8_t* p, uint16_t w, uint16_t h, uint8_t bpp) {
+  if(p == 0) {
+    fbPtr = oldfbPtr;
+    fbWidth = oldfbWidth;
+    fbHeight = oldfbHeight;
+    fbBpp = oldfbBpp;
+  } else {
+    oldfbPtr = fbPtr;
+    oldfbWidth = fbWidth;
+    oldfbHeight = fbHeight;
+    oldfbBpp = fbBpp;
+    fbPtr = p;
+    fbWidth = w;
+    fbHeight = h;
+    fbBpp = bpp;
+  }
+}
+
 void Framebuffer_DrawRect(int x, int y, int w, int h, uint32_t color) {
   int i, j;
   for(i=y;i<y+h;i++) {
@@ -14,6 +37,23 @@ void Framebuffer_DrawRect(int x, int y, int w, int h, uint32_t color) {
       ((uint32_t*)fbPtr)[(i*fbWidth)+j] = color;
     }
   }
+}
+
+void invert(uint32_t* base, int len) {
+  int i;
+  for(i=0;i < len;i++) {
+    base[i] = ~base[i];
+  }
+}
+
+void Framebuffer_RenderInvertOutline(int x, int y, int w, int h) {
+  invert(&((uint32_t*)fbPtr)[(y*fbWidth)+x],w);
+  int i;
+  for(i=y+1;i<(y+h)-1;i++) {
+    invert(&((uint32_t*)fbPtr)[(i*fbWidth)+x],1);
+    invert(&((uint32_t*)fbPtr)[(i*fbWidth)+(x+(w-1))],1);
+  }
+  invert(&((uint32_t*)fbPtr)[((y+(h-1))*fbWidth)+x],w);
 }
 
 void Framebuffer_Clear(uint32_t color) {

@@ -46,7 +46,10 @@ void PS2MouseIRQ() {
         int16_t offY = packetData[2] - ((flags << 3) & 0x100);
         int mX, mY;
         Compositor_GetMousePosition(&mX,&mY);
-        Compositor_SetMousePosition(mX+offX,mY-offY);
+        if(offX != 0 || offY != 0) {
+          Compositor_SetMousePosition(mX+offX,mY-offY);
+        }
+        Compositor_SetMouseStatus(flags & 1);
       }
       if(packetID == 0 && !(packetData[packetID] & 0x8)) {
         packetID = 0;

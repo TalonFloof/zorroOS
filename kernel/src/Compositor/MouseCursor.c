@@ -2,6 +2,7 @@
 #include <Compositor/MouseCursor.h>
 #include <Utilities/String.h>
 #include <Graphics/Framebuffer.h>
+#include <Compositor/Window.h>
 
 const unsigned char CursorImage[] = {
   0xff, 0xff, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
@@ -30,7 +31,7 @@ const unsigned char CursorImage[] = {
 };
 
 uint32_t ComposMouseFBData[13*21];
-int ComposMouseX, ComposMouseY = 0;
+int ComposMouseX, ComposMouseY, ComposLButton, ComposRedrawCursor = 0;
 
 void Compositor_RedrawCursor(int oldX, int oldY, int firstDraw) {
   int i;
@@ -42,6 +43,7 @@ void Compositor_RedrawCursor(int oldX, int oldY, int firstDraw) {
   for(i=0;i<21;i++) {
     memcpy(&ComposMouseFBData[i*13],&((uint32_t*)fbPtr)[((ComposMouseY+i)*fbWidth)+ComposMouseX],13*4);
   }
+  Compositor_WindowRedraw(ComposMouseX,ComposMouseY,13,21);
   for(i=0;i<273;i++) {
     int yPos = i/13;
     int xPos = i%13;
@@ -58,6 +60,9 @@ void Compositor_GetMousePosition(int* mouseX, int* mouseY) {
 
 void Compositor_SetMousePosition(int mouseX, int mouseY) {
   int oldX, oldY;
+  if(ComposLButton) {
+    Framebuffer_RenderInvertOutline(ComposMouseX,ComposMouseY,482,322);
+  }
   oldX = ComposMouseX;
   oldY = ComposMouseY;
   if(mouseX < 0) {
@@ -72,5 +77,25 @@ void Compositor_SetMousePosition(int mouseX, int mouseY) {
   }
   ComposMouseX = mouseX;
   ComposMouseY = mouseY;
-  Compositor_RedrawCursor(oldX,oldY,0);
+  Compositor_RedrawCursor(oldX,oldY,ComposRedrawCursor);
+  ComposRedrawCursor = 0;
+  if(ComposLButton) {
+    Framebuffer_RenderInvertOutline(mouseX,mouseY,482,322);
+  }
+}
+
+extern Window rootWindow;
+
+void Compositor_SetMouseStatus(int lclick) {
+  if(!lclick && ComposLButton) {
+    Framebuffer_RenderInvertOutline(ComposMouseX,ComposMouseY,482,322);
+    rootWindow.x = ComposMouseX;
+    rootWindow.y = ComposMouseY;
+    ComposRedrawCursor = 1;
+    Compositor_WindowRedraw(ComposMouseX,ComposMouseY,rootWindow.w,rootWindow.h);
+    Compositor_WindowRedraw(rootWindow.x,rootWindow.y,rootWindow.w,rootWindow.h);
+  } else if(lclick && !ComposLButton) {
+    Framebuffer_RenderInvertOutline(ComposMouseX,ComposMouseY,482,322);
+  }
+  ComposLButton = lclick;
 }

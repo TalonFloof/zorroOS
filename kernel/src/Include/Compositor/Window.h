@@ -1,6 +1,8 @@
 #pragma once
 #include <stdint.h>
 
+
+
 typedef struct {
     void* prev;
     void* next;
@@ -8,7 +10,10 @@ typedef struct {
     uint16_t y;
     uint16_t w;
     uint16_t h;
-    uint32_t* data;
+    uint32_t flags;
+    uint32_t* backBuffer;
+    uint32_t* frontBuffer;
 } Window;
 
+void Compositor_WindowRedraw(int x, int y, int w, int h);
 void Compositor_WindowSetup();
