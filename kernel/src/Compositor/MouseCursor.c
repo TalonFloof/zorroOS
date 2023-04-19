@@ -32,18 +32,19 @@ const unsigned char CursorImage[] = {
 
 uint32_t ComposMouseFBData[13*21];
 int ComposMouseX, ComposMouseY, ComposLButton, ComposRedrawCursor = 0;
+Window* ComposWindowDrag = 0;
 
 void Compositor_RedrawCursor(int oldX, int oldY, int firstDraw) {
   int i;
-  if(!firstDraw) {
+  /*if(!firstDraw) {
     for(i=0;i<21;i++) {
       memcpy(&((uint32_t*)fbPtr)[((oldY+i)*fbWidth)+oldX],&ComposMouseFBData[i*13],13*4);
     }
   }
   for(i=0;i<21;i++) {
     memcpy(&ComposMouseFBData[i*13],&((uint32_t*)fbPtr)[((ComposMouseY+i)*fbWidth)+ComposMouseX],13*4);
-  }
-  Compositor_WindowRedraw(ComposMouseX,ComposMouseY,13,21);
+  }*/
+  Compositor_WindowRedraw(oldX,oldY,13,21);
   for(i=0;i<273;i++) {
     int yPos = i/13;
     int xPos = i%13;
@@ -87,15 +88,32 @@ void Compositor_SetMousePosition(int mouseX, int mouseY) {
 extern Window rootWindow;
 
 void Compositor_SetMouseStatus(int lclick) {
-  if(!lclick && ComposLButton) {
+  if(!lclick && ComposLButton && ComposWindowDrag != 0) {
     Framebuffer_RenderInvertOutline(ComposMouseX,ComposMouseY,482,322);
-    rootWindow.x = ComposMouseX;
-    rootWindow.y = ComposMouseY;
+    int oldWinX = ComposWindowDrag->x;
+    int oldWinY = ComposWindowDrag->y;
+    ComposWindowDrag->x = ComposMouseX;
+    ComposWindowDrag->y = ComposMouseY;
     ComposRedrawCursor = 1;
-    Compositor_WindowRedraw(ComposMouseX,ComposMouseY,rootWindow.w,rootWindow.h);
-    Compositor_WindowRedraw(rootWindow.x,rootWindow.y,rootWindow.w,rootWindow.h);
+    Compositor_WindowRedraw(oldWinX,oldWinY,ComposWindowDrag->w,ComposWindowDrag->h);
+    Compositor_WindowRedraw(ComposWindowDrag->x,ComposWindowDrag->y,ComposWindowDrag->w,ComposWindowDrag->h);
+    ComposWindowDrag = 0;
   } else if(lclick && !ComposLButton) {
-    Framebuffer_RenderInvertOutline(ComposMouseX,ComposMouseY,482,322);
+    Window* win;
+    win = windowTail;
+    while(win != 0) {
+      if(ComposMouseX >= win->x && ComposMouseX < win->x+win->w && ComposMouseY >= win->y && ComposMouseY < win->y+20) {
+        ComposWindowDrag = win;
+        break;
+      } else if(ComposMouseX >= win->x && ComposMouseX < win->x+win->w && ComposMouseY >= win->y+20 && ComposMouseY < win->y+win->h) {
+        /* Mouse Click Event */
+        break;
+      }
+      win = win->prev;
+    }
+    if(ComposWindowDrag) {
+      Framebuffer_RenderInvertOutline(ComposMouseX,ComposMouseY,482,322);
+    }
   }
   ComposLButton = lclick;
 }

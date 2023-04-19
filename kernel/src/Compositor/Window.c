@@ -19,7 +19,7 @@ void Compositor_WindowRedraw(int x, int y, int w, int h) {
     Window* win = windowHead;
     int max_x, max_y;
     max_x = x+(w-1);
-    max_y = y+(h-1);
+    max_y = y+(h);
     Framebuffer_DrawRect(x,y,w,h,0x392442);
     while(win != 0) {
         if(!(max_x <= win->x || max_y <= win->y || x >= (win->x+(win->w-1)) || y >= (win->y+(win->h-1)))) {

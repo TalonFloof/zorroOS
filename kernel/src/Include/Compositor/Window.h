@@ -15,5 +15,8 @@ typedef struct {
     uint32_t* frontBuffer;
 } Window;
 
+extern Window* windowHead;
+extern Window* windowTail;
+
 void Compositor_WindowRedraw(int x, int y, int w, int h);
 void Compositor_WindowSetup();
