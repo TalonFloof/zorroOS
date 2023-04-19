@@ -16,7 +16,7 @@ void main() {
   /*Framebuffer_RenderMonoBitmap((fbWidth/2)-64,(fbHeight/2)-64,128,128,128,128,(uint8_t*)&zorroOSLogo,0xcdd6f4);*/
   /*Framebuffer_RenderMonoBitmap((fbWidth/2)-64,(fbHeight/2)+72,128,42,128,42,(uint8_t*)&zorroOSText,0xcdd6f4);*/
   Compositor_WindowSetup();
-  Compositor_RedrawCursor(0,0,1);
+  Compositor_RedrawCursor(0,0);
   Arch_IRQEnableDisable(1);
   Arch_Initialize();
   for(;;) {

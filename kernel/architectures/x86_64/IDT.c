@@ -3,6 +3,7 @@
 #include "PortIO.h"
 #include "Devices/PS2Mouse.h"
 #include <Utilities/String.h>
+#include <Panic.h>
 
 static IDTEntry idt[256];
 static IDTP idtr;
@@ -21,7 +22,7 @@ void IDT_Install(unsigned char entry, void* isr, unsigned char flags) {
 }
 
 void ExceptionHandler(int vector, ArchContext* context, int errcode) {
-  
+  Panic("Unexpected Exception!");
 }
 
 void IRQHandler(int vector, ArchContext* context) {

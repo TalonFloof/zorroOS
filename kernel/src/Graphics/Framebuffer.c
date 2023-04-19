@@ -47,13 +47,17 @@ void invert(uint32_t* base, int len) {
 }
 
 void Framebuffer_RenderInvertOutline(int x, int y, int w, int h) {
-  invert(&((uint32_t*)fbPtr)[(y*fbWidth)+x],w);
+  invert(&((uint32_t*)fbPtr)[(y*fbWidth)+(x+(x<0?-x:0))],w+(x<0?x:((x+w)>fbWidth?-((x+w)-fbWidth):0)));
   int i;
   for(i=y+1;i<(y+h)-1;i++) {
-    invert(&((uint32_t*)fbPtr)[(i*fbWidth)+x],1);
-    invert(&((uint32_t*)fbPtr)[(i*fbWidth)+(x+(w-1))],1);
+    if(x >= 0 && x < fbWidth) {
+      invert(&((uint32_t*)fbPtr)[(i*fbWidth)+x],1);
+    }
+    if(x+(w-1) >= 0 && x+(w-1) < fbWidth) {
+      invert(&((uint32_t*)fbPtr)[(i*fbWidth)+(x+(w-1))],1);
+    }
   }
-  invert(&((uint32_t*)fbPtr)[((y+(h-1))*fbWidth)+x],w);
+  invert(&((uint32_t*)fbPtr)[((y+(h-1))*fbWidth)+(x+(x<0?-x:0))],w+(x<0?x:((x+w)>fbWidth?-((x+w)-fbWidth):0)));
 }
 
 void Framebuffer_Clear(uint32_t color) {

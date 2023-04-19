@@ -1,11 +1,12 @@
 #pragma once
 #include <stdint.h>
 
-
+#define WINDOW_NOMOVE 1
 
 typedef struct {
     void* prev;
     void* next;
+    uint64_t id;
     uint16_t x;
     uint16_t y;
     uint16_t w;
@@ -18,5 +19,6 @@ typedef struct {
 extern Window* windowHead;
 extern Window* windowTail;
 
+void Compositor_MoveWindowToFront(Window* win);
 void Compositor_WindowRedraw(int x, int y, int w, int h);
 void Compositor_WindowSetup();
