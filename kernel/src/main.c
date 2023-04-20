@@ -6,6 +6,7 @@
 #include <Utilities/String.h>
 #include <Panic.h>
 #include <Compositor/MouseCursor.h>
+#include <Utilities/Logging.h>
 
 extern void* _binary____files_knxt_psf_start;
 extern void* _binary____files_unifont_psf_start;
@@ -18,6 +19,8 @@ void main() {
   Compositor_WindowSetup();
   Compositor_RedrawCursor(0,0);
   Arch_IRQEnableDisable(1);
+  Logger_Log("zorroOS, Copyright (C) 2020-2023 TalonFox");
+  Logger_Log("Licensed under the MIT License");
   Arch_Initialize();
   for(;;) {
     Arch_IRQEnableDisable(1);
