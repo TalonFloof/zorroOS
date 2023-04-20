@@ -55,7 +55,7 @@ void Compositor_GetMousePosition(int* mouseX, int* mouseY) {
 void Compositor_SetMousePosition(int mouseX, int mouseY) {
   int oldX, oldY;
   if(ComposLButton && ComposWindowDrag != 0) {
-    Framebuffer_RenderInvertOutline(ComposMouseX-ComposWindowX,ComposMouseY-ComposWindowY,482,322);
+    Framebuffer_RenderInvertOutline(ComposMouseX-ComposWindowX,ComposMouseY-ComposWindowY,ComposWindowDrag->w,ComposWindowDrag->h);
   }
   oldX = ComposMouseX;
   oldY = ComposMouseY;
@@ -73,17 +73,16 @@ void Compositor_SetMousePosition(int mouseX, int mouseY) {
   ComposMouseY = mouseY;
   Compositor_RedrawCursor(oldX,oldY);
   if(ComposLButton && ComposWindowDrag != 0) {
-    Framebuffer_RenderInvertOutline(mouseX-ComposWindowX,mouseY-ComposWindowY,482,322);
+    Framebuffer_RenderInvertOutline(mouseX-ComposWindowX,mouseY-ComposWindowY,ComposWindowDrag->w,ComposWindowDrag->h);
   }
 }
 
 void Compositor_SetMouseStatus(int lclick) {
   if(!lclick && ComposLButton && ComposWindowDrag != 0) {
-    /*Framebuffer_RenderInvertOutline(ComposMouseX-ComposWindowX,ComposMouseY-ComposWindowY,482,322);*/
     int oldWinX = ComposWindowDrag->x;
     int oldWinY = ComposWindowDrag->y;
-    ComposWindowDrag->x = MAX(ComposMouseX-ComposWindowX,0);
-    ComposWindowDrag->y = MAX(ComposMouseY-ComposWindowY,0);
+    ComposWindowDrag->x = MIN(MAX(ComposMouseX-ComposWindowX,0),fbWidth-ComposWindowDrag->w);
+    ComposWindowDrag->y = MIN(MAX(ComposMouseY-ComposWindowY,0),fbHeight-(ComposWindowDrag->h-1));
     Compositor_MoveWindowToFront(ComposWindowDrag);
     Compositor_WindowRedraw(oldWinX,oldWinY,ComposWindowDrag->w,ComposWindowDrag->h);
     Compositor_WindowRedraw(ComposWindowDrag->x,ComposWindowDrag->y,ComposWindowDrag->w,ComposWindowDrag->h);
@@ -93,7 +92,7 @@ void Compositor_SetMouseStatus(int lclick) {
     Window* win;
     win = windowTail;
     while(win != 0) {
-      if(ComposMouseX >= win->x && ComposMouseX < win->x+win->w && ComposMouseY >= win->y && ComposMouseY < win->y+20) {
+      if(ComposMouseX >= win->x && ComposMouseX < win->x+win->w && ComposMouseY >= win->y && ComposMouseY < win->y+20 && !(win->flags & WINDOW_NOMOVE)) {
         ComposWindowDrag = win;
         ComposWindowX = ComposMouseX-win->x;
         ComposWindowY = ComposMouseY-win->y;

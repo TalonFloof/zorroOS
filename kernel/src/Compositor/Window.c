@@ -8,8 +8,6 @@
 #define MAX(__x, __y) ((__x) > (__y) ? (__x) : (__y))
 
 Window rootWindow;
-Window rWindow;
-Window reWindow;
 uint32_t rootWinData[482*322];
 
 Window* windowHead;
@@ -88,7 +86,7 @@ void Compositor_MoveWindowToFront(Window* win) {
 }
 
 void Compositor_WindowSetup() {
-    rootWindow.next = &rWindow;
+    rootWindow.next = 0;
     rootWindow.prev = 0;
     rootWindow.id = 1;
     rootWindow.x = (fbWidth/2)-(482/2);
@@ -97,30 +95,17 @@ void Compositor_WindowSetup() {
     rootWindow.h = 322;
     rootWindow.backBuffer = (uint32_t*)&rootWinData;
     rootWindow.frontBuffer = (uint32_t*)&rootWinData;
-    rWindow.next = &reWindow;
-    rWindow.prev = &rootWindow;
-    rWindow.id = 2;
-    rWindow.x = 0;
-    rWindow.y = 0;
-    rWindow.w = 482;
-    rWindow.h = 322;
-    rWindow.backBuffer = (uint32_t*)&rootWinData;
-    rWindow.frontBuffer = (uint32_t*)&rootWinData;
-    reWindow.next = 0;
-    reWindow.prev = &rWindow;
-    reWindow.id = 3;
-    reWindow.x = fbWidth-482;
-    reWindow.y = 0;
-    reWindow.w = 482;
-    reWindow.h = 322;
-    reWindow.backBuffer = (uint32_t*)&rootWinData;
-    reWindow.frontBuffer = (uint32_t*)&rootWinData;
     windowHead = &rootWindow;
-    windowTail = &reWindow;
+    windowTail = &rootWindow;
     Framebuffer_SwapBuffer((uint8_t*)rootWindow.frontBuffer,rootWindow.w,rootWindow.h,32);
     Framebuffer_DrawRect(0,0,fbWidth,fbHeight,0xff505050);
     Framebuffer_DrawRect(1,1,fbWidth-2,fbHeight-3,0xff101010);
     Framebuffer_RenderString(1,1,0xff505050,(PSFHeader*)&_binary____files_knxt_psf_start,"System Console");
     Framebuffer_SwapBuffer(0,0,0,0);
     Compositor_WindowRedraw(0,0,fbWidth,fbHeight);
+}
+
+void Compositor_SwapWindowBuffer(Window* win) {
+  memcpy(win->frontBuffer,win->backBuffer,(win->w*win->h)*4);
+  Compositor_WindowRedraw(win->x,win->y,win->w,win->h);
 }

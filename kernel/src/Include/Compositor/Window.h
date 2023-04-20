@@ -22,3 +22,4 @@ extern Window* windowTail;
 void Compositor_MoveWindowToFront(Window* win);
 void Compositor_WindowRedraw(int x, int y, int w, int h);
 void Compositor_WindowSetup();
+void Compositor_SwapWindowBuffer(Window* win);
