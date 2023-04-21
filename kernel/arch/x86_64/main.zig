@@ -25,4 +25,6 @@ pub fn doLog(
     try writer.print(level.asText() ++ " -> " ++ format ++ "\n", args);
 }
 
-pub fn earlyInitialize() void {}
+pub fn earlyInitialize() void {
+    idt.initialize();
+}

@@ -33,6 +33,7 @@ pub fn build(b: *Builder) !void {
     });
     kernel.addModule("limine", limineMod);
     kernel.addModule("native", nativeMod);
+    kernel.addObjectFile("arch/x86_64/isr.o");
     kernel.code_model = .kernel;
     kernel.setLinkerScriptPath(.{ .path = "link_scripts/x86_64-Limine.ld" });
     kernel.override_dest_dir = .{ .custom = "../" };

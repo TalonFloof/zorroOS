@@ -9,6 +9,7 @@
 Building zorroOS is simple.    
 First, ensure that you have the following depenedencies:
 - `zig` (At least latest stable)
+- `nasm`
 - `xorriso`
 - `git`
 
