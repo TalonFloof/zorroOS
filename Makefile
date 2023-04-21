@@ -1,7 +1,10 @@
-build-x86_64-Limine:
-	cd kernel; make x86_64-Limine; cd ..
+build: limine-zig
+	cd kernel; zig build; cd ..
 
-iso: build-x86_64-Limine
+limine-zig:
+	git clone https://github.com/limine-bootloader/limine-zig.git --depth=1
+
+iso: build
 	git clone --branch v4.x-branch-binary --depth 1 https://github.com/limine-bootloader/limine /tmp/limine
 	mkdir -p /tmp/zorro_iso/EFI/BOOT
 	cp --force /tmp/limine/BOOTX64.EFI /tmp/limine/limine-cd-efi.bin /tmp/limine/limine-cd.bin /tmp/limine/limine.sys boot/x86_64/* kernel/ZorroKernel /tmp/zorro_iso
@@ -11,4 +14,4 @@ iso: build-x86_64-Limine
 	/tmp/limine/limine-deploy zorroOS.iso
 	rm -r --force /tmp/limine
 	rm -r --force /tmp/zorro_iso
-.PHONY: build-x86_64-Limine
+.PHONY: build

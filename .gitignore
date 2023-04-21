@@ -7,10 +7,9 @@
 *.o
 ZorroKernel
 zorroOS.iso
-fennecfstool
-zorroOS.hd
 *.bin
-zorroOS.qcow2
+limine-zig/
+zig-cache/
 
 # Ignore common editor/system specific metadata
 .DS_Store
