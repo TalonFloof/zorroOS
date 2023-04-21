@@ -1,5 +1,6 @@
 const std = @import("std");
 const limine = @import("limine");
+const idt = @import("idt.zig");
 
 export var console_request: limine.TerminalRequest = .{};
 
