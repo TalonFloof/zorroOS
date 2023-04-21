@@ -2,18 +2,16 @@
 
 # **zorroOS**: A hobby operating system written from scratch
 
-**zorroOS** is a hobby operating system written in ANSI C (with some inline assembly), currently targeting x86_64 PCs.
+**zorroOS** is a hobby operating system written in Zig (with some inline assembly), currently targeting x86_64 PCs.
 
 ## Building
 
 Building zorroOS is simple.    
 First, ensure that you have the following depenedencies:
-- `x86_64-elf-gcc`
-- `x86_64-elf-binutils`
+- `zig` (At least latest stable)
 - `nasm`
 - `xorriso`
 - `git`
-- `zig` (For userspace **NOT REQUIRED YET**)
 
 Then, clone the repository
 ```sh
