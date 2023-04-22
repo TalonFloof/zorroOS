@@ -35,4 +35,5 @@ pub fn setDescriptor(vector: usize, i: *void, flags: u8) void {
     descriptor.isrHigh = @truncate(u32, @ptrToInt(i) >> 32);
     descriptor.reserved = 0;
     descriptor.zero = 0;
+    isr.stub();
 }
