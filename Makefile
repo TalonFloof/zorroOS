@@ -1,9 +1,9 @@
 build: limine-zig
-	cd kernel; nasm -f elf64 arch/x86_64/isr.S -o arch/x86_64/isr.o; zig build; cd ..
-	rm -f kernel/arch/x86_64/isr.o
+	cd kernel; zig build; cd ..
 
 limine-zig:
 	git clone https://github.com/limine-bootloader/limine-zig.git --depth=1
+	rm -f -r limine-zig/.git
 
 iso: build
 	git clone --branch v4.x-branch-binary --depth 1 https://github.com/limine-bootloader/limine /tmp/limine
@@ -15,4 +15,4 @@ iso: build
 	/tmp/limine/limine-deploy zorroOS.iso
 	rm -r --force /tmp/limine
 	rm -r --force /tmp/zorro_iso
-.PHONY: build
+.PHONY: build iso
