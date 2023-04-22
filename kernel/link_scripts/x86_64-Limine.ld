@@ -15,24 +15,32 @@ SECTIONS
 {
     . = 0xffffffff80000000;
 
+    _TEXT_START_ = .;
     .text : {
         *(.text .text.*)
     } : text
 
     . += CONSTANT(MAXPAGESIZE);
+    _TEXT_END_ = .;
 
+    _RODATA_START_ = .;
     .rodata : {
         *(.rodata .rodata.*)
     } : rodata
 
     . += CONSTANT(MAXPAGESIZE);
+    _RODATA_END_ = .;
 
+    _DATA_START_ = .;
     .data : {
         *(.data .data.*)
     } : data
+    _DATA_END_ = .;
 
+    _BSS_START_ = .;
     .bss : {
         *(COMMON)
         *(.bss .bss.*)
     } : data
+    _BSS_END_ = .;
 }

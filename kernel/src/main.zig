@@ -1,5 +1,6 @@
 const std = @import("std");
 const native = @import("native");
+const alloc = @import("alloc.zig");
 
 pub const std_options = struct {
     pub const logFn = native.doLog;
@@ -7,7 +8,7 @@ pub const std_options = struct {
 
 pub fn panic(msg: []const u8, stacktrace: ?*std.builtin.StackTrace, wat: ?usize) noreturn {
     _ = wat;
-    std.log.err("panic: {s}", .{msg});
+    std.log.debug("\x1b[30;41mpanic\x1b[0m: {s}\n", .{msg});
     if (stacktrace) |trace| {
         _ = trace;
     }
@@ -21,5 +22,6 @@ export fn ZorroKernelMain() callconv(.C) noreturn {
     native.earlyInitialize();
     std.log.info("zorroOS Kernel", .{});
     std.log.info("Copyright (C) 2020-2023 TalonFox, Licensed under the MIT License", .{});
-    @panic("Kernel booted sucessfully");
+    native.initialize();
+    @panic("Sucessfully Booted!");
 }

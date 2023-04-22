@@ -1,6 +1,9 @@
 const std = @import("std");
 const limine = @import("limine");
+const gdt = @import("gdt.zig");
 const idt = @import("idt.zig");
+const physmem = @import("physmem.zig");
+pub const context = @import("context.zig");
 
 export var console_request: limine.TerminalRequest = .{};
 
@@ -23,9 +26,6 @@ pub fn doLog(
 ) void {
     _ = scope;
     switch (level) {
-        .debug => {
-            _ = try writer.write("\x1b[1;30m");
-        },
         .info => {
             _ = try writer.write("\x1b[36m");
         },
@@ -35,12 +35,22 @@ pub fn doLog(
         .err => {
             _ = try writer.write("\x1b[31m");
         },
+        else => {},
     }
-    try writer.print(level.asText() ++ "\x1b[0m: " ++ format ++ "\n", args);
+    if (level == .debug) {
+        try writer.print(format, args);
+    } else {
+        try writer.print(level.asText() ++ "\x1b[0m: " ++ format ++ "\n", args);
+    }
 }
 
 pub noinline fn earlyInitialize() void {
+    gdt.initialize();
     idt.initialize();
+}
+
+pub noinline fn initialize() void {
+    physmem.initialize();
 }
 
 pub fn enableDisableInt(enabled: bool) void {

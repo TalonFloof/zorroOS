@@ -19,11 +19,12 @@ pub fn initialize() void {
     for (0..128) |i|
         setDescriptor(i, ISRTable[i], 0x8E);
 
-    asm volatile ("lidt (%[idt_ptr])"
+    asm volatile (
+        \\lidt (%[idt_ptr])
+        \\sti
         :
         : [idt_ptr] "r" (&IDTptr),
     );
-    asm volatile ("sti");
 }
 
 pub fn setDescriptor(vector: usize, i: *void, flags: u8) void {
