@@ -22,9 +22,35 @@ pub fn doLog(
     args: anytype,
 ) void {
     _ = scope;
-    try writer.print(level.asText() ++ " -> " ++ format ++ "\n", args);
+    switch (level) {
+        .debug => {
+            _ = try writer.write("\x1b[1;30m");
+        },
+        .info => {
+            _ = try writer.write("\x1b[36m");
+        },
+        .warn => {
+            _ = try writer.write("\x1b[33m");
+        },
+        .err => {
+            _ = try writer.write("\x1b[31m");
+        },
+    }
+    try writer.print(level.asText() ++ "\x1b[0m: " ++ format ++ "\n", args);
 }
 
 pub noinline fn earlyInitialize() void {
     idt.initialize();
+}
+
+pub fn enableDisableInt(enabled: bool) void {
+    if (enabled) {
+        asm volatile ("sti");
+    } else {
+        asm volatile ("cli");
+    }
+}
+
+pub inline fn halt() void {
+    asm volatile ("hlt");
 }

@@ -16,7 +16,7 @@ pub fn initialize() void {
     IDTptr.limit = 0xffff;
     IDTptr.base = &IDT[0];
 
-    for (0..256) |i|
+    for (0..128) |i|
         setDescriptor(i, ISRTable[i], 0x8E);
 
     asm volatile ("lidt (%[idt_ptr])"

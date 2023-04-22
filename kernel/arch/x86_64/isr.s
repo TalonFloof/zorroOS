@@ -1,93 +1,93 @@
-/*
- * Wow, I can't believe I wrote this back in 2021
- * It's amazing how much more I know now than before.
- */
+; Wow, I can't believe I wrote this back in 2021
+; It's amazing how much more I know now than before.
 
-.section .text
-.macro pushaq
-    pushq %rax
-    pushq %rbx
-    pushq %rcx
-    pushq %rdx
-    pushq %rsi
-    pushq %rdi
-    pushq %rbp
-    pushq %r8
-    pushq %r9
-    pushq %r10
-    pushq %r11
-    pushq %r12
-    pushq %r13
-    pushq %r14
-    pushq %r15
-.endm 
+bits 64
+section .text
+%macro pushaq 0
+    push rax
+    push rbx
+    push rcx
+    push rdx
+    push rsi
+    push rdi
+    push rbp
+    push r8
+    push r9
+    push r10
+    push r11
+    push r12
+    push r13
+    push r14
+    push r15
+%endmacro
 
-.macro popaq
-    popq %r15
-    popq %r14
-    popq %r13
-    popq %r12
-    popq %r11
-    popq %r10
-    popq %r9
-    popq %r8
-    popq %rbp
-    popq %rdi
-    popq %rsi
-    popq %rdx
-    popq %rcx
-    popq %rbx
-    popq %rax
-.endm
+%macro popaq 0
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop r11
+    pop r10
+    pop r9
+    pop r8
+    pop rbp
+    pop rdi
+    pop rsi
+    pop rdx
+    pop rcx
+    pop rbx
+    pop rax
+%endmacro
 
-.extern ExceptionHandler
-.extern IRQHandler
+extern ExceptionHandler
+extern IRQHandler
 
-.macro ISR_ERROR_CODE num
-	.global int\num
-	int\num:
+%macro ISR_ERROR_CODE 1
+	global int%1
+	int%1:
         cli
-        pushq 5*8(%rsp) // SS
-        pushq 5*8(%rsp) // RSP
-        pushq 5*8(%rsp) // RFLAGS
-        pushq 5*8(%rsp) // CS
-        pushq 5*8(%rsp) // RIP
+        push qword [rsp+5*8] ; SS
+        push qword [rsp+5*8] ; RSP
+        push qword [rsp+5*8] ; RFLAGS
+        push qword [rsp+5*8] ; CS
+        push qword [rsp+5*8] ; RIP
         pushaq
-        movq $\num, %rdi
-        movq %rsp, %rsi
-        movq 20*8(%rsp), %rdx
-        xorq %rbp, %rbp
+        mov rdi, %1
+        mov rsi, rsp
+        mov rdx, qword [rsp+20*8]
+        xor rbp, rbp
         call ExceptionHandler
         popaq
         iretq
-.endm
+%endmacro
 
-.macro ISR_NO_ERROR_CODE num
-	.global int\num
-	int\num:
+%macro ISR_NO_ERROR_CODE 1
+	global int%1
+	int%1:
 		cli
         pushaq
-        movq $\num, %rdi
-        movq %rsp, %rsi
-        xorq %rdx, %rdx
-        xorq %rbp, %rbp
+        mov rdi, %1
+        mov rsi, rsp
+        xor rdx, rdx
+        xor rbp, rbp
         call ExceptionHandler
         popaq
         iretq
-.endm
+%endmacro
 
-.macro IRQ num
-	.global int\num
-	int\num:
+%macro IRQ 1
+	global int%1
+	int%1:
 		cli
         pushaq
-        movq $\num, %rdi
-        movq %rsp, %rsi
-        xorq %rbp, %rbp
-        callq IRQHandler
+        mov rdi, %1
+        mov rsi, rsp
+        xor rbp, rbp
+        call IRQHandler
         popaq
         iretq
-.endm
+%endmacro
+
 
 ISR_NO_ERROR_CODE  0
 ISR_NO_ERROR_CODE  1
@@ -122,240 +122,17 @@ ISR_NO_ERROR_CODE 29
 ISR_ERROR_CODE 30
 ISR_NO_ERROR_CODE 31
 
-IRQ 32
-IRQ 33
-IRQ 34
-IRQ 35
-IRQ 36
-IRQ 37
-IRQ 38
-IRQ 39
+%assign num 32
+%rep 256-32
+    IRQ num
+%assign num (num + 1)
+%endrep
 
-IRQ 40
-IRQ 41
-IRQ 42
-IRQ 43
-IRQ 44
-IRQ 45
-IRQ 46
-IRQ 47
-IRQ 48
-IRQ 49
-
-IRQ 50
-IRQ 51
-IRQ 52
-IRQ 53
-IRQ 54
-IRQ 55
-IRQ 56
-IRQ 57
-IRQ 58
-IRQ 59
-
-IRQ 60
-IRQ 61
-IRQ 62
-IRQ 63
-IRQ 64
-IRQ 65
-IRQ 66
-IRQ 67
-IRQ 68
-IRQ 69
-
-IRQ 70
-IRQ 71
-IRQ 72
-IRQ 73
-IRQ 74
-IRQ 75
-IRQ 76
-IRQ 77
-IRQ 78
-IRQ 79
-
-IRQ 80
-IRQ 81
-IRQ 82
-IRQ 83
-IRQ 84
-IRQ 85
-IRQ 86
-IRQ 87
-IRQ 88
-IRQ 89
-
-IRQ 90
-IRQ 91
-IRQ 92
-IRQ 93
-IRQ 94
-IRQ 95
-IRQ 96
-IRQ 97
-IRQ 98
-IRQ 99
-
-IRQ 100
-IRQ 101
-IRQ 102
-IRQ 103
-IRQ 104
-IRQ 105
-IRQ 106
-IRQ 107
-IRQ 108
-IRQ 109
-
-IRQ 110
-IRQ 111
-IRQ 112
-IRQ 113
-IRQ 114
-IRQ 115
-IRQ 116
-IRQ 117
-IRQ 118
-IRQ 119
-
-IRQ 120
-IRQ 121
-IRQ 122
-IRQ 123
-IRQ 124
-IRQ 125
-IRQ 126
-IRQ 127
-
-.section .rodata
-.global ISRTable
+section .rodata
+global ISRTable
 ISRTable:
-    .quad int0
-    .quad int1
-    .quad int2
-    .quad int3
-    .quad int4
-    .quad int5
-    .quad int6
-    .quad int7
-    .quad int8
-    .quad int9
-    .quad int10
-    .quad int11
-    .quad int12
-    .quad int13
-    .quad int14
-    .quad int15
-    .quad int16
-    .quad int17
-    .quad int18
-    .quad int19
-    .quad int20
-    .quad int21
-    .quad int22
-    .quad int23
-    .quad int24
-    .quad int25
-    .quad int26
-    .quad int27
-    .quad int28
-    .quad int29
-    .quad int30
-    .quad int31
-    .quad int32
-    .quad int33
-    .quad int34
-    .quad int35
-    .quad int36
-    .quad int37
-    .quad int38
-    .quad int39
-    .quad int40
-    .quad int41
-    .quad int42
-    .quad int43
-    .quad int44
-    .quad int45
-    .quad int46
-    .quad int47
-    .quad int48
-    .quad int49
-    .quad int50
-    .quad int51
-    .quad int52
-    .quad int53
-    .quad int54
-    .quad int55
-    .quad int56
-    .quad int57
-    .quad int58
-    .quad int59
-    .quad int60
-    .quad int61
-    .quad int62
-    .quad int63
-    .quad int64
-    .quad int65
-    .quad int66
-    .quad int67
-    .quad int68
-    .quad int69
-    .quad int70
-    .quad int71
-    .quad int72
-    .quad int73
-    .quad int74
-    .quad int75
-    .quad int76
-    .quad int77
-    .quad int78
-    .quad int79
-    .quad int80
-    .quad int81
-    .quad int82
-    .quad int83
-    .quad int84
-    .quad int85
-    .quad int86
-    .quad int87
-    .quad int88
-    .quad int89
-    .quad int90
-    .quad int91
-    .quad int92
-    .quad int93
-    .quad int94
-    .quad int95
-    .quad int96
-    .quad int97
-    .quad int98
-    .quad int99
-    .quad int100
-    .quad int101
-    .quad int102
-    .quad int103
-    .quad int104
-    .quad int105
-    .quad int106
-    .quad int107
-    .quad int108
-    .quad int109
-    .quad int110
-    .quad int111
-    .quad int112
-    .quad int113
-    .quad int114
-    .quad int115
-    .quad int116
-    .quad int117
-    .quad int118
-    .quad int119
-    .quad int120
-    .quad int121
-    .quad int122
-    .quad int123
-    .quad int124
-    .quad int125
-    .quad int126
-    .quad int127
+%assign num 0
+%rep 256-32
+    dq int%[num]
+%assign num (num + 1)
+%endrep

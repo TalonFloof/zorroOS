@@ -1,5 +1,6 @@
 build: limine-zig
-	cd kernel; zig build; cd ..
+	cd kernel; nasm -f elf64 arch/x86_64/isr.s -o arch/x86_64/isr.o; zig build; cd ..
+	rm -f -r kernel/arch/x86_64/isr.o
 
 limine-zig:
 	git clone https://github.com/limine-bootloader/limine-zig.git --depth=1
