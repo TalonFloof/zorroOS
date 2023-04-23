@@ -41,6 +41,9 @@ pub const Header = extern struct {
 
 pub fn initialize() void {
     if (rsdp_request.response) |rsdp_response| {
+        if (@ptrToInt(rsdp_response.address) == 0) {
+            @panic("System is not ACPI-compliant");
+        }
         const rsdp: *RSDP = @ptrCast(*RSDP, rsdp_response.address);
         const xsdt = @intToPtr(*Header, switch (rsdp.revision == 2) {
             true => rsdp.XSDT,

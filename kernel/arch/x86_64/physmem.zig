@@ -56,11 +56,12 @@ pub fn initialize() void {
     } else {
         @panic("Bootloader did not provide a valid memory map!");
     }
-    std.log.info("Memory: {d}K/{d}K available ({d}K acpi data, {d}K bootloader data, {d}K kernel code, {d}K rodata, {d}K rwdata)", .{
+    std.log.info("Memory: {d}K/{d}K available ({d}K acpi data, {d}K boot data, {d}K kernel, {d}K kernel code, {d}K rodata, {d}K rwdata)", .{
         (memTotal - (bootldrUsed + acpiUsed + kernelUsed)) / 1024,
         memTotal / 1024,
         acpiUsed / 1024,
         bootldrUsed / 1024,
+        kernelUsed / 1024,
         (@ptrToInt(&_TEXT_END_) - @ptrToInt(&_TEXT_START_)) / 1024,
         (@ptrToInt(&_RODATA_END_) - @ptrToInt(&_RODATA_START_)) / 1024,
         (@ptrToInt(&_BSS_END_) - @ptrToInt(&_DATA_START_)) / 1024,
