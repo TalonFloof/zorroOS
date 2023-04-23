@@ -12,7 +12,7 @@ iso: build
 	cp --force /tmp/limine/BOOTX64.EFI /tmp/limine/limine-cd-efi.bin /tmp/limine/limine-cd.bin /tmp/limine/limine.sys boot/x86_64/* kernel/ZorroKernel /tmp/zorro_iso
 	mv /tmp/zorro_iso/BOOTX64.EFI /tmp/zorro_iso/EFI/BOOT/BOOTX64.EFI
 	xorriso -as mkisofs -b limine-cd.bin -no-emul-boot -boot-load-size 4 -boot-info-table --efi-boot limine-cd-efi.bin -efi-boot-part --efi-boot-image --protective-msdos-label /tmp/zorro_iso -o zorroOS.iso
-	$(CC) /tmp/limine/limine-deploy.c -o /tmp/limine/limine-deploy
+	zig cc /tmp/limine/limine-deploy.c -o /tmp/limine/limine-deploy
 	/tmp/limine/limine-deploy zorroOS.iso
 	rm -r --force /tmp/limine
 	rm -r --force /tmp/zorro_iso

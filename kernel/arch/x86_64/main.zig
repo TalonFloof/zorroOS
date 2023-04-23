@@ -4,6 +4,7 @@ const gdt = @import("gdt.zig");
 const idt = @import("idt.zig");
 const physmem = @import("physmem.zig");
 pub const context = @import("context.zig");
+const acpi = @import("acpi.zig");
 
 export var console_request: limine.TerminalRequest = .{};
 
@@ -51,6 +52,7 @@ pub noinline fn earlyInitialize() void {
 
 pub noinline fn initialize() void {
     physmem.initialize();
+    acpi.initialize();
 }
 
 pub fn enableDisableInt(enabled: bool) void {

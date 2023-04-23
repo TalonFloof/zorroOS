@@ -10,7 +10,7 @@ var gdtEntries = [16]u64{
     0x0000920000000000, // 0x30: 64-BIT KDATA
     0x0000F20000000000, // 0x3B: 64-BIT UDATA
     0x0020FA0000000000, // 0x43: 64-BIT UCODE
-    0,
+    0, // 0x48 TSS
     0,
     0,
     0,

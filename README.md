@@ -12,7 +12,6 @@ First, ensure that you have the following depenedencies:
 - `nasm`
 - `xorriso`
 - `git`
-- Any ISO C99 (or later) compliant compiler (for `limine-deploy`)
 
 Then, clone the repository
 ```sh
