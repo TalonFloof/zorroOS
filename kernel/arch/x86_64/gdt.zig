@@ -10,7 +10,7 @@ var gdtEntries = [16]u64{
     0x0000920000000000, // 0x30: 64-BIT KDATA
     0x0000F20000000000, // 0x3B: 64-BIT UDATA
     0x0020FA0000000000, // 0x43: 64-BIT UCODE
-    0, // 0x48 TSS
+    0x0000E90000000067, // 0x48 TSS
     0,
     0,
     0,
@@ -24,7 +24,15 @@ const GDTRegister = packed struct {
     base: *const u64,
 };
 
-const TSS = packed struct {};
+pub const TSS = struct {
+    reserved1: u32 align(1),
+    rsp: [3]u64 align(1),
+    reserved2: u64 align(1),
+    ist: [7]u64 align(1),
+    reserved3: u64 align(1),
+    reserved4: u16 align(1),
+    ioMapBase: u16 align(1),
+};
 
 pub fn initialize() void {
     var gdtr = GDTRegister{

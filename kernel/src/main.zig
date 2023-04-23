@@ -1,6 +1,5 @@
 const std = @import("std");
 const native = @import("native");
-const alloc = @import("alloc.zig");
 
 pub const std_options = struct {
     pub const logFn = native.doLog;

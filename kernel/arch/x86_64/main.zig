@@ -3,8 +3,10 @@ const limine = @import("limine");
 const gdt = @import("gdt.zig");
 const idt = @import("idt.zig");
 const physmem = @import("physmem.zig");
-pub const context = @import("context.zig");
 const acpi = @import("acpi.zig");
+
+pub const context = @import("context.zig");
+pub const hart = @import("hart.zig");
 
 export var console_request: limine.TerminalRequest = .{};
 

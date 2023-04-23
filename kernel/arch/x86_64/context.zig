@@ -3,7 +3,7 @@ const std = @import("std");
 const REG_IP = 256;
 const REG_SP = 257;
 
-pub const ArchContext = packed struct {
+pub const Context = packed struct {
     r15: u64,
     r14: u64,
     r13: u64,
@@ -26,7 +26,7 @@ pub const ArchContext = packed struct {
     ss: u64,
 
     // Arguments: RDI, RSI, RDX, RCX, R8, R9
-    pub fn getReg(self: *ArchContext, index: usize) usize {
+    pub fn getReg(self: *Context, index: usize) usize {
         switch (index) {
             0 => {
                 return self.rdi;
@@ -57,7 +57,7 @@ pub const ArchContext = packed struct {
             },
         }
     }
-    pub fn setReg(self: *ArchContext, index: usize, val: usize) void {
+    pub fn setReg(self: *Context, index: usize, val: usize) void {
         switch (index) {
             0 => {
                 self.rdi = val;
@@ -86,7 +86,7 @@ pub const ArchContext = packed struct {
             else => {},
         }
     }
-    pub fn dump(self: *ArchContext) void {
+    pub fn dump(self: *Context) void {
         std.log.debug("=== BEGIN CONTEXT DUMP ===\n", .{});
         std.log.debug("rax: 0x{x:0>16} rbx: 0x{x:0>16} rcx: 0x{x:0>16} rdx: 0x{x:0>16}\n", .{ self.rax, self.rbx, self.rcx, self.rdx });
         std.log.debug("rsi: 0x{x:0>16} rdi: 0x{x:0>16} rbp: 0x{x:0>16} rsp: 0x{x:0>16}\n", .{ self.rsi, self.rdi, self.rbp, self.rsp });
