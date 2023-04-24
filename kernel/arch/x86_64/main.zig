@@ -58,6 +58,10 @@ pub noinline fn initialize() void {
     acpi.initialize();
 }
 
+pub fn hartInit(info: *limine.SmpInfo) callconv(.C) noreturn {
+    _ = info;
+}
+
 pub fn enableDisableInt(enabled: bool) void {
     if (enabled) {
         asm volatile ("sti");

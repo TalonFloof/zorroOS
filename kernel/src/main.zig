@@ -28,3 +28,10 @@ export fn ZorroKernelMain() callconv(.C) noreturn {
     native.initialize();
     @panic("Sucessfully Booted!");
 }
+
+export fn ZorroKernelHartMain() callconv(.C) noreturn {
+    while (true) {
+        native.enableDisableInt(true);
+        native.halt();
+    }
+}

@@ -1,4 +1,5 @@
 const std = @import("std");
+const hart = @import("hart.zig");
 
 var gdtEntries = [16]u64{
     0x0000000000000000, // 0x00: NULL
@@ -39,6 +40,8 @@ pub fn initialize() void {
         .limit = (16 * 8) - 1,
         .base = @ptrCast(*const u64, &gdtEntries),
     };
+    gdtEntries[9] = gdtEntries[9] | ((@ptrToInt(hart.getHart()) & 0xFFFFFF) << 16) | (((@ptrToInt(hart.getHart()) & 0xFF000000) >> 24) << 56);
+    gdtEntries[10] = @ptrToInt(hart.getHart()) >> 32;
     asm volatile (
         \\lgdt (%rdi)
         \\mov $0x30, %ax
@@ -48,6 +51,8 @@ pub fn initialize() void {
         \\mov $0x3b, %ax
         \\mov %ax, %fs
         \\mov %ax, %gs
+        \\mov $0x48, %ax
+        \\ltr %ax
         :
         : [ptr] "{rdi}" (&gdtr),
         : "rax"
