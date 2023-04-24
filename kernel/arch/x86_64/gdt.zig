@@ -25,13 +25,13 @@ const GDTRegister = packed struct {
 };
 
 pub const TSS = struct {
-    reserved1: u32 align(1),
-    rsp: [3]u64 align(1),
-    reserved2: u64 align(1),
-    ist: [7]u64 align(1),
-    reserved3: u64 align(1),
-    reserved4: u16 align(1),
-    ioMapBase: u16 align(1),
+    reserved1: u32 align(1) = 0,
+    rsp: [3]u64 align(1) = [_]u64{0} ** 3,
+    reserved2: u64 align(1) = 0,
+    ist: [7]u64 align(1) = [_]u64{0} ** 7,
+    reserved3: u64 align(1) = 0,
+    reserved4: u16 align(1) = 0,
+    ioMapBase: u16 align(1) = 0,
 };
 
 pub fn initialize() void {

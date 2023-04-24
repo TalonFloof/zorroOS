@@ -48,6 +48,7 @@ pub fn doLog(
 }
 
 pub noinline fn earlyInitialize() void {
+    hart.initialize0();
     gdt.initialize();
     idt.initialize();
 }
@@ -67,4 +68,27 @@ pub fn enableDisableInt(enabled: bool) void {
 
 pub inline fn halt() void {
     asm volatile ("hlt");
+}
+
+// x86_64 Exclusives
+pub fn rdmsr(index: u32) u64 {
+    var low: u32 = 0;
+    var high: u32 = 0;
+    asm volatile ("rdmsr"
+        : [lo] "={rax}" (low),
+          [hi] "={rdx}" (high),
+        : [ind] "{rcx}" (index),
+    );
+    return (@intCast(u64, high) << 32) | @intCast(u64, low);
+}
+
+pub fn wrmsr(index: u32, val: u64) void {
+    var low: u32 = @intCast(u32, val & 0xFFFFFFFF);
+    var high: u32 = @intCast(u32, val >> 32);
+    asm volatile ("wrmsr"
+        :
+        : [lo] "{rax}" (low),
+          [hi] "{rdx}" (high),
+          [ind] "{rcx}" (index),
+    );
 }
