@@ -1,5 +1,6 @@
 const std = @import("std");
 const limine = @import("limine");
+const alloc = @import("root").alloc;
 
 export var memmap_request: limine.MemoryMapRequest = .{};
 
@@ -15,11 +16,15 @@ pub fn initialize() void {
     var kernelUsed: u64 = 0;
     var bootldrUsed: u64 = 0;
     var acpiUsed: u64 = 0;
+    var i: usize = 0;
     if (memmap_request.response) |memmap_response| {
         for (memmap_response.entries()) |entry| {
             var entryKind: []const u8 = "Unknown";
             switch (entry.kind) {
                 .usable => {
+                    alloc.entries[i].begin = entry.base + 0xffff800000000000;
+                    alloc.entries[i].end = entry.base + entry.length + 0xffff800000000000;
+                    i += 1;
                     memTotal += entry.length;
                     entryKind = "Usable Block";
                 },

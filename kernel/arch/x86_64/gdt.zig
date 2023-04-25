@@ -40,8 +40,8 @@ pub fn initialize() void {
         .limit = (16 * 8) - 1,
         .base = @ptrCast(*const u64, &gdtEntries),
     };
-    gdtEntries[9] = gdtEntries[9] | ((@ptrToInt(hart.getHart()) & 0xFFFFFF) << 16) | (((@ptrToInt(hart.getHart()) & 0xFF000000) >> 24) << 56);
-    gdtEntries[10] = @ptrToInt(hart.getHart()) >> 32;
+    gdtEntries[9] = gdtEntries[9] | ((@ptrToInt(&(hart.getHart().archData.tss)) & 0xFFFFFF) << 16) | (((@ptrToInt(&(hart.getHart().archData.tss)) & 0xFF000000) >> 24) << 56);
+    gdtEntries[10] = @ptrToInt(&(hart.getHart().archData.tss)) >> 32;
     asm volatile (
         \\lgdt (%rdi)
         \\mov $0x30, %ax

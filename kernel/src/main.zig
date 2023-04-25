@@ -1,6 +1,8 @@
 const std = @import("std");
 const native = @import("native");
 pub const hart = @import("hart.zig");
+pub const alloc = @import("alloc.zig");
+pub const Spinlock = @import("spinlock.zig").Spinlock;
 
 pub const std_options = struct {
     pub const logFn = native.doLog;
@@ -23,15 +25,7 @@ pub fn panic(msg: []const u8, stacktrace: ?*std.builtin.StackTrace, wat: ?usize)
 
 export fn ZorroKernelMain() callconv(.C) noreturn {
     native.earlyInitialize();
-    std.log.info("zorroOS Kernel", .{});
-    std.log.info("Copyright (C) 2020-2023 TalonFox, Licensed under the MIT License", .{});
+    std.log.debug("zorroOS\n\n", .{});
     native.initialize();
     @panic("Sucessfully Booted!");
-}
-
-export fn ZorroKernelHartMain() callconv(.C) noreturn {
-    while (true) {
-        native.enableDisableInt(true);
-        native.halt();
-    }
 }

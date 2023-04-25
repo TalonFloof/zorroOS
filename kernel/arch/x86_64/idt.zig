@@ -27,6 +27,15 @@ pub fn initialize() void {
     );
 }
 
+pub fn fastInit() void {
+    asm volatile (
+        \\lidt (%[idt_ptr])
+        \\sti
+        :
+        : [idt_ptr] "r" (&IDTptr),
+    );
+}
+
 pub fn setDescriptor(vector: usize, i: *void, flags: u8) void {
     const descriptor = &IDT[vector];
     descriptor.isrLow = @truncate(u16, @ptrToInt(i) & 0xFFFF);

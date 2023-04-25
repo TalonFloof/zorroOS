@@ -4,9 +4,9 @@ const gdt = @import("gdt.zig");
 const idt = @import("idt.zig");
 const physmem = @import("physmem.zig");
 const acpi = @import("acpi.zig");
+const root = @import("root");
 
 pub const context = @import("context.zig");
-pub const hart = @import("hart.zig");
 
 export var console_request: limine.TerminalRequest = .{};
 
@@ -20,6 +20,7 @@ fn limineWriteString(_: @TypeOf(.{}), string: []const u8) error{}!usize {
 
 const Writer = std.io.Writer(@TypeOf(.{}), error{}, limineWriteString);
 const writer = Writer{ .context = .{} };
+var writerLock: root.Spinlock = root.Spinlock.unaquired;
 
 pub fn doLog(
     comptime level: std.log.Level,
@@ -27,6 +28,7 @@ pub fn doLog(
     comptime format: []const u8,
     args: anytype,
 ) void {
+    writerLock.acquire("WriterSpinlock");
     _ = scope;
     switch (level) {
         .info => {
@@ -45,10 +47,10 @@ pub fn doLog(
     } else {
         try writer.print(level.asText() ++ "\x1b[0m: " ++ format ++ "\n", args);
     }
+    writerLock.release();
 }
 
 pub noinline fn earlyInitialize() void {
-    hart.initialize0();
     gdt.initialize();
     idt.initialize();
 }
@@ -56,10 +58,6 @@ pub noinline fn earlyInitialize() void {
 pub noinline fn initialize() void {
     physmem.initialize();
     acpi.initialize();
-}
-
-pub fn hartInit(info: *limine.SmpInfo) callconv(.C) noreturn {
-    _ = info;
 }
 
 pub fn enableDisableInt(enabled: bool) void {
