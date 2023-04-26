@@ -1,6 +1,5 @@
 const std = @import("std");
 const native = @import("native");
-pub const hart = @import("hart.zig");
 pub const alloc = @import("alloc.zig");
 pub const Spinlock = @import("spinlock.zig").Spinlock;
 
@@ -25,7 +24,10 @@ pub fn panic(msg: []const u8, stacktrace: ?*std.builtin.StackTrace, wat: ?usize)
 
 export fn ZorroKernelMain() callconv(.C) noreturn {
     native.earlyInitialize();
-    std.log.debug("zorroOS\n\n", .{});
+    std.log.debug("zorroOS ", .{});
     native.initialize();
-    @panic("Sucessfully Booted!");
+    while (true) { // Infinite loop in case an NMI is triggered
+        native.enableDisableInt(false);
+        native.halt();
+    }
 }

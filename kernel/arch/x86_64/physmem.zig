@@ -4,13 +4,6 @@ const alloc = @import("root").alloc;
 
 export var memmap_request: limine.MemoryMapRequest = .{};
 
-extern const _TEXT_START_: *allowzero void;
-extern const _TEXT_END_: *allowzero void;
-extern const _RODATA_START_: *allowzero void;
-extern const _RODATA_END_: *allowzero void;
-extern const _DATA_START_: *allowzero void;
-extern const _BSS_END_: *allowzero void;
-
 pub fn initialize() void {
     var memTotal: u64 = 0;
     var kernelUsed: u64 = 0;
@@ -56,19 +49,9 @@ pub fn initialize() void {
                     entryKind = "Framebuffer";
                 },
             }
-            std.log.debug("Limine MemMap: [mem 0x{x:0>16}-0x{x:0>16}] {s}\n", .{ entry.base, entry.base + (entry.length - 1), entryKind });
         }
     } else {
         @panic("Bootloader did not provide a valid memory map!");
     }
-    std.log.info("Memory: {d}K/{d}K available ({d}K acpi data, {d}K boot data, {d}K kernel, {d}K kernel code, {d}K rodata, {d}K rwdata)", .{
-        (memTotal - (bootldrUsed + acpiUsed + kernelUsed)) / 1024,
-        memTotal / 1024,
-        acpiUsed / 1024,
-        bootldrUsed / 1024,
-        kernelUsed / 1024,
-        (@ptrToInt(&_TEXT_END_) - @ptrToInt(&_TEXT_START_)) / 1024,
-        (@ptrToInt(&_RODATA_END_) - @ptrToInt(&_RODATA_START_)) / 1024,
-        (@ptrToInt(&_BSS_END_) - @ptrToInt(&_DATA_START_)) / 1024,
-    });
+    std.log.debug("{d}K Free\n\n", .{(memTotal - (bootldrUsed + acpiUsed + kernelUsed)) / 1024});
 }

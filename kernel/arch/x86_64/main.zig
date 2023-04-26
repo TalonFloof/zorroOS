@@ -57,7 +57,6 @@ pub noinline fn earlyInitialize() void {
 
 pub noinline fn initialize() void {
     physmem.initialize();
-    acpi.initialize();
 }
 
 pub fn enableDisableInt(enabled: bool) void {

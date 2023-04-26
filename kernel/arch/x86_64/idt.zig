@@ -1,4 +1,5 @@
 pub const isr = @import("isr.zig");
+const io = @import("io.zig");
 
 const IDTEntry = packed struct { isrLow: u16, kernelCS: u16, reserved: u8, attributes: u8, isrMid: u16, isrHigh: u32, zero: u32 };
 
