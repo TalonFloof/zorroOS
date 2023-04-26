@@ -8,6 +8,11 @@ pub const MemEntry = struct {
 pub var entries: [256]MemEntry = [_]MemEntry{MemEntry{ .begin = 0, .end = 0 }} ** 256;
 
 fn getFreeEntry() usize {
+    for (entries, 0..) |entry, index| {
+        if (entry.begin == 0 and entry.end == 0) {
+            return index;
+        }
+    }
     return ~0;
 }
 
@@ -25,4 +30,8 @@ pub fn alloc(n: usize, alignment: usize) []u8 {
         }
     }
     @panic("Out of Memory!");
+}
+
+pub fn free(d: []u8) void {
+    _ = d;
 }

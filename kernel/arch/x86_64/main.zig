@@ -3,7 +3,6 @@ const limine = @import("limine");
 const gdt = @import("gdt.zig");
 const idt = @import("idt.zig");
 const physmem = @import("physmem.zig");
-const acpi = @import("acpi.zig");
 const root = @import("root");
 
 pub const context = @import("context.zig");
