@@ -13,13 +13,13 @@ fn getFreeEntry() usize {
             return index;
         }
     }
-    return ~0;
+    return ~@as(usize, 0);
 }
 
 fn addEntry(begin: usize, end: usize) usize {
     const entry = getFreeEntry();
-    if (entry == ~0) {
-        return ~0;
+    if (entry == ~@as(usize, 0)) {
+        return ~@as(usize, 0);
     }
     entries[entry].begin = begin;
     entries[entry].end = end;
@@ -44,7 +44,7 @@ pub fn alloc(n: usize, alignment: usize) []u8 {
             if (alignment > 0) {
                 const new_addr = (entry.begin + (alignment - 1)) & ~(alignment - 1);
                 if (new_addr != entry.begin) {
-                    entry.end = new_addr;
+                    entries[index].end = new_addr;
                 }
                 return @intToPtr([*]u8, new_addr)[0..n];
             } else {
@@ -59,34 +59,34 @@ pub fn alloc(n: usize, alignment: usize) []u8 {
 }
 
 pub fn free(d: []u8) void {
-    const end = @ptrToInt(d.ptr) + d.len;
-    for (entries) |entry| {
+    const end: usize = @ptrToInt(d.ptr) + d.len;
+    for (entries, 0..) |entry, index| {
         if (entry.begin == end) {
-            entry.begin = @ptrToInt(d.ptr);
-            for (entries) |e| {
+            entries[index].begin = @ptrToInt(d.ptr);
+            for (entries, 0..) |e, i| {
                 if (e.end == @ptrToInt(d.ptr)) {
-                    e.end = entry.end;
-                    entry.begin = 0;
-                    entry.end = 0;
+                    entries[i].end = entry.end;
+                    entries[index].begin = 0;
+                    entries[index].end = 0;
                     break;
                 }
             }
             return;
         } else if (entry.end == @ptrToInt(d.ptr)) {
-            entry.end = end;
-            for (entries) |e| {
-                if (e.start == end) {
-                    e.start = entry.start;
-                    entry.begin = 0;
-                    entry.end = 0;
+            entries[index].begin = end;
+            for (entries, 0..) |e, i| {
+                if (e.begin == end) {
+                    entries[i].begin = entry.begin;
+                    entries[index].begin = 0;
+                    entries[index].end = 0;
                     break;
                 }
             }
             return;
         } else if (end < entry.begin) {
-            addEntry(@ptrToInt(d.ptr), end);
+            _ = addEntry(@ptrToInt(d.ptr), end);
             return;
         }
     }
-    addEntry(@ptrToInt(d.ptr), end);
+    _ = addEntry(@ptrToInt(d.ptr), end);
 }

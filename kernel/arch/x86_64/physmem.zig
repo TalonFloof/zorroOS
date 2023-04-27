@@ -15,8 +15,7 @@ pub fn initialize() void {
             var entryKind: []const u8 = "Unknown";
             switch (entry.kind) {
                 .usable => {
-                    alloc.entries[i].begin = entry.base + 0xffff800000000000;
-                    alloc.entries[i].end = entry.base + entry.length + 0xffff800000000000;
+                    alloc.free(@intToPtr([*]u8, entry.base)[0..entry.length]);
                     i += 1;
                     memTotal += entry.length;
                     entryKind = "Usable Block";
