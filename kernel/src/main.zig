@@ -26,7 +26,7 @@ export fn ZorroKernelMain() callconv(.C) noreturn {
     native.earlyInitialize();
     std.log.debug("zorroOS ", .{});
     native.initialize();
-    std.log.debug("> ", .{});
+    std.log.debug("\x1b[32m>\x1b[0m ", .{});
     while (true) { // Infinite loop in case an NMI is triggered
 
     }

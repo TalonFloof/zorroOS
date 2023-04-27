@@ -53,5 +53,5 @@ pub fn initialize() void {
     } else {
         @panic("Bootloader did not provide a valid memory map!");
     }
-    std.log.debug("{d}K Free\n\n", .{(memTotal - (bootldrUsed + acpiUsed + kernelUsed)) / 1024});
+    std.log.debug("{d}MB\n\n", .{(memTotal / 1024) / 1024});
 }
