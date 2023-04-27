@@ -2,6 +2,7 @@ const std = @import("std");
 const native = @import("native");
 pub const alloc = @import("alloc.zig");
 pub const Spinlock = @import("spinlock.zig").Spinlock;
+pub const kbd = @import("kbd.zig");
 
 pub const std_options = struct {
     pub const logFn = native.doLog;
