@@ -1,5 +1,5 @@
 const std = @import("std");
-const native = @import("native");
+pub const native = @import("native");
 pub const alloc = @import("alloc.zig");
 pub const Spinlock = @import("spinlock.zig").Spinlock;
 pub const hart = @import("hart.zig");
@@ -27,5 +27,5 @@ export fn ZorroKernelMain() callconv(.C) noreturn {
     native.earlyInitialize();
     std.log.debug("Zorro Kernel\n\n", .{});
     native.initialize();
-    @panic("Successfully Booted");
+    @panic("No ");
 }

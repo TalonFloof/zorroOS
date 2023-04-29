@@ -1,5 +1,5 @@
 build: limine-zig
-	cd kernel; nasm -f elf64 arch/x86_64/isr.s -o arch/x86_64/isr.o; zig build; cd ..
+	cd kernel; nasm -f elf64 arch/x86_64/isr.s -o arch/x86_64/isr.o; zig build; rm -f -r zig-cache; cd ..
 	rm -f -r kernel/arch/x86_64/isr.o
 
 limine-zig:

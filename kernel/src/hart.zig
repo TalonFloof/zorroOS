@@ -3,6 +3,8 @@ const Spinlock = @import("spinlock.zig").Spinlock;
 const std = @import("std");
 const Thread = @import("thread.zig").Thread;
 
+pub var hartList: ?[]*HardwareThread = null;
+
 pub const HardwareThread = struct {
     kstack: [3072]u8,
     id: u32,
@@ -10,6 +12,7 @@ pub const HardwareThread = struct {
     threadLock: Spinlock = Spinlock.unaquired,
     threadHead: ?*Thread = null,
     threadTail: ?*Thread = null,
+    threadCurrent: ?*Thread = null,
     // Arch Data
     archData: native.hart.HartData,
 
