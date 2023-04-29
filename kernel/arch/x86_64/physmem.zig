@@ -4,6 +4,13 @@ const alloc = @import("root").alloc;
 
 export var memmap_request: limine.MemoryMapRequest = .{};
 
+extern const _TEXT_START_: *allowzero void;
+extern const _TEXT_END_: *allowzero void;
+extern const _RODATA_START_: *allowzero void;
+extern const _RODATA_END_: *allowzero void;
+extern const _DATA_START_: *allowzero void;
+extern const _BSS_END_: *allowzero void;
+
 pub fn initialize() void {
     var memTotal: u64 = 0;
     var kernelUsed: u64 = 0;
@@ -15,7 +22,7 @@ pub fn initialize() void {
             var entryKind: []const u8 = "Unknown";
             switch (entry.kind) {
                 .usable => {
-                    alloc.free(@intToPtr([*]u8, entry.base)[0..entry.length]);
+                    alloc.free(@intToPtr([*]u8, entry.base + 0xffff800000000000)[0..entry.length]);
                     i += 1;
                     memTotal += entry.length;
                     entryKind = "Usable Block";
@@ -52,5 +59,14 @@ pub fn initialize() void {
     } else {
         @panic("Bootloader did not provide a valid memory map!");
     }
-    std.log.debug("{d}MB\n\n", .{(memTotal / 1024) / 1024});
+    std.log.info("Memory: {d}K/{d}K available ({d}K acpi data, {d}K boot data, {d}K kernel, {d}K kernel code, {d}K rodata, {d}K rwdata)", .{
+        (memTotal - (bootldrUsed + acpiUsed + kernelUsed)) / 1024,
+        memTotal / 1024,
+        acpiUsed / 1024,
+        bootldrUsed / 1024,
+        kernelUsed / 1024,
+        (@ptrToInt(&_TEXT_END_) - @ptrToInt(&_TEXT_START_)) / 1024,
+        (@ptrToInt(&_RODATA_END_) - @ptrToInt(&_RODATA_START_)) / 1024,
+        (@ptrToInt(&_BSS_END_) - @ptrToInt(&_DATA_START_)) / 1024,
+    });
 }

@@ -1,6 +1,8 @@
 const std = @import("std");
 const Builder = std.build.Builder;
 
+const str = []const u8;
+
 pub fn build(b: *Builder) !void {
     var target: std.zig.CrossTarget = .{
         .cpu_arch = .x86_64,

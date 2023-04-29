@@ -31,9 +31,9 @@ pub fn alloc(n: usize, alignment: usize) []u8 {
         if ((entry.end - entry.begin) > n) {
             if (alignment > 0) {
                 const new_addr = (entry.begin + (alignment - 1)) & ~(alignment - 1);
-                entries[index].start += n + (new_addr - entry.begin);
+                entries[index].begin += n + (new_addr - entry.begin);
                 if (new_addr != entry.begin) {
-                    addEntry(entry.begin, new_addr);
+                    _ = addEntry(entry.begin, new_addr);
                 }
                 return @intToPtr([*]u8, new_addr)[0..n];
             } else {
@@ -55,7 +55,7 @@ pub fn alloc(n: usize, alignment: usize) []u8 {
             }
         }
     }
-    @panic("Out of Memory!");
+    @panic("Kernel Heap is deprived! (Out of Memory)");
 }
 
 pub fn free(d: []u8) void {

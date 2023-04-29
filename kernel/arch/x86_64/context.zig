@@ -96,3 +96,20 @@ pub const Context = packed struct {
         std.log.debug("=== END CONTEXT DUMP ===\n", .{});
     }
 };
+
+pub const FloatContext = struct {
+    data: [512]u8 = [_]u8{0} ** 512,
+
+    pub fn save(self: *FloatContext) void {
+        asm volatile ("fxsave64 (%rax)"
+            :
+            : [state] "{rax}" (@ptrToInt(&self.data)),
+        );
+    }
+    pub fn load(self: *FloatContext) void {
+        asm volatile ("fxrstor64 (%rax)"
+            :
+            : [state] "{rax}" (@ptrToInt(&self.data)),
+        );
+    }
+};

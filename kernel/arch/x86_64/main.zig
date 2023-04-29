@@ -4,7 +4,9 @@ const gdt = @import("gdt.zig");
 const idt = @import("idt.zig");
 const physmem = @import("physmem.zig");
 const root = @import("root");
+const acpi = @import("acpi.zig");
 
+pub const hart = @import("hart.zig");
 pub const context = @import("context.zig");
 
 export var console_request: limine.TerminalRequest = .{};
@@ -50,12 +52,27 @@ pub fn doLog(
 }
 
 pub noinline fn earlyInitialize() void {
+    hart.initialize0();
     gdt.initialize();
     idt.initialize();
 }
 
 pub noinline fn initialize() void {
     physmem.initialize();
+    acpi.initialize();
+    hart.startSMP();
+}
+
+pub noinline fn hartStart(d: *limine.SmpInfo) callconv(.C) noreturn {
+    wrmsr(0xC0000102, hart.hartData);
+    gdt.initialize();
+    idt.fastInit();
+    std.log.info("hart{d:0>3}(0x{x:0>16}): ready", .{ d.processor_id, hart.hartData });
+    hart.hartData = 0;
+    while (true) {
+        enableDisableInt(false);
+        halt();
+    }
 }
 
 pub fn enableDisableInt(enabled: bool) void {
