@@ -8,6 +8,7 @@ const acpi = @import("acpi.zig");
 
 pub const hart = @import("hart.zig");
 pub const context = @import("context.zig");
+pub const vmm = @import("vmm.zig");
 
 export var console_request: limine.TerminalRequest = .{};
 
