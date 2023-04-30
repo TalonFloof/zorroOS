@@ -6,17 +6,13 @@ const Thread = @import("thread.zig").Thread;
 pub var hartList: ?[]*HardwareThread = null;
 
 pub const HardwareThread = struct {
-    kstack: [3072]u8,
+    kstack: *void,
     id: u32,
     // Scheduling Data
     threadLock: Spinlock = Spinlock.unaquired,
     threadHead: ?*Thread = null,
     threadTail: ?*Thread = null,
-    threadCurrent: ?*Thread = null,
+    threadCurrent: u64 = 0,
     // Arch Data
     archData: native.hart.HartData,
-
-    comptime {
-        std.debug.assert(@sizeOf(@This()) <= 4096);
-    }
 };

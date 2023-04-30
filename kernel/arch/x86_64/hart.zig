@@ -32,11 +32,12 @@ pub fn startSMP() void {
     if (smp_request.response) |smp_response| {
         genhart.hartList = @ptrCast([*]*HardwareThread, @alignCast(@sizeOf(usize), alloc.alloc(smp_response.cpu_count * @sizeOf(usize), @sizeOf(usize))))[0..smp_response.cpu_count];
         genhart.hartList.?[0] = &hart0;
+        var hartCount: u32 = 1;
         for (smp_response.cpus()) |hart| {
-            if (hart.processor_id != 0) {
+            if (hart.lapic_id != smp_response.bsp_lapic_id) {
                 var dat: *HardwareThread = @ptrCast(*HardwareThread, @alignCast(@sizeOf(usize), alloc.alloc(4096, 4096).ptr));
-                genhart.hartList.?[hart.processor_id] = dat;
-                dat.id = hart.processor_id;
+                genhart.hartList.?[hartCount] = dat;
+                dat.id = hartCount;
                 dat.archData.apicID = hart.lapic_id;
                 dat.threadLock = .unaquired;
                 dat.threadHead = null;
@@ -45,9 +46,16 @@ pub fn startSMP() void {
                 dat.archData.tss.rsp[0] = @ptrToInt(dat) + 3072;
                 hartData = @ptrToInt(dat);
                 hart.goto_address = native.hartStart;
+                var cycles: usize = 0;
                 while (hartData != 0) {
+                    cycles += 1;
+                    if (cycles >= 50000000) {
+                        std.log.err("hart{d:0>3} took too long (potential triple fault on hart!)", .{hartCount});
+                        @panic("Hart Initialization Failure");
+                    }
                     std.atomic.spinLoopHint();
                 }
+                hartCount += 1;
             }
         }
     }

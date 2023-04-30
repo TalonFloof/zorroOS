@@ -27,5 +27,5 @@ export fn ZorroKernelMain() callconv(.C) noreturn {
     native.earlyInitialize();
     std.log.debug("Zorro Kernel\n\n", .{});
     native.initialize();
-    @panic("No ");
+    @panic("No Boot Image");
 }

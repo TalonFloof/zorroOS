@@ -64,10 +64,11 @@ pub noinline fn initialize() void {
 }
 
 pub noinline fn hartStart(d: *limine.SmpInfo) callconv(.C) noreturn {
+    _ = d;
     wrmsr(0xC0000102, hart.hartData);
     gdt.initialize();
     idt.fastInit();
-    std.log.info("hart{d:0>3}(0x{x:0>16}): ready", .{ d.processor_id, hart.hartData });
+    std.log.info("hart{d:0>3}(0x{x:0>16}): ready", .{ hart.getHart().id, hart.hartData });
     hart.hartData = 0;
     while (true) {
         enableDisableInt(false);
