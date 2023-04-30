@@ -35,10 +35,10 @@ pub fn alloc(n: usize, alignment: usize) []u8 {
                 if (new_addr != entry.begin) {
                     _ = addEntry(entry.begin, new_addr);
                 }
-                return @intToPtr([*]u8, new_addr)[0..n];
+                return @intToPtr([*]u8, new_addr)[0..(n + 1)];
             } else {
                 entries[index].begin += n;
-                return @intToPtr([*]u8, entries[index].begin - n)[0..n];
+                return @intToPtr([*]u8, entries[index].begin - n)[0..(n + 1)];
             }
         } else if ((entry.end - entry.begin) == n) {
             if (alignment > 0) {
@@ -46,9 +46,9 @@ pub fn alloc(n: usize, alignment: usize) []u8 {
                 if (new_addr != entry.begin) {
                     entries[index].end = new_addr;
                 }
-                return @intToPtr([*]u8, new_addr)[0..n];
+                return @intToPtr([*]u8, new_addr)[0..(n + 1)];
             } else {
-                var ret: []u8 = @intToPtr([*]u8, entries[index].begin)[0..n];
+                var ret: []u8 = @intToPtr([*]u8, entries[index].begin)[0..(n + 1)];
                 entries[index].begin = 0;
                 entries[index].end = 0;
                 return ret;

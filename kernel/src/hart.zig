@@ -6,13 +6,10 @@ const Thread = @import("thread.zig").Thread;
 pub var hartList: ?[]*HardwareThread = null;
 
 pub const HardwareThread = struct {
-    kstack: *void,
+    activeKstack: ?*void = null,
+    activeUstack: ?*void = null,
     id: u32,
     // Scheduling Data
-    threadLock: Spinlock = Spinlock.unaquired,
-    threadHead: ?*Thread = null,
-    threadTail: ?*Thread = null,
-    threadCurrent: u64 = 0,
     // Arch Data
     archData: native.hart.HartData,
 };

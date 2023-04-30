@@ -39,19 +39,35 @@ pub const Header = extern struct {
     }
 };
 
+pub var MADTAddr: ?*Header = null;
+pub var HPETAddr: ?*Header = null;
+
 pub fn initialize() void {
     if (rsdp_request.response) |rsdp_response| {
         if (@ptrToInt(rsdp_response.address) == 0) {
             @panic("System is not ACPI-compliant");
         }
         const rsdp: *RSDP = @ptrCast(*RSDP, rsdp_response.address);
-        const xsdt = @intToPtr(*Header, switch (rsdp.revision == 2) {
-            true => rsdp.XSDT,
-            false => rsdp.RSDT,
-        });
-        _ = xsdt;
+        const rsdt = @intToPtr(*Header, @intCast(usize, rsdp.RSDT) + 0xffff800000000000);
         std.log.info("ACPI: RSDP 0x{x:0>16} (v{d:0>2} {s: <6})", .{ @ptrToInt(rsdp_response.address), rsdp.revision, rsdp.OEMID });
+        const acpiEntries: []align(1) u32 = @intToPtr([*]align(1) u32, @ptrToInt(rsdt) + @sizeOf(Header))[0..((rsdt.length - @sizeOf(Header)) / 4)];
+        std.log.info("ACPI: {s: <4} 0x{x:0>16} (v{d:0>2} {s: <6} {s: <8})", .{ @ptrCast([*]u8, &rsdt.signature)[0..4], @ptrToInt(rsdt), rsdt.revision, rsdt.OEM_ID, rsdt.OEM_table_ID });
+        for (acpiEntries) |ptr| {
+            const entry: *Header = @intToPtr(*Header, @intCast(usize, ptr) + 0xffff800000000000);
+            std.log.info("ACPI: {s: <4} 0x{x:0>16} (v{d:0>2} {s: <6} {s: <8})", .{ @ptrCast([*]u8, &entry.signature)[0..4], @ptrToInt(entry), entry.revision, entry.OEM_ID, entry.OEM_table_ID });
+            if (entry.signature == 0x43495041) {
+                MADTAddr = entry;
+            } else if (entry.signature == 0x54455048) {
+                HPETAddr = entry;
+            }
+        }
     } else {
         @panic("System is not ACPI-compliant");
+    }
+    if (MADTAddr == null) {
+        @panic("ACPI didn't provide an MADT and we don't know how to parse the MP table (if it even exist!)");
+    }
+    if (HPETAddr == null) {
+        std.log.warn("System appears to not have an HPET, falling back to the PIT for timer calibration.", .{});
     }
 }

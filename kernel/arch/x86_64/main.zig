@@ -5,6 +5,7 @@ const idt = @import("idt.zig");
 const physmem = @import("physmem.zig");
 const root = @import("root");
 const acpi = @import("acpi.zig");
+const syscall = @import("syscall.zig");
 
 pub const hart = @import("hart.zig");
 pub const context = @import("context.zig");
@@ -20,37 +21,7 @@ fn limineWriteString(_: @TypeOf(.{}), string: []const u8) error{}!usize {
     return 0;
 }
 
-const Writer = std.io.Writer(@TypeOf(.{}), error{}, limineWriteString);
-const writer = Writer{ .context = .{} };
-var writerLock: root.Spinlock = root.Spinlock.unaquired;
-
-pub fn doLog(
-    comptime level: std.log.Level,
-    comptime scope: @TypeOf(.EnumLiteral),
-    comptime format: []const u8,
-    args: anytype,
-) void {
-    writerLock.acquire("WriterSpinlock");
-    _ = scope;
-    switch (level) {
-        .info => {
-            _ = try writer.write("\x1b[36m");
-        },
-        .warn => {
-            _ = try writer.write("\x1b[33m");
-        },
-        .err => {
-            _ = try writer.write("\x1b[31m");
-        },
-        else => {},
-    }
-    if (level == .debug) {
-        try writer.print(format, args);
-    } else {
-        try writer.print(level.asText() ++ "\x1b[0m: " ++ format ++ "\n", args);
-    }
-    writerLock.release();
-}
+pub const Writer = std.io.Writer(@TypeOf(.{}), error{}, limineWriteString);
 
 pub noinline fn earlyInitialize() void {
     hart.initialize0();
@@ -61,6 +32,7 @@ pub noinline fn earlyInitialize() void {
 pub noinline fn initialize() void {
     physmem.initialize();
     acpi.initialize();
+    syscall.initialize();
     hart.startSMP();
 }
 
@@ -69,6 +41,7 @@ pub noinline fn hartStart(d: *limine.SmpInfo) callconv(.C) noreturn {
     wrmsr(0xC0000102, hart.hartData);
     gdt.initialize();
     idt.fastInit();
+    syscall.initialize();
     std.log.info("hart{d:0>3}(0x{x:0>16}): ready", .{ hart.getHart().id, hart.hartData });
     hart.hartData = 0;
     while (true) {

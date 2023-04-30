@@ -3,6 +3,8 @@ const std = @import("std");
 const REG_IP = 256;
 const REG_SP = 257;
 
+pub const ContextMode = enum { Supervisor, User };
+
 pub const Context = packed struct {
     r15: u64 = 0,
     r14: u64 = 0,
@@ -20,30 +22,42 @@ pub const Context = packed struct {
     rbx: u64 = 0,
     rax: u64 = 0,
     rip: u64 = 0,
-    cs: u64 = 0x43,
-    rflags: u64 = 0,
+    cs: u64 = 0,
+    rflags: u64 = 0x202,
     rsp: u64 = 0,
-    ss: u64 = 0x3b,
+    ss: u64 = 0,
 
-    // Arguments: RDI, RSI, RDX, RCX, R8, R9
+    pub fn setMode(self: *Context, mode: ContextMode) void {
+        if (mode == .Supervisor) {
+            self.cs = 0x28;
+            self.ss = 0x30;
+        } else if (mode == .User) {
+            self.cs = 0x43;
+            self.ss = 0x3b;
+        }
+    }
+
     pub fn getReg(self: *Context, index: usize) usize {
         switch (index) {
             0 => {
-                return self.rdi;
+                return self.rax;
             },
             1 => {
-                return self.rsi;
+                return self.rdi;
             },
             2 => {
-                return self.rdx;
+                return self.rsi;
             },
             3 => {
-                return self.rcx;
+                return self.rdx;
             },
             4 => {
-                return self.r8;
+                return self.r10;
             },
             5 => {
+                return self.r8;
+            },
+            6 => {
                 return self.r9;
             },
             REG_IP => {
@@ -60,21 +74,24 @@ pub const Context = packed struct {
     pub fn setReg(self: *Context, index: usize, val: usize) void {
         switch (index) {
             0 => {
-                self.rdi = val;
+                self.rax = val;
             },
             1 => {
-                self.rsi = val;
+                self.rdi = val;
             },
             2 => {
-                self.rdx = val;
+                self.rsi = val;
             },
             3 => {
-                self.rcx = val;
+                self.rdx = val;
             },
             4 => {
-                self.r8 = val;
+                self.r10 = val;
             },
             5 => {
+                self.r8 = val;
+            },
+            6 => {
                 self.r9 = val;
             },
             REG_IP => {
@@ -95,6 +112,7 @@ pub const Context = packed struct {
         std.log.debug("rip: 0x{x:0>16} rfl: 0x{x:0>16}  cs: 0x{x:0>4}\n", .{ self.rip, self.rflags, self.cs });
         std.log.debug("=== END CONTEXT DUMP ===\n", .{});
     }
+    pub fn enter() void {}
 };
 
 pub const FloatContext = struct {

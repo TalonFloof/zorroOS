@@ -6,7 +6,7 @@ const native = @import("main.zig");
 const limine = @import("limine");
 const alloc = @import("root").alloc;
 
-export var smp_request: limine.SmpRequest = .{};
+export var smp_request: limine.SmpRequest = .{ .flags = 0 };
 pub var hartData: usize = 0;
 
 pub const HartData = struct {
@@ -15,7 +15,6 @@ pub const HartData = struct {
 };
 
 var hart0: HardwareThread = .{
-    .kstack = [_]u8{0} ** 3072,
     .id = 0,
     .archData = .{ .tss = gdt.TSS{} },
 };
@@ -35,15 +34,11 @@ pub fn startSMP() void {
         var hartCount: u32 = 1;
         for (smp_response.cpus()) |hart| {
             if (hart.lapic_id != smp_response.bsp_lapic_id) {
-                var dat: *HardwareThread = @ptrCast(*HardwareThread, @alignCast(@sizeOf(usize), alloc.alloc(4096, 4096).ptr));
+                var dat: *HardwareThread = @ptrCast(*HardwareThread, @alignCast(@sizeOf(usize), alloc.alloc(@sizeOf(HardwareThread), 1).ptr));
                 genhart.hartList.?[hartCount] = dat;
                 dat.id = hartCount;
                 dat.archData.apicID = hart.lapic_id;
-                dat.threadLock = .unaquired;
-                dat.threadHead = null;
-                dat.threadTail = null;
-                dat.threadCurrent = null;
-                dat.archData.tss.rsp[0] = @ptrToInt(dat) + 3072;
+                dat.archData.tss.rsp[0] = 0;
                 hartData = @ptrToInt(dat);
                 hart.goto_address = native.hartStart;
                 var cycles: usize = 0;
