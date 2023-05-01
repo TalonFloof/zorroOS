@@ -1,4 +1,5 @@
 const std = @import("std");
+const alloc = @import("alloc.zig");
 
 pub fn AATree(comptime K: type, comptime V: type) type {
     return struct {
@@ -7,6 +8,16 @@ pub fn AATree(comptime K: type, comptime V: type) type {
             level: isize = 1,
             key: K,
             value: V,
+
+            pub fn new(k: K, v: V) *Node {
+                var node = @ptrCast(*Node, @alignCast(@alignOf(@This()), alloc.alloc(@sizeOf(@This()), @alignOf(@This())).ptr));
+                node.link[0] = null;
+                node.link[1] = null;
+                node.level = 1;
+                node.key = k;
+                node.value = v;
+                return node;
+            }
         };
 
         root: ?*Node = null,
