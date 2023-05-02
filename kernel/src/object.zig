@@ -20,6 +20,7 @@ pub const Object = struct {
     pub fn init(self: *Object) void {
         objLock.acquire("Object Tree");
         self.id = objId;
+        self.rc = 0;
         objId += 1;
         objects.insert(ObjectTree.Node.new(self.id, self));
         objLock.release();
