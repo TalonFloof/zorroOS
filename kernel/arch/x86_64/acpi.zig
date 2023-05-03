@@ -39,6 +39,24 @@ pub const Header = extern struct {
     }
 };
 
+pub const HPETTable = extern struct {
+    acpiHeader: Header align(1),
+    hardwareRevId: u8 align(1),
+    comparatorCount: u5 align(1),
+    counterSize: u1 align(1),
+    reserved: u1 align(1),
+    legacyReplacement: u1 align(1),
+    pciVendorId: u16 align(1),
+    addressSpaceId: u8 align(1),
+    registerBitWidth: u8 align(1),
+    registerBitOffset: u8 align(1),
+    reserved: u8 align(1),
+    address: u64 align(1),
+    hpet_number: u8 align(1),
+    minimum_tick: u16 align(1),
+    page_protection: u8 align(1),
+};
+
 pub var MADTAddr: ?*Header = null;
 pub var HPETAddr: ?*Header = null;
 

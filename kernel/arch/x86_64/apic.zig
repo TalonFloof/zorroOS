@@ -7,7 +7,7 @@ var lapic_ptr: usize = 0;
 
 pub fn setup() void {
     native.wrmsr(0x1b, (native.rdmsr(0x1b) | 0x800) & ~(@as(u64, 1) << @as(u64, 10)));
-    lapic_ptr = native.rdmsr(0x1b) & 0xfffff000;
+    lapic_ptr = (native.rdmsr(0x1b) & 0xfffff000) + 0xffff800000000000;
     write(0xf0, 0x1ff);
 }
 
