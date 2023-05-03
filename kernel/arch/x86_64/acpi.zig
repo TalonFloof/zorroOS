@@ -42,23 +42,20 @@ pub const Header = extern struct {
 pub const HPETTable = extern struct {
     acpiHeader: Header align(1),
     hardwareRevId: u8 align(1),
-    comparatorCount: u5 align(1),
-    counterSize: u1 align(1),
-    reserved: u1 align(1),
-    legacyReplacement: u1 align(1),
+    timerFlags: u8 align(1),
     pciVendorId: u16 align(1),
     addressSpaceId: u8 align(1),
     registerBitWidth: u8 align(1),
     registerBitOffset: u8 align(1),
-    reserved: u8 align(1),
+    reserved2: u8 align(1),
     address: u64 align(1),
-    hpet_number: u8 align(1),
-    minimum_tick: u16 align(1),
-    page_protection: u8 align(1),
+    hpetNumber: u8 align(1),
+    minimumTick: u16 align(1),
+    pageProtection: u8 align(1),
 };
 
 pub var MADTAddr: ?*Header = null;
-pub var HPETAddr: ?*Header = null;
+pub var HPETAddr: ?*HPETTable = null;
 
 pub fn initialize() void {
     if (rsdp_request.response) |rsdp_response| {
@@ -76,7 +73,7 @@ pub fn initialize() void {
             if (entry.signature == 0x43495041) {
                 MADTAddr = entry;
             } else if (entry.signature == 0x54455048) {
-                HPETAddr = entry;
+                HPETAddr = @ptrCast(*HPETTable, entry);
             }
         }
     } else {
@@ -86,6 +83,6 @@ pub fn initialize() void {
         @panic("ACPI didn't provide an MADT and we don't know how to parse the MP table (if it even exist!)");
     }
     if (HPETAddr == null) {
-        std.log.warn("System appears to not have an HPET, falling back to the PIT for timer calibration.", .{});
+        @panic("System appears to not have an HPET. An HPET is required to calibrate the Local APIC Timers");
     }
 }

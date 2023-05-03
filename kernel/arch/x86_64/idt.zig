@@ -17,7 +17,7 @@ pub fn initialize() void {
     IDTptr.limit = 0xffff;
     IDTptr.base = &IDT[0];
 
-    for (0..128) |i|
+    for (0..256) |i|
         setDescriptor(i, ISRTable[i], 0x8E);
 
     io.outb(0x21, 0xff);

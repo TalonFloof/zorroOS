@@ -4,7 +4,7 @@ pub const alloc = @import("alloc.zig");
 pub const Spinlock = @import("spinlock.zig").Spinlock;
 pub const hart = @import("hart.zig");
 
-const writer = native.Writer{ .context = .{} };
+pub const writer = native.Writer{ .context = .{} };
 var writerLock: Spinlock = .unaquired;
 
 pub fn doLog(
@@ -58,5 +58,8 @@ export fn ZorroKernelMain() callconv(.C) noreturn {
     native.earlyInitialize();
     std.log.debug("Zorro Kernel \x1b[1;30;40m▀▀\x1b[31;41m▀▀\x1b[32;42m▀▀\x1b[33;43m▀▀\x1b[34;44m▀▀\x1b[35;45m▀▀\x1b[36;46m▀▀\x1b[37;47m▀▀\x1b[0m\n\n", .{});
     native.initialize();
-    @panic("No Boot Image");
+    std.log.err("No Boot Image", .{});
+    while (true) {
+        native.halt();
+    }
 }
