@@ -6,6 +6,7 @@ const physmem = @import("physmem.zig");
 const root = @import("root");
 const acpi = @import("acpi.zig");
 const syscall = @import("syscall.zig");
+const apic = @import("apic.zig");
 
 pub const hart = @import("hart.zig");
 pub const context = @import("context.zig");
@@ -34,12 +35,14 @@ pub noinline fn initialize() void {
     acpi.initialize();
     syscall.initialize();
     hart.startSMP();
+    apic.setup();
 }
 
 pub noinline fn hartStart(d: *limine.SmpInfo) callconv(.C) noreturn {
     _ = d;
     wrmsr(0xC0000102, hart.hartData);
     gdt.initialize();
+    apic.setup();
     idt.fastInit();
     syscall.initialize();
     std.log.info("hart{d:0>3}(0x{x:0>16}): ready", .{ hart.getHart().id, hart.hartData });

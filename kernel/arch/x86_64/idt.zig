@@ -20,6 +20,9 @@ pub fn initialize() void {
     for (0..128) |i|
         setDescriptor(i, ISRTable[i], 0x8E);
 
+    io.outb(0x21, 0xff);
+    io.outb(0x29, 0xff);
+
     asm volatile (
         \\lidt (%[idt_ptr])
         \\sti

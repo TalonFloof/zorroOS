@@ -5,7 +5,7 @@ const alloc = @import("alloc.zig");
 
 pub const ObjectTree = AATree(u64, *Object);
 
-pub const ObjectType = enum { Any, Universe, Core, Area, Thread };
+pub const ObjectType = enum { Any, Universe, Port, Core, Area, Thread };
 
 var objId = 1;
 var objects = ObjectTree{};
