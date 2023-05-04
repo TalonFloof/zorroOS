@@ -41,7 +41,7 @@ pub const std_options = struct {
 
 pub fn panic(msg: []const u8, stacktrace: ?*std.builtin.StackTrace, wat: ?usize) noreturn {
     _ = wat;
-    std.log.debug("\x1b[30;41mpanic\x1b[0m: {s}\n", .{msg});
+    std.log.debug("\x1b[30;41mpanic hart#{d}\x1b[0m: {s}\n", .{ native.hart.getHart().id, msg });
     if (stacktrace) |trace| {
         std.log.debug("Stack Backtrace:\n", .{});
         for (trace.instruction_addresses) |addr| {
@@ -54,8 +54,7 @@ pub fn panic(msg: []const u8, stacktrace: ?*std.builtin.StackTrace, wat: ?usize)
     }
 }
 
-export fn ZorroKernelMain() callconv(.C) noreturn {
-    native.earlyInitialize();
+pub fn ZorroKernelMain() noreturn {
     std.log.debug("Zorro Kernel \x1b[1;30;40m▀▀\x1b[31;41m▀▀\x1b[32;42m▀▀\x1b[33;43m▀▀\x1b[34;44m▀▀\x1b[35;45m▀▀\x1b[36;46m▀▀\x1b[37;47m▀▀\x1b[0m\n\n", .{});
     native.initialize();
     std.log.err("No Boot Image", .{});

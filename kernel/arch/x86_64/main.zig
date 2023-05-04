@@ -24,10 +24,27 @@ fn limineWriteString(_: @TypeOf(.{}), string: []const u8) error{}!usize {
 
 pub const Writer = std.io.Writer(@TypeOf(.{}), error{}, limineWriteString);
 
-pub noinline fn earlyInitialize() void {
-    hart.initialize0();
+pub export fn _kstart0() callconv(.Naked) noreturn {
+    asm volatile (
+        \\mov %rsp, %rdi
+        \\jmp earlyInitialize
+    );
+    while (true) {}
+}
+
+pub noinline fn _kstart() callconv(.Naked) noreturn {
+    asm volatile (
+        \\mov %rsp, %rsi
+        \\jmp hartStart
+    );
+    while (true) {}
+}
+
+pub export fn earlyInitialize(stack: u64) callconv(.C) noreturn {
+    hart.initialize0(stack);
     gdt.initialize();
     idt.initialize();
+    root.ZorroKernelMain();
 }
 
 pub noinline fn initialize() void {
@@ -38,9 +55,12 @@ pub noinline fn initialize() void {
     apic.setup();
 }
 
-pub noinline fn hartStart(d: *limine.SmpInfo) callconv(.C) noreturn {
+pub export fn hartStart(d: *limine.SmpInfo, stack: u64) callconv(.C) noreturn {
     _ = d;
     wrmsr(0xC0000102, hart.hartData);
+    hart.getHart().archData.tss.rsp[0] = stack;
+    hart.getHart().archData.tss.ist[0] = stack;
+    hart.getHart().archData.tss.ist[1] = stack;
     gdt.initialize();
     apic.setup();
     idt.fastInit();

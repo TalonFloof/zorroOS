@@ -19,8 +19,11 @@ var hart0: HardwareThread = .{
     .archData = .{ .tss = gdt.TSS{} },
 };
 
-pub fn initialize0() void {
+pub fn initialize0(stack: u64) void {
     native.wrmsr(0xC0000102, @ptrToInt(&hart0));
+    hart0.archData.tss.rsp[0] = stack;
+    hart0.archData.tss.ist[0] = stack;
+    hart0.archData.tss.ist[1] = stack;
 }
 
 pub inline fn getHart() *HardwareThread {
@@ -38,9 +41,8 @@ pub fn startSMP() void {
                 genhart.hartList.?[hartCount] = dat;
                 dat.id = hartCount;
                 dat.archData.apicID = hart.lapic_id;
-                dat.archData.tss.rsp[0] = 0;
                 hartData = @ptrToInt(dat);
-                hart.goto_address = native.hartStart;
+                @intToPtr(*align(1) u64, @ptrToInt(hart) + @offsetOf(limine.SmpInfo, "goto_address")).* = @ptrToInt(&native._kstart);
                 var cycles: usize = 0;
                 while (hartData != 0) {
                     cycles += 1;
