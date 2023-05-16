@@ -1,7 +1,7 @@
 const native = @import("native");
 const Spinlock = @import("spinlock.zig").Spinlock;
 const std = @import("std");
-const Thread = @import("thread.zig").Thread;
+const Thread = @import("objects/thread.zig").Thread;
 
 pub var hartList: ?[]*HardwareThread = null;
 

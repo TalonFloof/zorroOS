@@ -11,7 +11,6 @@ pub const Thread = struct {
     kstack: [8192]u8 = [_]u8{0} ** 8192,
     context: native.context.Context,
     floatContext: native.context.FloatContext,
-    managerID: u64 = 0,
     universeID: u64 = 0,
     coreID: u64 = 0,
     startTime: u64 = 0,
@@ -27,6 +26,8 @@ pub const Thread = struct {
         thread.coreID = core;
         return thread;
     }
+
+    pub fn 
 
     pub fn decon(self: *object.Object) void {
         var thr = @ptrCast(*Thread, self);
