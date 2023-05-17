@@ -27,8 +27,6 @@ pub const Thread = struct {
         return thread;
     }
 
-    pub fn 
-
     pub fn decon(self: *object.Object) void {
         var thr = @ptrCast(*Thread, self);
         alloc.free(@ptrCast([*]u8, thr)[0..(@sizeOf(Thread) + 1)]);
