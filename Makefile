@@ -1,11 +1,8 @@
 build: limine-zig
-	cd kernel; \
-	nasm -f elf64 arch/x86_64/isr.s -o arch/x86_64/isr.o; \
-	nasm -f elf64 arch/x86_64/syscall.s -o arch/x86_64/syscall.o; \
+	cd ryu; \
 	zig build; \
 	rm -f -r zig-cache; \
 	cd ..
-	rm -f -r kernel/arch/x86_64/isr.o kernel/arch/x86_64/syscall.o
 
 limine-zig:
 	git clone https://github.com/limine-bootloader/limine-zig.git --depth=1
