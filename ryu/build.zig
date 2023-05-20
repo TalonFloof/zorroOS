@@ -19,24 +19,25 @@ pub fn build(b: *Builder) !void {
     target.cpu_features_add.addFeature(@enumToInt(Features.soft_float));
     const optimize = b.standardOptimizeOption(.{});
     const kernel = b.addExecutable(.{
-        .name = "ZorroKernel",
-        .root_source_file = .{ .path = "src/main.zig" },
+        .name = "Ryu",
+        .root_source_file = .{ .path = "kernel/main.zig" },
         .target = target,
         .optimize = optimize,
     });
     const limineMod = b.createModule(.{
         .source_file = .{ .path = "../limine-zig/limine.zig" },
     });
-    const nativeMod = b.createModule(.{
-        .source_file = .{ .path = "arch/x86_64/main.zig" },
+    var halMod: *std.build.Module = undefined;
+    halMod = b.createModule(.{
+        .source_file = .{ .path = "hal/HAL.zig" },
         .dependencies = &.{
             .{ .name = "limine", .module = limineMod },
         },
     });
     kernel.addModule("limine", limineMod);
-    kernel.addModule("native", nativeMod);
+    kernel.addModule("hal", halMod);
     kernel.code_model = .kernel;
-    kernel.setLinkerScriptPath(.{ .path = "link_scripts/x86_64-Limine.ld" });
+    kernel.setLinkerScriptPath(.{ .path = "hal/link_scripts/x86_64-Limine.ld" });
     kernel.override_dest_dir = .{ .custom = "../" };
     b.installArtifact(kernel);
 }

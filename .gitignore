@@ -5,7 +5,7 @@
 *.dylib
 *.dll
 *.o
-ZorroKernel
+Ryu
 zorroOS.iso
 *.bin
 limine-zig/
