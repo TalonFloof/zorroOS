@@ -86,6 +86,9 @@ IPIType = enum usize
 end
 fn HALArchGetHCB(): *HCB
 HALArchContext = record --[[GPR Context]] end
+fn HALArchContextSetMode(p: *HALArchContext; isKrnl: bool;)
+fn HALArchContextGetReg(p: *HALArchContext; index: usize;): usize -- Used for System Calls (use 128 for IP and 129 for SP)
+fn HALArchContextSetReg(p: *HALArchContext; index: usize; val: usize;) -- Used for System Calls (use 128 for IP and 129 for SP)
 fn HALArchEnterContext(p: *HALArchContext;): noreturn
 HALArchFloatContext = record --[[FPR Context]] end
 fn HALArchSaveFloat(p: *HALArchFloatContext;)
@@ -107,14 +110,26 @@ When the **HAL** is executed, machine-specific code that is ran via `HALArchPref
 All information relating to the pages that the **Ryu Kernel** can access is stored within the PFN database. This data must be accessable while a page is in use, so it cannot be stored within the page itself. An entry in the database has the following structure:
 ```lua
 PFNEntry = record
-    prev, next: *PFNEntry;
+    next: *PFNEntry; /* Only used when page is Free or Zeroed */
     refs: i28;
     state: u3; -- 0: Free 1: Zeroed 2: Reserved 3: Active 4: Swapped
     swappable: u1;
     pfe: PageFrame;
 end
 ```
-
+The kernel has two memory pools which are used for heap memory. These pools are known as the **Static Pool** and the **Paged Pool**. The **Static Pool** contains memory that is guarenteed to always recide in physical memory (it cannot be swapped out). The **Paged Pool** is memory that could page fault in the event of a page swap. Memory within this pool is also different per each address space.
+### **Virtual Memory Layout**
+#### **4-level Paging Layout**
+```
+0x0000000000000000-0x0000000000000fff: Reserved
+0x0000000000001000-0x0000800000000000: Userspace Memory
+0x0000800000000000-0xffff7fffffffffff: Unusable (4-level paging has 48-bit addresses and bit 47 extends to MSB)
+0xffff800000000000-0xfffffe7fffffffff: Identity Mapping of Physical Memory
+0xfffffe8000000000-0xfffffeffffffffff: Static Pool
+0xffffff0000000000-0xffffff7fffffffff: Paged Pool
+0xffffff8000000000-0xffffffff7fffffff: Reserved
+0xffffffff80000000-0xffffffffffffffff: Ryu Kernel and Drivers
+```
 ### **Routines**
 ```lua
 ```

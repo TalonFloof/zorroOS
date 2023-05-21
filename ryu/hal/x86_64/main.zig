@@ -4,6 +4,7 @@ const limine = @import("limine");
 const framebuffer = @import("framebuffer.zig");
 const mem = @import("mem.zig");
 const gdt = @import("gdt.zig");
+const idt = @import("idt.zig");
 
 pub export fn _archstart() callconv(.Naked) noreturn {
     asm volatile (
@@ -16,6 +17,7 @@ pub export fn _archstart() callconv(.Naked) noreturn {
 pub fn PreformStartup() void {
     IRQEnableDisable(false);
     gdt.initialize();
+    idt.initialize();
     framebuffer.init();
     mem.init();
 }
@@ -51,6 +53,29 @@ pub fn SendIPI(hartID: i32, typ: IPIType) void {
     _ = typ;
     _ = hartID;
 }
+
+pub const Context = packed struct {
+    r15: u64 = 0,
+    r14: u64 = 0,
+    r13: u64 = 0,
+    r12: u64 = 0,
+    r11: u64 = 0,
+    r10: u64 = 0,
+    r9: u64 = 0,
+    r8: u64 = 0,
+    rbp: u64 = 0,
+    rdi: u64 = 0,
+    rsi: u64 = 0,
+    rdx: u64 = 0,
+    rcx: u64 = 0,
+    rbx: u64 = 0,
+    rax: u64 = 0,
+    rip: u64 = 0,
+    cs: u64 = 0,
+    rflags: u64 = 0x202,
+    rsp: u64 = 0,
+    ss: u64 = 0,
+};
 
 pub const PTEEntry = packed struct {
     r: u1 = 0,

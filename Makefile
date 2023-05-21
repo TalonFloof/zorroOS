@@ -1,7 +1,8 @@
 build: limine-zig
+	nasm -f elf64 ryu/hal/x86_64/isr.s -o ryu/isr.o; \
 	cd ryu; \
 	zig build; \
-	rm -f -r zig-cache; \
+	rm -f -r zig-cache isr.o; \
 	cd ..
 
 limine-zig:
