@@ -10,14 +10,15 @@ pub const CrashCode = enum(u32) {
     RyuPFNCorruption,
     RyuNoACPI,
     RyuStaticPoolDepleated,
-    RyuPageFaultWhileIRQLGreaterThanUserDispatch,
     RyuIRQLDemoteWhilePromoting,
     RyuIRQLPromoteWhileDemoting,
+    RyuPageFaultWhileIRQLGreaterThanUserDispatch,
     RyuUnhandledPageFault,
     RyuUnalignedAccess,
     RyuIllegalOpcode,
     RyuProtectionFault,
     RyuDeadlock,
+    RyuZigPanic,
     RyuIntentionallyTriggeredFailure = 0xdeaddead,
 };
 

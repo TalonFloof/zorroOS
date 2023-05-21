@@ -177,13 +177,13 @@ pub fn Init(i: *const FBInfo) void {
     info.set(info, 0, 0, info.width, info.height - 96, 0x1E1E2E);
     info.set(info, @intCast(isize, cursorX * 8), @intCast(isize, cursorY * 16), 8, 16, 0xCDD6F4);
     var runtime: usize = 0;
-    var y = info.height - 96;
-    while (y <= info.height) : (y += 1) {
-        var x: isize = if ((y % 2) == 1) 1 else 0;
-        while (x <= info.width) : (x += 2) {
-            info.set(info, x, @intCast(isize, y), 1, 1, 0x1E1E2E);
-        }
-    }
+    //var y = info.height - 96;
+    //while (y <= info.height) : (y += 1) {
+    //    var x: isize = if ((y % 2) == 1) 1 else 0;
+    //    while (x <= info.width) : (x += 2) {
+    //        info.set(info, x, @intCast(isize, y), 1, 1, 0x1E1E2E);
+    //    }
+    //}
     fbDrawBitmap(@divTrunc(@intCast(isize, info.width), 2) - 84, @intCast(isize, info.height) - 96, 96, 24, @constCast(ryuLogo[runtime..ryuLogo.len]), 0xB57BEE);
     fbDrawBitmap(@divTrunc(@intCast(isize, info.width), 2) - 84, @intCast(isize, info.height) - 72, 96, 24, @constCast(ryuLogo[runtime + (12 * 24) .. ryuLogo.len]), 0x8B61C1);
     fbDrawBitmap(@divTrunc(@intCast(isize, info.width), 2) - 84, @intCast(isize, info.height) - 48, 96, 24, @constCast(ryuLogo[runtime + (24 * 24) .. ryuLogo.len]), 0x624795);

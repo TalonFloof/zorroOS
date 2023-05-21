@@ -3,6 +3,7 @@ const HAL = @import("hal");
 const limine = @import("limine");
 const framebuffer = @import("framebuffer.zig");
 const mem = @import("mem.zig");
+const gdt = @import("gdt.zig");
 
 pub export fn _archstart() callconv(.Naked) noreturn {
     asm volatile (
@@ -14,6 +15,7 @@ pub export fn _archstart() callconv(.Naked) noreturn {
 
 pub fn PreformStartup() void {
     IRQEnableDisable(false);
+    gdt.initialize();
     framebuffer.init();
     mem.init();
 }

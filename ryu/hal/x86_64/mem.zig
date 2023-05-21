@@ -16,5 +16,5 @@ pub fn init() void {
             }
         }
     }
-    Memory.Initialize(ranges);
+    Memory.Initialize(&ranges);
 }

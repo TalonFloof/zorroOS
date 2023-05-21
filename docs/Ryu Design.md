@@ -84,7 +84,7 @@ IPIType = enum usize
     IPIReschedule,
     IPIFlushTLB,
 end
-fn HALArchGetHart(): *HartData
+fn HALArchGetHCB(): *HCB
 HALArchContext = record --[[GPR Context]] end
 fn HALArchEnterContext(p: *HALArchContext;): noreturn
 HALArchFloatContext = record --[[FPR Context]] end
@@ -114,7 +114,7 @@ PFNEntry = record
     pfe: PageFrame;
 end
 ```
-Memory Allocation 
+
 ### **Routines**
 ```lua
 ```
