@@ -1,17 +1,24 @@
 const HAL = @import("HAL.zig");
 const std = @import("std");
 
-pub const CrashCode = enum {
-    RyuUnknownCrash,
+pub const CrashCode = enum(u32) {
+    RyuUnknownCrash = 0,
     RyuUnknownException,
     RyuNoRootFilesystem,
-    RyuPhase0Exception,
     RyuHALInitializationFailure,
     RyuKernelInitializationFailure,
     RyuPFNCorruption,
     RyuNoACPI,
     RyuStaticPoolDepleated,
-    RyuIRQLUnexpectedLowerIRQL,
+    RyuPageFaultWhileIRQLGreaterThanUserDispatch,
+    RyuIRQLDemoteWhilePromoting,
+    RyuIRQLPromoteWhileDemoting,
+    RyuUnhandledPageFault,
+    RyuUnalignedAccess,
+    RyuIllegalOpcode,
+    RyuProtectionFault,
+    RyuDeadlock,
+    RyuIntentionallyTriggeredFailure = 0xdeaddead,
 };
 
 pub fn Crash(code: CrashCode, args: [4]usize) noreturn {
@@ -27,6 +34,6 @@ pub fn Crash(code: CrashCode, args: [4]usize) noreturn {
         args[3],
     });
     // Begin Debugger Dump
-    HAL.Console.Put("Kernel version:\nRyu Kernel Version 0.0.1\n\nSystem Halted\n", .{});
+    HAL.Console.Put("System Halted\n", .{});
     while (true) {}
 }

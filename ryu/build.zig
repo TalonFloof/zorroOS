@@ -27,15 +27,21 @@ pub fn build(b: *Builder) !void {
     const limineMod = b.createModule(.{
         .source_file = .{ .path = "../limine-zig/limine.zig" },
     });
-    var halMod: *std.build.Module = undefined;
-    halMod = b.createModule(.{
+    const halMod = b.createModule(.{
         .source_file = .{ .path = "hal/HAL.zig" },
         .dependencies = &.{
             .{ .name = "limine", .module = limineMod },
         },
     });
+    const memoryMod = b.createModule(.{
+        .source_file = .{ .path = "memory/Memory.zig" },
+        .dependencies = &.{
+            .{ .name = "hal", .module = halMod },
+        },
+    });
     kernel.addModule("limine", limineMod);
     kernel.addModule("hal", halMod);
+    kernel.addModule("memory", memoryMod);
     kernel.code_model = .kernel;
     kernel.setLinkerScriptPath(.{ .path = "hal/link_scripts/x86_64-Limine.ld" });
     kernel.override_dest_dir = .{ .custom = "../" };

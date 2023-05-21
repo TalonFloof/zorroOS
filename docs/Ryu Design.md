@@ -90,9 +90,12 @@ fn HALArchEnterContext(p: *HALArchContext;): noreturn
 HALArchFloatContext = record --[[FPR Context]] end
 fn HALArchSaveFloat(p: *HALArchFloatContext;)
 fn HALArchRestoreFloat(p: *HALArchFloatContext;)
--- TODO: Add Arch-Specific Paging Routines
+fn HALArchGetPTE(root: *void; level, addr: usize;): PTEEntry
+fn HALArchSetPTE(root: *void; level, addr: usize; entry: PTEEntry;): PTEEntry
+inline fn HALArchGetPTELevels(): usize
+fn HALArchSwitchPT(newRoot: *void;)
 ----------HALCrash----------
-fn HALCrash(code: CrashCode;): noreturn
+fn HALCrash(code: CrashCode; args: [4]usize;): noreturn
 ```
 ---
 ## **Memory Management**
@@ -106,7 +109,7 @@ All information relating to the pages that the **Ryu Kernel** can access is stor
 PFNEntry = record
     prev, next: *PFNEntry;
     refs: i28;
-    state: u3; -- 0: Reserved 1: Free 2: Zeroed 3: Active 4: Transitioning 5: Swapped
+    state: u3; -- 0: Free 1: Zeroed 2: Reserved 3: Active 4: Swapped
     swappable: u1;
     pfe: PageFrame;
 end

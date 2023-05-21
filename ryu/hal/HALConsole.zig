@@ -189,6 +189,7 @@ pub fn Init(i: *const FBInfo) void {
     fbDrawBitmap(@divTrunc(@intCast(isize, info.width), 2) - 84, @intCast(isize, info.height) - 48, 96, 24, @constCast(ryuLogo[runtime + (24 * 24) .. ryuLogo.len]), 0x624795);
     fbDrawBitmap(@divTrunc(@intCast(isize, info.width), 2) - 84, @intCast(isize, info.height) - 24, 96, 24, @constCast(ryuLogo[runtime + (36 * 24) .. ryuLogo.len]), 0x392D69);
     fbDrawBitmap(@divTrunc(@intCast(isize, info.width), 2) + 20, @intCast(isize, info.height - 66), 64, 37, @constCast(ryuText[runtime..ryuText.len]), 0xffffff);
+    Put("Ryu Kernel Version 0.0.1 (c) 2020-2023 TalonFox\n", .{});
 }
 
 fn newline() void {
