@@ -12,8 +12,6 @@ CURRENTLY IMCOMPLETE**
 - [Section 6 - Objects](#objects)
 - [Section 7 - Driver I/O](#driver-io)
 - [Section 8 - Multitasking and Scheduling](#multitasking-and-scheduling)
-- [Appendix A - Ryu Executive Calls](#ryu-executive-calls)
-- [Appendix B - Ryu Crash Codes](#ryu-crash-codes)
 ## Pseudocode
 All routines within the **Ryu Design** documentation use a special pseudocode to represent the actual code which will be ran within the **Ryu Kernel**.  
 An example of the syntax can be seen within this code sniplet:
@@ -70,8 +68,7 @@ fn HALPreformStartup(stackTop: usize;): noreturn -- Kernel Entry Point
 HALConsoleFBInfo = record
    ptr: *void;
    width, height, pitch, bpp: usize;
-   nativeColor: *fn(c: u8;): usize;
-   set: *fn(x, y, w, h: i32; c: usize;);
+   set: *fn(x, y: isize; w, h, c: usize;);
 end
 fn HALConsoleInit(info: *HALConsoleFB;)
 fn HALConsolePut(--[[Formatted String and Arguments]])
@@ -108,9 +105,13 @@ All information relating to the pages that the **Ryu Kernel** can access is stor
 ```lua
 PFNEntry = record
     prev, next: *PFNEntry;
-    
+    refs: i28;
+    state: u3; -- 0: Reserved 1: Free 2: Zeroed 3: Active 4: Transitioning 5: Swapped
+    swappable: u1;
+    pfe: PageFrame;
 end
 ```
+Memory Allocation 
 ### **Routines**
 ```lua
 ```

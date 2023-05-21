@@ -8,10 +8,11 @@ pub export fn _archstart() callconv(.Naked) noreturn {
         \\mov %rsp, %rdi
         \\jmp HALPreformStartup
     );
-    while (true) {}
+    unreachable;
 }
 
 pub fn PreformStartup() void {
+    IRQEnableDisable(false);
     framebuffer.init();
 }
 
