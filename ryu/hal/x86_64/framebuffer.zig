@@ -20,7 +20,7 @@ fn setPixels(self: *const HAL.Console.FBInfo, x: isize, y: isize, w: usize, h: u
             } else if (i >= self.width) {
                 break;
             }
-            @ptrCast([*]u32, @alignCast(4, self.ptr))[(@intCast(usize, i) * self.width) + @intCast(usize, j)] = @intCast(u32, c);
+            @ptrCast([*]u32, @alignCast(4, self.ptr))[(@intCast(usize, i) * (self.pitch / (self.bpp / 8))) + @intCast(usize, j)] = @intCast(u32, c);
         }
     }
 }
