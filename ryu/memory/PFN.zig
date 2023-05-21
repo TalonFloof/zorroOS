@@ -13,30 +13,12 @@ pub const PFNEntry = struct {
     pte: HAL.Arch.PTEEntry,
 };
 
-fn isPageFree(addr: usize, ranges: *[32]Memory.PhysicalRange) bool {
-    for (ranges) |r| {
-        if (r.start == 0 and r.end == 0)
-            continue;
-        if (r.start >= addr and r.end <= addr + 0xfff) {
-            return true;
-        }
-    }
-    return false;
-}
-
 pub fn Initialize(begin: usize, entryCount: usize, ranges: *[32]Memory.PhysicalRange) void {
     pfnDatabase = @intToPtr([*]PFNEntry, begin)[0..entryCount];
     for (0..pfnDatabase.len) |i| {
-        if (isPageFree(@intCast(usize, i) << 12, ranges)) {
-            pfnDatabase[i].next = pfnFreeHead;
-            pfnDatabase[i].refs = 0;
-            pfnDatabase[i].state = 0; // Free
-            pfnFreeHead = &pfnDatabase[i];
-        } else {
-            pfnDatabase[i].next = null;
-            pfnDatabase[i].refs = 0;
-            pfnDatabase[i].state = 2; // Reserved
-        }
+        pfnDatabase[i].next = null;
+        pfnDatabase[i].refs = 0;
+        pfnDatabase[i].state = 2; // Reserved
         pfnDatabase[i].swappable = 0;
         pfnDatabase[i].pte.r = 0;
         pfnDatabase[i].pte.w = 0;
@@ -46,5 +28,14 @@ pub fn Initialize(begin: usize, entryCount: usize, ranges: *[32]Memory.PhysicalR
         pfnDatabase[i].pte.reserved = 0;
         pfnDatabase[i].pte.neededLevel = 0;
         pfnDatabase[i].pte.phys = @intCast(u52, i);
+    }
+    for (ranges) |r| {
+        var i = r.start;
+        while (i < r.end) : (i += 4096) {
+            pfnDatabase[i >> 12].next = pfnFreeHead;
+            pfnDatabase[i >> 12].refs = 0;
+            pfnDatabase[i >> 12].state = 0; // Free
+            pfnFreeHead = &pfnDatabase[i >> 12];
+        }
     }
 }
