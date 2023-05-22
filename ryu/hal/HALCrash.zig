@@ -12,17 +12,21 @@ pub const CrashCode = enum(u32) {
     RyuStaticPoolDepleated,
     RyuIRQLDemoteWhilePromoting,
     RyuIRQLPromoteWhileDemoting,
+    RyuPageFaultInStaticPool,
+    RyuPageFaultInPagedPool,
     RyuPageFaultWhileIRQLGreaterThanUserDispatch,
     RyuUnhandledPageFault,
     RyuUnalignedAccess,
     RyuIllegalOpcode,
     RyuProtectionFault,
+    RyuDoubleFault,
     RyuDeadlock,
     RyuZigPanic,
     RyuIntentionallyTriggeredFailure = 0xdeaddead,
 };
 
 pub fn Crash(code: CrashCode, args: [4]usize) noreturn {
+    HAL.Arch.IRQEnableDisable(false);
     HAL.Console.EnableDisable(true);
     HAL.Console.Put("System Failure: hart={d} ret={x:0>16}; code={x:0>8} {s}\n({x:0>16},{x:0>16},{x:0>16},{x:0>16})\n\n", .{
         0,
@@ -36,5 +40,5 @@ pub fn Crash(code: CrashCode, args: [4]usize) noreturn {
     });
     // Begin Debugger Dump
     HAL.Console.Put("System Halted\n", .{});
-    while (true) {}
+    HAL.Arch.Halt();
 }

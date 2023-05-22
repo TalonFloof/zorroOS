@@ -97,6 +97,7 @@ fn HALArchGetPTE(root: *void; level, addr: usize;): PTEEntry
 fn HALArchSetPTE(root: *void; level, addr: usize; entry: PTEEntry;): PTEEntry
 inline fn HALArchGetPTELevels(): usize
 fn HALArchSwitchPT(newRoot: *void;)
+HCBArchData = record --[[Arch-specific HCB data]] end
 ----------HALCrash----------
 fn HALCrash(code: CrashCode; args: [4]usize;): noreturn
 ```
@@ -111,13 +112,13 @@ All information relating to the pages that the **Ryu Kernel** can access is stor
 ```lua
 PFNEntry = record
     next: *PFNEntry; /* Only used when page is Free or Zeroed */
-    refs: i28;
-    state: u3; -- 0: Free 1: Zeroed 2: Reserved 3: Active 4: Swapped
+    refs: u28;
+    state: u3; -- 0: Free 1: Zeroed 2: Reserved 3: Active 4: Swapped 5: Page Table 6: Swapped Page Table
     swappable: u1;
-    pfe: PageFrame;
+    pfe: usize; -- Pointer to Page Frame Entry
 end
 ```
-The kernel has two memory pools which are used for heap memory. These pools are known as the **Static Pool** and the **Paged Pool**. The **Static Pool** contains memory that is guarenteed to always recide in physical memory (it cannot be swapped out). The **Paged Pool** is memory that could page fault in the event of a page swap. Memory within this pool is also different per each address space.
+The kernel has two memory pools which are used for heap memory. These pools are known as the **Static Pool** and the **Paged Pool**. The **Static Pool** contains memory that is guarenteed to always recide in physical memory (it cannot be swapped out). The **Paged Pool** is memory that could page fault in the event of a page swap. Both pools are preserved across different address spaces. The **Paged Pool** can only be allocated from if the **IRQL** is less than or equal to **IRQL_USER_DISPATCH**. Routines that run in a higher **IRQL** should use the **Static Pool**. (NOTICE: At the momment the Paged Pool isn't implemented yet, the Paged Pool routines will access the Static Pool until page swapping is implemented)
 ### **Virtual Memory Layout**
 #### **4-level Paging Layout**
 ```
