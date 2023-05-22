@@ -3,6 +3,7 @@ const std = @import("std");
 const acpi = @import("acpi.zig");
 
 var lapic_ptr: usize = 0;
+pub var ioapic_ptr: usize = 0;
 
 pub fn setup() void {
     HAL.Arch.wrmsr(0x1b, (HAL.Arch.rdmsr(0x1b) | 0x800) & ~(@as(u64, 1) << @as(u64, 10))); // Enable the Local APIC
@@ -42,7 +43,7 @@ pub fn setup() void {
     write(0x380, ticks / 10);
     write(0x320, 32 | 0x20000);
     // Now, we'll start to recieve interrupts from the timer!
-    // This is vital for preemptive multitasking, and will be super useful for the microkernel.
+    // This is vital for preemptive multitasking, and will be super useful for the kernel.
 }
 
 pub fn read(reg: usize) u32 {

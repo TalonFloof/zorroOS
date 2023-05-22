@@ -1,4 +1,6 @@
 pub const PFN = @import("PFN.zig");
+pub const Pool = @import("Pool.zig");
+pub const Paging = @import("Paging.zig");
 const HAL = @import("hal");
 
 pub const PhysicalRange = struct {
@@ -7,7 +9,7 @@ pub const PhysicalRange = struct {
 };
 
 pub fn Initialize(ranges: *[32]PhysicalRange) void {
-    var highestAddress: usize = 0;
+    var highestAddress: usize = 0x100000000;
     for (ranges) |r| {
         if (r.end > highestAddress) {
             highestAddress = r.end;

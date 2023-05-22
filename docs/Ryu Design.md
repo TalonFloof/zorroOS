@@ -113,7 +113,7 @@ All information relating to the pages that the **Ryu Kernel** can access is stor
 PFNEntry = record
     next: *PFNEntry; /* Only used when page is Free or Zeroed */
     refs: u28;
-    state: u3; -- 0: Free 1: Zeroed 2: Reserved 3: Active 4: Swapped 5: Page Table 6: Swapped Page Table
+    state: u3; -- 0: Free 1: Zeroed 2: Reserved 3: Active 4: Swapped 5: Page Table
     swappable: u1;
     pfe: usize; -- Pointer to Page Frame Entry
 end

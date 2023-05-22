@@ -15,7 +15,6 @@ pub const PFNType = enum(u3) {
     Active = 3,
     Swapped = 4,
     PageTable = 5,
-    SwappedPageTable = 6,
 };
 
 // PFN Database
@@ -96,14 +95,15 @@ pub fn DereferencePage(page: usize) void {
     pfnSpinlock.acquire();
     pfnDatabase[index].refs -= 1;
     if (pfnDatabase[index].refs == 0) {
+        const oldState = pfnDatabase[index].state;
         pfnDatabase[index].state = .Free;
         pfnDatabase[index].next = pfnFreeHead;
         pfnDatabase[index].swappable = 0;
-        if (pfnDatabase[index].pte != 0) {
+        if (pfnDatabase[index].pte != 0 and oldState == .PageTable) {
             const entry: usize = pfnDatabase[index].pte;
             const pt = entry & (~@intCast(usize, 0xFFF));
-            if (pfnDatabase[pt >> 12].state != .PageTable and pfnDatabase[pt >> 12].state != .SwappedPageTable) {
-                HAL.Crash.Crash(.RyuPFNCorruption, .{ pt, @enumToInt(entry.state), (@enumToInt(.SwappedPageTable) << 8) | @enumToInt(.PageTable), 0 });
+            if (pfnDatabase[pt >> 12].state != .PageTable) {
+                HAL.Crash.Crash(.RyuPFNCorruption, .{ pt, @enumToInt(entry.state), @enumToInt(.PageTable), 0 });
             }
             @intToPtr(*usize, entry).* = 0;
             pfnFreeHead = &pfnDatabase[index];

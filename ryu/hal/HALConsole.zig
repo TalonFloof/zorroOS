@@ -216,7 +216,9 @@ fn conWriteString(_: @TypeOf(.{}), string: []const u8) error{}!usize {
         if (c == '\n') {
             newline();
         } else {
-            fbDrawBitmap(@intCast(isize, cursorX * 8), @intCast(isize, cursorY * 16), 8, 16, @constCast(Unifont[((@intCast(usize, c) - 0x20) * 16)..Unifont.len]), 0xcdd6f4);
+            if (c >= 0x20 and c <= 0x7e) {
+                fbDrawBitmap(@intCast(isize, cursorX * 8), @intCast(isize, cursorY * 16), 8, 16, @constCast(Unifont[((@intCast(usize, c) - 0x20) * 16)..Unifont.len]), 0xcdd6f4);
+            }
             cursorX += 1;
             if ((cursorX * 8) >= info.width) {
                 newline();
