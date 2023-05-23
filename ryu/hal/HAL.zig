@@ -10,8 +10,7 @@ pub const PTEEntry = packed struct {
     userSupervisor: u1 = 0,
     nonCached: u1 = 0,
     writeThrough: u1 = 0,
-    reserved: u3 = 0,
-    neededLevel: u3 = 0,
+    reserved: u6 = 0,
     phys: u52 = 0,
 };
 

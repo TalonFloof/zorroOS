@@ -93,8 +93,8 @@ fn HALArchEnterContext(p: *HALArchContext;): noreturn
 HALArchFloatContext = record --[[FPR Context]] end
 fn HALArchSaveFloat(p: *HALArchFloatContext;)
 fn HALArchRestoreFloat(p: *HALArchFloatContext;)
-fn HALArchGetPTE(root: *void; level, addr: usize;): PTEEntry
-fn HALArchSetPTE(root: *void; level, addr: usize; entry: PTEEntry;): PTEEntry
+fn HALArchGetPTE(root: *void; index: usize;): PTEEntry
+fn HALArchSetPTE(root: *void; index: usize; entry: PTEEntry;)
 inline fn HALArchGetPTELevels(): usize
 fn HALArchSwitchPT(newRoot: *void;)
 HCBArchData = record --[[Arch-specific HCB data]] end
@@ -111,14 +111,14 @@ When the **HAL** is executed, machine-specific code that is ran via `HALArchPref
 All information relating to the pages that the **Ryu Kernel** can access is stored within the PFN database. This data must be accessable while a page is in use, so it cannot be stored within the page itself. An entry in the database has the following structure:
 ```lua
 PFNEntry = record
-    next: *PFNEntry; /* Only used when page is Free or Zeroed */
+    next: *PFNEntry; -- Only used when page is Free or Zeroed
     refs: u28;
-    state: u3; -- 0: Free 1: Zeroed 2: Reserved 3: Active 4: Swapped 5: Page Table
+    state: u3; -- 0: Free 1: Zeroed 2: Reserved 3: Active 4: Page Table
     swappable: u1;
     pfe: usize; -- Pointer to Page Frame Entry
 end
 ```
-The kernel has two memory pools which are used for heap memory. These pools are known as the **Static Pool** and the **Paged Pool**. The **Static Pool** contains memory that is guarenteed to always recide in physical memory (it cannot be swapped out). The **Paged Pool** is memory that could page fault in the event of a page swap. Both pools are preserved across different address spaces. The **Paged Pool** can only be allocated from if the **IRQL** is less than or equal to **IRQL_USER_DISPATCH**. Routines that run in a higher **IRQL** should use the **Static Pool**. (NOTICE: At the momment the Paged Pool isn't implemented yet, the Paged Pool routines will access the Static Pool until page swapping is implemented)
+The kernel has two memory pools which are used for heap memory. These pools are known as the **Static Pool** and the **Paged Pool**. The **Static Pool** contains memory that is guarenteed to always recide in physical memory (it cannot be swapped out). The **Paged Pool** is memory that could page fault in the event of a page swap. Both pools are preserved across different address spaces. The **Paged Pool** can only be allocated from if the **IRQL** is less than or equal to **IRQL_USER_DISPATCH**. Routines that run in a higher **IRQL** should use the **Static Pool**.
 ### **Virtual Memory Layout**
 #### **4-level Paging Layout**
 ```

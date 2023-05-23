@@ -13,8 +13,7 @@ pub const PFNType = enum(u3) {
     Zeroed = 1,
     Reserved = 2,
     Active = 3,
-    Swapped = 4,
-    PageTable = 5,
+    PageTable = 4,
 };
 
 // PFN Database
@@ -54,7 +53,7 @@ pub fn AllocatePage(tag: PFNType, swappable: bool, pte: usize) ?[]u8 {
         }
         pfnZeroedHead = entry.next;
         entry.next = null;
-        entry.refs = 1;
+        entry.refs = if (tag == .PageTable) 0 else 1;
         entry.state = tag;
         entry.swappable = if (swappable) 1 else 0;
         entry.pte = pte;
@@ -69,7 +68,7 @@ pub fn AllocatePage(tag: PFNType, swappable: bool, pte: usize) ?[]u8 {
         }
         pfnFreeHead = entry.next;
         entry.next = null;
-        entry.refs = 1;
+        entry.refs = if (tag == .PageTable) 0 else 1;
         entry.state = tag;
         entry.swappable = if (swappable) 1 else 0;
         entry.pte = pte;

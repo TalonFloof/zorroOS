@@ -99,56 +99,26 @@ const NativePTEEntry = packed struct {
     noExecute: u1 = 0,
 };
 
-pub fn GetPTE(root: *void, level: usize, addr: usize) HAL.PTEEntry {
+pub fn GetPTE(root: *void, index: usize) HAL.PTEEntry {
     var entries: []NativePTEEntry = @ptrCast([*]NativePTEEntry, @alignCast(@alignOf(usize), root))[0..512];
-    var i = 0;
-    while (i < level) : (i += 1) {
-        const index = (addr & (0x3fe000000000 >> (i * 9))) >> (37 - (i * 9));
-        if (i + 1 >= level) {
-            var entry: HAL.PTEEntry = HAL.PTEEntry{};
-            entry.r = entries[index].valid;
-            entry.w = entries[index].write;
-            entry.x = ~entries[index].noExecute;
-            entry.nonCached = entries[index].cacheDisable;
-            entry.writeThrough = entries[index].writeThrough;
-            entry.phys = @intCast(u52, entries[index].phys);
-            entry.neededLevel = 0;
-            return entry;
-        } else {
-            if (entries[index].valid == 0) {
-                return HAL.PTEEntry{ .r = 0, .neededLevel = level - (i + 1) };
-            } else {
-                entries = @intToPtr([*]NativePTEEntry, @intCast(usize, entries[index].phys) << 12)[0..512];
-            }
-        }
-    }
-    unreachable;
+    var entry: HAL.PTEEntry = HAL.PTEEntry{};
+    entry.r = entries[index].valid;
+    entry.w = entries[index].write;
+    entry.x = ~entries[index].noExecute;
+    entry.nonCached = entries[index].cacheDisable;
+    entry.writeThrough = entries[index].writeThrough;
+    entry.phys = @intCast(u52, entries[index].phys);
+    return entry;
 }
 
-pub fn SetPTE(root: *void, level: usize, addr: usize) HAL.PTEEntry {
+pub fn SetPTE(root: *void, index: usize, entry: HAL.PTEEntry) void {
     var entries: []NativePTEEntry = @ptrCast([*]NativePTEEntry, @alignCast(@alignOf(usize), root))[0..512];
-    var i = 0;
-    while (i < level) : (i += 1) {
-        const index = (addr & (0x3fe000000000 >> (i * 9))) >> (37 - (i * 9));
-        if (i + 1 >= level) {
-            var entry: HAL.PTEEntry = HAL.PTEEntry{};
-            entry.r = entries[index].valid;
-            entry.w = entries[index].write;
-            entry.x = ~entries[index].noExecute;
-            entry.nonCached = entries[index].cacheDisable;
-            entry.writeThrough = entries[index].writeThrough;
-            entry.phys = @intCast(u52, entries[index].phys);
-            entry.neededLevel = 0;
-            return entry;
-        } else {
-            if (entries[index].valid == 0) {
-                return HAL.PTEEntry{ .r = 0, .neededLevel = level - (i + 1) };
-            } else {
-                entries = @intToPtr([*]NativePTEEntry, @intCast(usize, entries[index].phys) << 12)[0..512];
-            }
-        }
-    }
-    unreachable;
+    entries[index].valid = entry.r;
+    entries[index].write = entry.w;
+    entries[index].noExecute = ~entry.x;
+    entries[index].cacheDisable = entry.nonCached;
+    entries[index].writeThrough = entry.writeThrough;
+    entries[index].phys = @intCast(u51, entry.phys);
 }
 
 pub inline fn GetPTELevels() usize {
