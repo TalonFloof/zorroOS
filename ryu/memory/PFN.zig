@@ -115,3 +115,10 @@ pub fn DereferencePage(page: usize) void {
     }
     pfnSpinlock.release();
 }
+
+pub fn ChangePTEEntry(page: usize, pte: usize) void {
+    const index: usize = (page >> 12);
+    pfnSpinlock.acquire();
+    pfnDatabase[index].pte = pte;
+    pfnSpinlock.release();
+}

@@ -1,5 +1,6 @@
 const Memory = @import("root").Memory;
 const Spinlock = @import("root").Spinlock;
+const HAL = @import("root").HAL;
 
 // This implements a simple memory allocator for the Ryu Kernel.
 // There's a chance this will probably be replaced with a more efficient allocator in the future, but for now, this is the best you'll get.
@@ -71,6 +72,7 @@ pub const Bucket = struct {
 pub const Pool = struct {
     poolName: []const u8,
     poolBase: usize,
+    searchStart: usize,
     allowSwapping: bool,
     buckets: usize = 0,
     usedBlocks: usize = 0,
@@ -78,11 +80,14 @@ pub const Pool = struct {
     anonymousPages: usize = 0,
     partialBucketHead: ?*Bucket = null,
     fullBucketHead: ?*Bucket = null,
+    lock: Spinlock = .unaquired,
+    lockHartID: i32 = -1,
 
     pub fn Alloc(self: *Pool, size: usize) ?[]u8 {
         if (size > 65024) {
             return self.AllocAnonPages(size);
         }
+        self.lock.acquire();
         var index = self.partialBucketHead;
         while (index != null) : (index = index.?.next) {
             const oldEntryCount = index.?.usedEntries;
@@ -104,10 +109,12 @@ pub const Pool = struct {
                     self.fullBucketHead = index;
                 }
                 self.usedBlocks += ((index.?.usedEntries) - oldEntryCount);
+                self.lock.release();
                 return ret;
             }
         }
         // Allocate a new bucket
+        self.lockHartID = HAL.Arch.GetHCB().hartID;
         var newBucket = self.AllocAnonPages(512 * 1024);
         var bucketHeader = @ptrCast(*Bucket, newBucket.?.ptr);
         self.anonymousPages -= (512 * 1024) / 4096;
@@ -116,12 +123,29 @@ pub const Pool = struct {
         bucketHeader.next = self.partialBucketHead;
         var ret = bucketHeader.Alloc(size);
         self.usedBlocks += index.?.usedEntries;
+        self.lock.release();
         return ret;
     }
 
     pub fn AllocAnonPages(self: *Pool, size: usize) ?[]u8 {
         _ = size;
-        _ = self;
+        if (self.lockHartID != HAL.Arch.GetHCB().hartID) {
+            self.lock.acquire();
+        }
+        var addr: usize = Memory.Paging.FindFreeSpace(Memory.Paging.initialPageDir,self.searchStart,size);
+        self.searchStart = addr + size;
+        var i = addr;
+        while(i < addr + size) : (i += 4096) {
+            var page = Memory.PFN.AllocatePage(.Active,self.allowSwapping,0);
+            var pte = Memory.Paging.MapPage(Memory.Paging.initialPageDir,i,Memory.Paging.MapRead | Memory.Paging.MapWrite | Memory.Paging.MapSupervisor,);
+            Memory.PFN.ChangePTEEntry(page,pte);
+        }
+        self.anonymousPages += size/4096;
+        if (self.lockHartID != HAL.Arch.GetHCB().hartID) {
+            self.lock.release();
+        } else {
+            self.lockHartID = -1;
+        }
         return null;
     }
 
@@ -130,6 +154,7 @@ pub const Pool = struct {
             self.FreeAnonPages(data);
             return;
         }
+        self.lock.acquire();
         var index = self.partialBucketHead;
         var bucket: ?*Bucket = null;
         while (index != null) : (index = index.?.next) {
@@ -180,25 +205,43 @@ pub const Pool = struct {
                 self.totalBlocks -= 32512;
                 self.buckets -= 1;
                 self.anonymousPages += (512 * 1024) / 4096;
+                self.lockHartID = HAL.Arch.GetHCB().hartID;
                 self.FreeAnonPages(@ptrCast([*]u8, bucket)[0..(512 * 1024)]);
             }
         }
+        self.lock.release();
     }
 
     pub fn FreeAnonPages(self: *Pool, data: []u8) void {
         _ = data;
-        _ = self;
+        if (self.lockHartID != HAL.Arch.GetHCB().hartID) {
+            self.lock.acquire();
+        }
+        if(self.search)
+        var i = addr;
+        while(i < addr + size) : (i += 4096) {
+            var page = Memory.PFN.AllocatePage(.Active,self.allowSwapping,0);
+            var pte = Memory.Paging.MapPage(Memory.Paging.initialPageDir,i,Memory.Paging.MapRead | Memory.Paging.MapWrite | Memory.Paging.MapSupervisor,);
+            Memory.PFN.ChangePTEEntry(page,pte);
+        }
+        if (self.lockHartID != HAL.Arch.GetHCB().hartID) {
+            self.lock.release();
+        } else {
+            self.lockHartID = -1;
+        }
     }
 };
 
 pub var StaticPool: Pool = Pool{
     .poolName = "StaticPool",
     .poolBase = 0xfffffe8000000000,
+    .searchStart = 0xfffffe8000000000,
     .allowSwapping = false,
 };
 
 pub var PagedPool: Pool = Pool{
     .poolName = "PagedPool",
-    .poolBase = 0xfffffe8000000000,
+    .poolBase = 0xffffff0000000000,
+    .searchStart = 0xffffff0000000000,
     .allowSwapping = true,
 };
