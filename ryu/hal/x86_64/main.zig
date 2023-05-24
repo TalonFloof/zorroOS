@@ -1,5 +1,5 @@
 const std = @import("std");
-const HAL = @import("hal");
+const HAL = @import("root").HAL;
 const limine = @import("limine");
 const framebuffer = @import("framebuffer.zig");
 const mem = @import("mem.zig");

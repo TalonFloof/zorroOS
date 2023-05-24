@@ -19,7 +19,6 @@ pub fn NewPageDirectory() PageDirectory {
 }
 
 pub fn MapPage(root: PageDirectory, vaddr: usize, flags: usize, paddr: usize) usize {
-    _ = paddr;
     const pte = HAL.PTEEntry{
         .r = @intCast(u1, flags & MapRead),
         .w = @intCast(u1, (flags & MapWrite) >> 1),
@@ -28,12 +27,12 @@ pub fn MapPage(root: PageDirectory, vaddr: usize, flags: usize, paddr: usize) us
         .nonCached = @intCast(u1, (flags & MapNoncached) >> 4),
         .writeThrough = @intCast(u1, (flags & MapWriteThru) >> 5),
         .reserved = 0,
-        .phys = @intCast(u52, vaddr >> 12),
+        .phys = @intCast(u52, paddr >> 12),
     };
-    var i = 0;
+    var i: usize = 0;
     var entries: *void = @ptrCast(*void, root.ptr);
     while (i < HAL.Arch.GetPTELevels()) : (i += 1) {
-        const index = ((vaddr >> 12) & (0x3fe000000000 >> (i * 9))) >> (37 - (i * 9));
+        const index = @intCast(usize, ((vaddr >> 12) & (@intCast(u64, 0x3fe000000000) >> @intCast(u6, i * 9))) >> (37 - @intCast(u6, i * 9)));
         var entry = HAL.Arch.GetPTE(entries, index);
         if (i + 1 >= HAL.Arch.GetPTELevels()) {
             if (pte.r == 0) {
@@ -46,7 +45,7 @@ pub fn MapPage(root: PageDirectory, vaddr: usize, flags: usize, paddr: usize) us
                 return @ptrToInt(entries) + (index * @sizeOf(Memory.PFN.PFNEntry));
             }
         } else {
-            if (!entry.r) {
+            if (entry.r == 0) {
                 // Allocate Page
                 var page = Memory.PFN.AllocatePage(.PageTable, false, @ptrToInt(entries) + (index * @sizeOf(usize))).?;
                 entry.r = 1;
@@ -55,32 +54,34 @@ pub fn MapPage(root: PageDirectory, vaddr: usize, flags: usize, paddr: usize) us
                 entry.userSupervisor = pte.userSupervisor;
                 entry.nonCached = 0;
                 entry.writeThrough = 0;
-                entry.phys = @intCast(u52, page.ptr);
+                entry.phys = @intCast(u52, @ptrToInt(page.ptr));
                 Memory.PFN.ReferencePage(@ptrToInt(entries));
-                entries = @intToPtr(*void, page.ptr);
+                entries = @intToPtr(*void, @ptrToInt(page.ptr));
             } else {
                 entries = @intToPtr(*void, @intCast(usize, entry.phys) << 12);
             }
         }
     }
+    unreachable;
 }
 
 pub fn GetPage(root: PageDirectory, vaddr: usize) HAL.PTEEntry {
-    var i = 0;
+    var i: usize = 0;
     var entries: *void = @ptrCast(*void, root.ptr);
     while (i < HAL.Arch.GetPTELevels()) : (i += 1) {
-        const index = ((vaddr >> 12) & (0x3fe000000000 >> (i * 9))) >> (37 - (i * 9));
+        const index = @intCast(usize, ((vaddr >> 12) & (@intCast(u64, 0x3fe000000000) >> @intCast(u6, i * 9))) >> (37 - @intCast(u6, i * 9)));
         var entry = HAL.Arch.GetPTE(entries, index);
         if (i + 1 >= HAL.Arch.GetPTELevels()) {
             return entry;
         } else {
-            if (!entry.r) {
+            if (entry.r == 0) {
                 return HAL.PTEEntry{};
             } else {
                 entries = @intToPtr(*void, @intCast(usize, entry.phys) << 12);
             }
         }
     }
+    unreachable;
 }
 
 pub fn FindFreeSpace(root: PageDirectory, start: usize, size: usize) ?usize { // This is only used for the Static and Paged Pools, userspace doesn't use this

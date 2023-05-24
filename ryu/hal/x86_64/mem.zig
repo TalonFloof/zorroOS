@@ -16,5 +16,8 @@ pub fn init() void {
             }
         }
     }
-    Memory.Initialize(&ranges);
+    var initial: usize = asm volatile ("mov %%cr3, %[ret]"
+        : [ret] "={rax}" (-> usize),
+    );
+    Memory.Initialize(&ranges, @intToPtr([*]usize, initial)[0..512]);
 }

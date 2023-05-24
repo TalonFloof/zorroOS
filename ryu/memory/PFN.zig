@@ -46,10 +46,10 @@ pub fn Initialize(begin: usize, entryCount: usize, ranges: *[32]Memory.PhysicalR
 
 pub fn AllocatePage(tag: PFNType, swappable: bool, pte: usize) ?[]u8 {
     pfnSpinlock.acquire();
-    if (pfnZeroedHead != null) |entry| {
-        const phys: usize = ((@ptrToInt(entry) - @ptrToInt(pfnDatabase)) / @sizeOf(PFNEntry)) << 12;
+    if (pfnZeroedHead) |entry| {
+        const phys: usize = ((@ptrToInt(entry) - @ptrToInt(pfnDatabase.ptr)) / @sizeOf(PFNEntry)) << 12;
         if (entry.state != .Zeroed) {
-            HAL.Crash.Crash(.RyuPFNCorruption, .{ phys, @enumToInt(entry.state), @enumToInt(.Zeroed), 0 });
+            HAL.Crash.Crash(.RyuPFNCorruption, .{ phys, @enumToInt(@as(PFNType, entry.state)), @enumToInt(PFNType.Zeroed), 0 });
         }
         pfnZeroedHead = entry.next;
         entry.next = null;
@@ -57,14 +57,13 @@ pub fn AllocatePage(tag: PFNType, swappable: bool, pte: usize) ?[]u8 {
         entry.state = tag;
         entry.swappable = if (swappable) 1 else 0;
         entry.pte = pte;
-        entry.pte.phys = @intCast(u52, phys >> 12);
         var ret = @intToPtr([*]u8, phys + 0xFFFF800000000000)[0..4096];
         pfnSpinlock.release();
         return ret;
-    } else if (pfnFreeHead != null) |entry| {
-        const phys: usize = ((@ptrToInt(entry) - @ptrToInt(pfnDatabase)) / @sizeOf(PFNEntry)) << 12;
+    } else if (pfnFreeHead) |entry| {
+        const phys: usize = ((@ptrToInt(entry) - @ptrToInt(pfnDatabase.ptr)) / @sizeOf(PFNEntry)) << 12;
         if (entry.state != .Free) {
-            HAL.Crash.Crash(.RyuPFNCorruption, .{ phys, @enumToInt(entry.state), @enumToInt(.Free), 0 });
+            HAL.Crash.Crash(.RyuPFNCorruption, .{ phys, @enumToInt(@as(PFNType, entry.state)), @enumToInt(PFNType.Free), 0 });
         }
         pfnFreeHead = entry.next;
         entry.next = null;
@@ -72,7 +71,6 @@ pub fn AllocatePage(tag: PFNType, swappable: bool, pte: usize) ?[]u8 {
         entry.state = tag;
         entry.swappable = if (swappable) 1 else 0;
         entry.pte = pte;
-        entry.pte.phys = @intCast(u52, phys >> 12);
         var ret = @intToPtr([*]u8, phys + 0xFFFF800000000000)[0..4096];
         @memset(ret, 0); // Freed Pages haven't been zeroed yet so we'll manually do it.
         pfnSpinlock.release();
@@ -102,7 +100,7 @@ pub fn DereferencePage(page: usize) void {
             const entry: usize = pfnDatabase[index].pte;
             const pt = entry & (~@intCast(usize, 0xFFF));
             if (pfnDatabase[pt >> 12].state != .PageTable) {
-                HAL.Crash.Crash(.RyuPFNCorruption, .{ pt, @enumToInt(entry.state), @enumToInt(.PageTable), 0 });
+                HAL.Crash.Crash(.RyuPFNCorruption, .{ pt, @enumToInt(pfnDatabase[pt >> 12].state), @enumToInt(PFNType.PageTable), 0 });
             }
             @intToPtr(*usize, entry).* = 0;
             pfnFreeHead = &pfnDatabase[index];

@@ -21,20 +21,20 @@ pub const Bucket = struct {
     }
 
     fn GetBit(self: *Bucket, index: usize) bool {
-        return ((self.bitmap[index / 8] >> (index % 8)) & 1) != 0;
+        return ((self.bitmap[index / 8] >> @intCast(u3, index % 8)) & 1) != 0;
     }
 
     fn SetBit(self: *Bucket, index: usize, value: bool) void {
         if (value) {
-            self.bitmap[index / 8] |= 1 << (index % 8);
+            self.bitmap[index / 8] |= @intCast(u8, 1) << @intCast(u3, index % 8);
         } else {
-            self.bitmap[index / 8] &= ~(1 << (index % 8));
+            self.bitmap[index / 8] &= ~(@intCast(u8, 1) << @intCast(u3, index % 8));
         }
     }
 
     pub fn Alloc(self: *Bucket, size: usize) ?[]u8 {
-        var i = 0;
-        const entries: usize = (size / 16) + (if ((size % 16) != 0) 1 else 0);
+        var i: usize = 0;
+        const entries: usize = if ((size % 16) != 0) ((size / 16) + 1) else (size / 16);
         while (i < 32512 - (entries - 1)) : (i += 1) {
             var j = i;
             var canUse = true;
@@ -58,11 +58,11 @@ pub const Bucket = struct {
     }
 
     pub fn Free(self: *Bucket, mem: []u8) void {
-        const size = mem.len;
-        const entries: usize = (size / 16) + (if ((size % 16) != 0) 1 else 0);
+        const size: usize = mem.len;
+        const entries: usize = if ((size % 16) != 0) ((size / 16) + 1) else (size / 16);
         self.usedEntries -= entries;
         const start = (@ptrToInt(mem.ptr) - @ptrToInt(self)) / 16;
-        var i = start;
+        var i: usize = start;
         while (i < start + entries) : (i += 1) {
             self.SetBit(i, false);
         }
@@ -131,12 +131,17 @@ pub const Pool = struct {
         if (self.lockHartID != HAL.Arch.GetHCB().hartID) {
             self.lock.acquire();
         }
-        var addr: usize = Memory.Paging.FindFreeSpace(Memory.Paging.initialPageDir, self.searchStart, size);
+        var addr: usize = Memory.Paging.FindFreeSpace(Memory.Paging.initialPageDir.?, self.searchStart, size).?;
         self.searchStart = addr + size;
         var i = addr;
         while (i < addr + size) : (i += 4096) {
             var page = Memory.PFN.AllocatePage(.Active, self.allowSwapping, 0);
-            Memory.Paging.MapPage(Memory.Paging.initialPageDir, i, Memory.Paging.MapRead | Memory.Paging.MapWrite | Memory.Paging.MapSupervisor, @ptrToInt(page.?.ptr));
+            _ = Memory.Paging.MapPage(
+                Memory.Paging.initialPageDir.?,
+                i,
+                Memory.Paging.MapRead | Memory.Paging.MapWrite | Memory.Paging.MapSupervisor,
+                @ptrToInt(page.?.ptr),
+            );
         }
         self.anonymousPages += size / 4096;
         if (self.lockHartID != HAL.Arch.GetHCB().hartID) {
@@ -221,11 +226,11 @@ pub const Pool = struct {
         }
         var i = addr;
         while (i < addr + size) : (i += 4096) {
-            var entry = Memory.Paging.GetPage(Memory.Paging.initialPageDir, i);
+            var entry = Memory.Paging.GetPage(Memory.Paging.initialPageDir.?, i);
             if (entry.r == 1) {
                 Memory.PFN.DereferencePage(@intCast(usize, entry.phys) << 12);
             }
-            Memory.Paging.MapPage(Memory.Paging.initialPageDir, i, 0, 0);
+            Memory.Paging.MapPage(Memory.Paging.initialPageDir.?, i, 0, 0);
         }
         if (self.lockHartID != HAL.Arch.GetHCB().hartID) {
             self.lock.release();
