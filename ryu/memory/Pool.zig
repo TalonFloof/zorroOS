@@ -1,6 +1,7 @@
 const Memory = @import("root").Memory;
 const Spinlock = @import("root").Spinlock;
 const HAL = @import("root").HAL;
+const std = @import("std");
 
 // This implements a simple memory allocator for the Ryu Kernel.
 // There's a chance this will probably be replaced with a more efficient allocator in the future, but for now, this is the best you'll get.
@@ -90,6 +91,7 @@ pub const Pool = struct {
         self.lock.acquire();
         var index = self.partialBucketHead;
         while (index != null) : (index = index.?.next) {
+            std.debug.assert(index != null);
             const oldEntryCount = index.?.usedEntries;
             var ret = index.?.Alloc(size);
             if (ret != null) {
@@ -116,13 +118,14 @@ pub const Pool = struct {
         // Allocate a new bucket
         self.lockHartID = HAL.Arch.GetHCB().hartID;
         var newBucket = self.AllocAnonPages(512 * 1024);
+        std.debug.assert(newBucket != null);
         var bucketHeader = @ptrCast(*Bucket, newBucket.?.ptr);
         self.anonymousPages -= (512 * 1024) / 4096;
         self.buckets += 1;
         self.totalBlocks += 32512;
         bucketHeader.next = self.partialBucketHead;
         var ret = bucketHeader.Alloc(size);
-        self.usedBlocks += index.?.usedEntries;
+        self.usedBlocks += bucketHeader.usedEntries;
         self.lock.release();
         return ret;
     }
@@ -131,25 +134,35 @@ pub const Pool = struct {
         if (self.lockHartID != HAL.Arch.GetHCB().hartID) {
             self.lock.acquire();
         }
-        var addr: usize = Memory.Paging.FindFreeSpace(Memory.Paging.initialPageDir.?, self.searchStart, size).?;
-        self.searchStart = addr + size;
-        var i = addr;
-        while (i < addr + size) : (i += 4096) {
-            var page = Memory.PFN.AllocatePage(.Active, self.allowSwapping, 0);
-            _ = Memory.Paging.MapPage(
-                Memory.Paging.initialPageDir.?,
-                i,
-                Memory.Paging.MapRead | Memory.Paging.MapWrite | Memory.Paging.MapSupervisor,
-                @ptrToInt(page.?.ptr),
-            );
-        }
-        self.anonymousPages += size / 4096;
-        if (self.lockHartID != HAL.Arch.GetHCB().hartID) {
-            self.lock.release();
+        const trueSize = if ((size % 4096) != 0) (size & ~@intCast(usize, 0xFFF)) + 4096 else size;
+        if (Memory.Paging.FindFreeSpace(Memory.Paging.initialPageDir.?, self.searchStart, trueSize)) |addr| {
+            self.searchStart = addr + trueSize;
+            var i = addr;
+            while (i < addr + trueSize) : (i += 4096) {
+                var page = Memory.PFN.AllocatePage(.Active, self.allowSwapping, 0);
+                _ = Memory.Paging.MapPage(
+                    Memory.Paging.initialPageDir.?,
+                    i,
+                    Memory.Paging.MapRead | Memory.Paging.MapWrite | Memory.Paging.MapSupervisor,
+                    @ptrToInt(page.?.ptr) - 0xffff800000000000,
+                );
+            }
+            self.anonymousPages += trueSize / 4096;
+            if (self.lockHartID != HAL.Arch.GetHCB().hartID) {
+                self.lock.release();
+            } else {
+                self.lockHartID = -1;
+            }
+            return @intToPtr([*]u8, addr)[0..trueSize];
         } else {
-            self.lockHartID = -1;
+            if (self.lockHartID != HAL.Arch.GetHCB().hartID) {
+                self.lock.release();
+            } else {
+                self.lockHartID = -1;
+            }
+            return null;
         }
-        return null;
+        unreachable;
     }
 
     pub fn Free(self: *Pool, data: []u8) void {
@@ -220,7 +233,7 @@ pub const Pool = struct {
             self.lock.acquire();
         }
         const addr = @ptrToInt(data.ptr);
-        const size = data.len;
+        const size = if ((data.len % 4096) != 0) (data.len & ~@intCast(usize, 0xFFF)) + 4096 else data.len;
         if (self.searchStart > addr) {
             self.searchStart = addr;
         }

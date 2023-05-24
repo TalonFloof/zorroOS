@@ -199,11 +199,12 @@ fn newline() void {
         var i: usize = 16;
         while (i < (info.height - 96)) : (i += 1) {
             std.mem.copy(
-                u8,
-                @intToPtr([*]u8, @ptrToInt(info.ptr) + ((i - 16) * info.pitch))[0..info.pitch],
-                @intToPtr([*]const u8, @ptrToInt(info.ptr) + (i * info.pitch))[0..info.pitch],
+                u32,
+                @intToPtr([*]u32, @ptrToInt(info.ptr) + ((i - 16) * info.pitch))[0..(info.pitch / (info.bpp / 8))],
+                @intToPtr([*]const u32, @ptrToInt(info.ptr) + (i * info.pitch))[0..(info.pitch / (info.bpp / 8))],
             );
         }
+        info.set(info, 0, @intCast(isize, (info.height - 96) - 16), info.width, 16, 0x1E1E2E);
     } else {
         cursorY += 1;
     }

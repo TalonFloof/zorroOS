@@ -1,6 +1,7 @@
 const limine = @import("limine");
 const std = @import("std");
 const Memory = @import("root").Memory;
+const HAL = @import("root").HAL;
 
 export var memmap_request: limine.MemoryMapRequest = .{};
 
@@ -18,6 +19,6 @@ pub fn init() void {
     }
     var initial: usize = asm volatile ("mov %%cr3, %[ret]"
         : [ret] "={rax}" (-> usize),
-    );
+    ) + 0xffff800000000000;
     Memory.Initialize(&ranges, @intToPtr([*]usize, initial)[0..512]);
 }

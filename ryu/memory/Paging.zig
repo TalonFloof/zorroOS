@@ -21,27 +21,27 @@ pub fn NewPageDirectory() PageDirectory {
 pub fn MapPage(root: PageDirectory, vaddr: usize, flags: usize, paddr: usize) usize {
     const pte = HAL.PTEEntry{
         .r = @intCast(u1, flags & MapRead),
-        .w = @intCast(u1, (flags & MapWrite) >> 1),
-        .x = @intCast(u1, (flags & MapExec) >> 2),
-        .userSupervisor = @intCast(u1, (flags & MapSupervisor) >> 3),
-        .nonCached = @intCast(u1, (flags & MapNoncached) >> 4),
-        .writeThrough = @intCast(u1, (flags & MapWriteThru) >> 5),
+        .w = @intCast(u1, (flags >> 1) & 1),
+        .x = @intCast(u1, (flags >> 2) & 1),
+        .userSupervisor = @intCast(u1, (flags >> 3) & 1),
+        .nonCached = @intCast(u1, (flags >> 4) & 1),
+        .writeThrough = @intCast(u1, (flags >> 5) & 1),
         .reserved = 0,
         .phys = @intCast(u52, paddr >> 12),
     };
     var i: usize = 0;
     var entries: *void = @ptrCast(*void, root.ptr);
     while (i < HAL.Arch.GetPTELevels()) : (i += 1) {
-        const index = @intCast(usize, ((vaddr >> 12) & (@intCast(u64, 0x3fe000000000) >> @intCast(u6, i * 9))) >> (37 - @intCast(u6, i * 9)));
+        const index: u64 = (vaddr >> (39 - @intCast(u6, i * 9))) & 0x1ff;
         var entry = HAL.Arch.GetPTE(entries, index);
         if (i + 1 >= HAL.Arch.GetPTELevels()) {
             if (pte.r == 0) {
                 HAL.Arch.SetPTE(entries, index, HAL.PTEEntry{});
-                Memory.PFN.DereferencePage(@ptrToInt(entries));
+                Memory.PFN.DereferencePage(@ptrToInt(entries) - 0xffff800000000000);
                 return @ptrToInt(entries) + (index * @sizeOf(Memory.PFN.PFNEntry));
             } else {
                 HAL.Arch.SetPTE(entries, index, pte);
-                Memory.PFN.ReferencePage(@ptrToInt(entries));
+                Memory.PFN.ReferencePage(@ptrToInt(entries) - 0xffff800000000000);
                 return @ptrToInt(entries) + (index * @sizeOf(Memory.PFN.PFNEntry));
             }
         } else {
@@ -54,11 +54,12 @@ pub fn MapPage(root: PageDirectory, vaddr: usize, flags: usize, paddr: usize) us
                 entry.userSupervisor = pte.userSupervisor;
                 entry.nonCached = 0;
                 entry.writeThrough = 0;
-                entry.phys = @intCast(u52, @ptrToInt(page.ptr));
-                Memory.PFN.ReferencePage(@ptrToInt(entries));
+                entry.phys = @intCast(u52, (@ptrToInt(page.ptr) - 0xffff800000000000) >> 12);
+                HAL.Arch.SetPTE(entries, index, entry);
+                Memory.PFN.ReferencePage(@ptrToInt(entries) - 0xffff800000000000);
                 entries = @intToPtr(*void, @ptrToInt(page.ptr));
             } else {
-                entries = @intToPtr(*void, @intCast(usize, entry.phys) << 12);
+                entries = @intToPtr(*void, (@intCast(usize, entry.phys) << 12) + 0xffff800000000000);
             }
         }
     }
@@ -69,7 +70,7 @@ pub fn GetPage(root: PageDirectory, vaddr: usize) HAL.PTEEntry {
     var i: usize = 0;
     var entries: *void = @ptrCast(*void, root.ptr);
     while (i < HAL.Arch.GetPTELevels()) : (i += 1) {
-        const index = @intCast(usize, ((vaddr >> 12) & (@intCast(u64, 0x3fe000000000) >> @intCast(u6, i * 9))) >> (37 - @intCast(u6, i * 9)));
+        const index: u64 = (vaddr >> (39 - @intCast(u6, i * 9))) & 0x1ff;
         var entry = HAL.Arch.GetPTE(entries, index);
         if (i + 1 >= HAL.Arch.GetPTELevels()) {
             return entry;
@@ -101,4 +102,20 @@ pub fn FindFreeSpace(root: PageDirectory, start: usize, size: usize) ?usize { //
             return address;
     }
     return null;
+}
+
+pub const AccessRead = 1;
+pub const AccessWrite = 2;
+pub const AccessExecute = 4;
+pub const AccessSupervisor = 8;
+pub const AccessIsValid = 16;
+
+pub fn PageFault(pc: usize, addr: usize, accessType: usize) void {
+    if (accessType & AccessSupervisor != 0) {
+        if (addr >= 0xfffffe8000000000 and addr <= 0xfffffeffffffffff) {
+            HAL.Crash.Crash(.RyuPageFaultInStaticPool, .{ addr, accessType, 0, pc });
+        } else {
+            HAL.Crash.Crash(.RyuUnhandledPageFault, .{ addr, accessType, 0, pc });
+        }
+    }
 }

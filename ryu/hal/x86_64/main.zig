@@ -100,7 +100,7 @@ const NativePTEEntry = packed struct {
 };
 
 pub fn GetPTE(root: *void, index: usize) HAL.PTEEntry {
-    var entries: []NativePTEEntry = @ptrCast([*]NativePTEEntry, @alignCast(@alignOf(usize), root))[0..512];
+    var entries: []align(1) NativePTEEntry = @ptrCast([*]align(1) NativePTEEntry, @alignCast(1, root))[0..512];
     var entry: HAL.PTEEntry = HAL.PTEEntry{};
     entry.r = entries[index].valid;
     entry.w = entries[index].write;
@@ -112,13 +112,13 @@ pub fn GetPTE(root: *void, index: usize) HAL.PTEEntry {
 }
 
 pub fn SetPTE(root: *void, index: usize, entry: HAL.PTEEntry) void {
-    var entries: []NativePTEEntry = @ptrCast([*]NativePTEEntry, @alignCast(@alignOf(usize), root))[0..512];
+    var entries: []align(1) NativePTEEntry = @ptrCast([*]align(1) NativePTEEntry, @alignCast(1, root))[0..512];
     entries[index].valid = entry.r;
     entries[index].write = entry.w;
     entries[index].noExecute = ~entry.x;
     entries[index].cacheDisable = entry.nonCached;
     entries[index].writeThrough = entry.writeThrough;
-    entries[index].phys = @intCast(u51, entry.phys);
+    entries[index].phys = @intCast(u51, entry.phys & 0xfffffffff);
 }
 
 pub inline fn GetPTELevels() usize {
