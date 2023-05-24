@@ -128,19 +128,17 @@ pub const Pool = struct {
     }
 
     pub fn AllocAnonPages(self: *Pool, size: usize) ?[]u8 {
-        _ = size;
         if (self.lockHartID != HAL.Arch.GetHCB().hartID) {
             self.lock.acquire();
         }
-        var addr: usize = Memory.Paging.FindFreeSpace(Memory.Paging.initialPageDir,self.searchStart,size);
+        var addr: usize = Memory.Paging.FindFreeSpace(Memory.Paging.initialPageDir, self.searchStart, size);
         self.searchStart = addr + size;
         var i = addr;
-        while(i < addr + size) : (i += 4096) {
-            var page = Memory.PFN.AllocatePage(.Active,self.allowSwapping,0);
-            var pte = Memory.Paging.MapPage(Memory.Paging.initialPageDir,i,Memory.Paging.MapRead | Memory.Paging.MapWrite | Memory.Paging.MapSupervisor,);
-            Memory.PFN.ChangePTEEntry(page,pte);
+        while (i < addr + size) : (i += 4096) {
+            var page = Memory.PFN.AllocatePage(.Active, self.allowSwapping, 0);
+            Memory.Paging.MapPage(Memory.Paging.initialPageDir, i, Memory.Paging.MapRead | Memory.Paging.MapWrite | Memory.Paging.MapSupervisor, @ptrToInt(page.?.ptr));
         }
-        self.anonymousPages += size/4096;
+        self.anonymousPages += size / 4096;
         if (self.lockHartID != HAL.Arch.GetHCB().hartID) {
             self.lock.release();
         } else {
@@ -213,16 +211,21 @@ pub const Pool = struct {
     }
 
     pub fn FreeAnonPages(self: *Pool, data: []u8) void {
-        _ = data;
         if (self.lockHartID != HAL.Arch.GetHCB().hartID) {
             self.lock.acquire();
         }
-        if(self.search)
+        const addr = @ptrToInt(data.ptr);
+        const size = data.len;
+        if (self.searchStart > addr) {
+            self.searchStart = addr;
+        }
         var i = addr;
-        while(i < addr + size) : (i += 4096) {
-            var page = Memory.PFN.AllocatePage(.Active,self.allowSwapping,0);
-            var pte = Memory.Paging.MapPage(Memory.Paging.initialPageDir,i,Memory.Paging.MapRead | Memory.Paging.MapWrite | Memory.Paging.MapSupervisor,);
-            Memory.PFN.ChangePTEEntry(page,pte);
+        while (i < addr + size) : (i += 4096) {
+            var entry = Memory.Paging.GetPage(Memory.Paging.initialPageDir, i);
+            if (entry.r == 1) {
+                Memory.PFN.DereferencePage(@intCast(usize, entry.phys) << 12);
+            }
+            Memory.Paging.MapPage(Memory.Paging.initialPageDir, i, 0, 0);
         }
         if (self.lockHartID != HAL.Arch.GetHCB().hartID) {
             self.lock.release();
