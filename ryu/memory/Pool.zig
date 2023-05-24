@@ -12,12 +12,13 @@ pub const Bucket = struct {
     prev: ?*Bucket align(1),
     next: ?*Bucket align(1),
     usedEntries: u64 align(1),
-    magic: u64 align(1),
+    bestBetLower: u32 align(1),
+    bestBetUpper: u32 align(1),
     bitmap: [4064]u8 align(1), // 32512 entries = 520192 bytes = 508 KiB maximum
 
     comptime {
         if (@sizeOf(@This()) != 4096) {
-            @panic("Bucket size is not 4 KiB!");
+            @panic("Bucket Header is not 4 KiB!");
         }
     }
 
@@ -37,6 +38,16 @@ pub const Bucket = struct {
         var i: usize = 0;
         const entries: usize = if ((size % 16) != 0) ((size / 16) + 1) else (size / 16);
         while (i < 32512 - (entries - 1)) : (i += 1) {
+            if (@ptrCast(*align(1) u32, &self.bitmap[i / 8]).* == 0xffffffff) {
+                i += 31 - (i % 32);
+                continue;
+            } else if (@ptrCast(*align(1) u16, &self.bitmap[i / 8]).* == 0xffff) {
+                i += 15 - (i % 16);
+                continue;
+            } else if (self.bitmap[i / 8] == 0xff) {
+                i += 7 - (i % 8);
+                continue;
+            }
             var j = i;
             var canUse = true;
             while (j < i + entries) : (j += 1) {
@@ -126,6 +137,9 @@ pub const Pool = struct {
         self.buckets += 1;
         self.totalBlocks += 32512;
         bucketHeader.next = self.partialBucketHead;
+        if (self.partialBucketHead) |head| {
+            head.prev = bucketHeader;
+        }
         self.partialBucketHead = bucketHeader;
         var ret = bucketHeader.Alloc(size);
         self.usedBlocks += bucketHeader.usedEntries;
@@ -177,7 +191,7 @@ pub const Pool = struct {
         var index = self.partialBucketHead;
         var bucket: ?*Bucket = null;
         while (index != null) : (index = index.?.next) {
-            if (@ptrToInt(index) >= @ptrToInt(data.ptr) and @ptrToInt(index) + data.len <= (@ptrToInt(data.ptr) + (512 * 1024))) {
+            if (@ptrToInt(data.ptr) >= @ptrToInt(index) and (@ptrToInt(data.ptr) + data.len) <= (@ptrToInt(index) + (512 * 1024))) {
                 bucket = index;
                 break;
             }
@@ -229,6 +243,8 @@ pub const Pool = struct {
                 self.lockHartID = HAL.Arch.GetHCB().hartID;
                 self.FreeAnonPages(@ptrCast([*]u8, bucket)[0..(512 * 1024)]);
             }
+        } else {
+            @panic("Unable to free pool memory!");
         }
         self.lock.release();
     }
@@ -248,8 +264,9 @@ pub const Pool = struct {
             if (entry.r == 1) {
                 Memory.PFN.DereferencePage(@intCast(usize, entry.phys) << 12);
             }
-            Memory.Paging.MapPage(Memory.Paging.initialPageDir.?, i, 0, 0);
+            _ = Memory.Paging.MapPage(Memory.Paging.initialPageDir.?, i, 0, 0);
         }
+        self.anonymousPages -= size / 4096;
         if (self.lockHartID != HAL.Arch.GetHCB().hartID) {
             self.lock.release();
         } else {
