@@ -106,7 +106,9 @@ pub const Pool = struct {
                     if (self.partialBucketHead == index) {
                         self.partialBucketHead = index.?.next;
                     }
-                    self.fullBucketHead.?.prev = index;
+                    if (self.fullBucketHead) |head| {
+                        head.prev = index;
+                    }
                     index.?.next = self.fullBucketHead;
                     self.fullBucketHead = index;
                 }
@@ -124,6 +126,7 @@ pub const Pool = struct {
         self.buckets += 1;
         self.totalBlocks += 32512;
         bucketHeader.next = self.partialBucketHead;
+        self.partialBucketHead = bucketHeader;
         var ret = bucketHeader.Alloc(size);
         self.usedBlocks += bucketHeader.usedEntries;
         self.lock.release();
@@ -203,7 +206,9 @@ pub const Pool = struct {
                 if (self.fullBucketHead == b) {
                     self.fullBucketHead = b.next;
                 }
-                self.partialBucketHead.?.prev = b;
+                if (self.partialBucketHead) |head| {
+                    head.prev = b;
+                }
                 b.prev = null;
                 b.next = self.partialBucketHead;
                 self.partialBucketHead = b;
