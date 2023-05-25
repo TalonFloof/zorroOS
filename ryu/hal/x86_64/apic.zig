@@ -28,7 +28,7 @@ pub fn setup() void {
     var interval = (10 * (1000000000000 / clock));
     const val = (((hz << 16) / (interval)));
     if (HAL.Arch.GetHCB().hartID == 0) {
-        HAL.Console.Put("LAPICTimer: HPET @ {d} Hz (~{d}.{d} Hz interval) for calibration\n", .{ hz, val >> 16, (10000 * (val & 0xFFFF)) >> 16 });
+        HAL.Console.Put("HPET @ {d} Hz (~{d}.{d} Hz interval) for Local APIC Timer calibration\n", .{ hz, val >> 16, (10000 * (val & 0xFFFF)) >> 16 });
     }
     write(0x380, 0xffffffff); // Set the Initial Count to 0xffffffff
     // Start the HPET or PIT timer and wait for it to finish counting down.

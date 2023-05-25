@@ -196,15 +196,16 @@ fn newline() void {
     cursorX = 0;
     if (((cursorY + 1) * 16) >= (info.height - 96)) {
         // Scroll
-        var i: usize = 16;
-        while (i < (info.height - 96)) : (i += 1) {
-            std.mem.copy(
-                u32,
-                @intToPtr([*]u32, @ptrToInt(info.ptr) + ((i - 16) * info.pitch))[0..(info.pitch / (info.bpp / 8))],
-                @intToPtr([*]const u32, @ptrToInt(info.ptr) + (i * info.pitch))[0..(info.pitch / (info.bpp / 8))],
-            );
-        }
-        info.set(info, 0, @intCast(isize, (info.height - 96) - 16), info.width, 16, 0x1E1E2E);
+        //var i: usize = 16;
+        //while (i < (info.height - 96)) : (i += 1) {
+        //    std.mem.copy(
+        //        u32,
+        //        @intToPtr([*]u32, @ptrToInt(info.ptr) + ((i - 16) * info.pitch))[0..(info.pitch / (info.bpp / 8))],
+        //        @intToPtr([*]const u32, @ptrToInt(info.ptr) + (i * info.pitch))[0..(info.pitch / (info.bpp / 8))],
+        //    );
+        //}
+        //info.set(info, 0, @intCast(isize, (info.height - 96) - 16), info.width, 16, 0x1E1E2E);
+        cursorY = 0;
     } else {
         cursorY += 1;
     }

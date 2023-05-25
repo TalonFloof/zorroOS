@@ -14,6 +14,8 @@ pub const PTEEntry = packed struct {
     phys: u52 = 0,
 };
 
+pub var hcbList: ?[]*root.HCB = null;
+
 pub export fn HALPreformStartup(stackTop: usize) callconv(.C) noreturn {
     Arch.PreformStartup(stackTop);
     root.RyuInit();

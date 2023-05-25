@@ -18,6 +18,14 @@ pub export fn _archstart() callconv(.Naked) noreturn {
     unreachable;
 }
 
+pub export fn _hartstart() callconv(.Naked) noreturn {
+    asm volatile (
+        \\mov %rsp, %rdi
+        \\jmp HartStart
+    );
+    unreachable;
+}
+
 pub fn PreformStartup(stackTop: usize) void {
     IRQEnableDisable(false);
     hart.initialize(stackTop);
@@ -27,6 +35,22 @@ pub fn PreformStartup(stackTop: usize) void {
     mem.init();
     acpi.initialize();
     apic.setup();
+    hart.startSMP();
+}
+
+pub export fn HartStart(stack: u64) callconv(.C) noreturn {
+    wrmsr(0xC0000102, hart.hartData);
+    GetHCB().archData.tss.rsp[0] = stack;
+    GetHCB().archData.tss.ist[0] = stack;
+    GetHCB().archData.tss.ist[1] = stack;
+    gdt.initialize();
+    apic.setup();
+    idt.fastInit();
+    hart.hartData = 0;
+    while (true) {
+        IRQEnableDisable(false);
+        WaitForIRQ();
+    }
 }
 
 pub fn IRQEnableDisable(en: bool) void {
