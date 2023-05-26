@@ -77,10 +77,10 @@ pub const MADTIOApicRecord = extern struct {
 };
 
 pub const MADTIRQRedirectRecord = extern struct {
-    id: u8 align(1),
-    reserved: u8 align(1),
-    addr: u32 align(1),
-    gsiBase: u32 align(1),
+    busSource: u8 align(1),
+    irqSource: u8 align(1),
+    gsi: u32 align(1),
+    flags: u16 align(1),
 };
 
 pub var MADTAddr: ?*MADTTable = null;
@@ -114,13 +114,15 @@ pub fn initialize() void {
             if (entry.recordType == 1) { // I/O APIC Record
                 var data = @ptrCast(*MADTIOApicRecord, &entry.recordData);
                 if (data.gsiBase == 0) {
-                    apic.ioapic_ptr = @intCast(usize, data.addr);
+                    apic.ioapic_regSelect = @intToPtr(*allowzero u32, @intCast(usize, data.addr));
+                    apic.ioapic_ioWindow = @intToPtr(*allowzero u32, @intCast(usize, data.addr) + 0x10);
                 }
             } else if (entry.recordType == 2) { // I/O APIC IRQ Redirect
-
+                var data = @ptrCast(*MADTIRQRedirectRecord, &entry.recordData);
+                _ = data;
             }
         }
-        if (apic.ioapic_ptr == 0) {
+        if (@ptrToInt(apic.ioapic_regSelect) == 0) {
             @panic("No I/O APIC was specified in the MADT!");
         }
     } else {

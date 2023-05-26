@@ -3,7 +3,12 @@ const std = @import("std");
 const acpi = @import("acpi.zig");
 
 var lapic_ptr: usize = 0;
-pub var ioapic_ptr: usize = 0;
+pub var ioapic_regSelect: *allowzero volatile u32 = @intToPtr(*allowzero volatile u32, 0);
+pub var ioapic_ioWindow: *allowzero volatile u32 = @intToPtr(*allowzero volatile u32, 0);
+
+pub var ioapic_redirect: [24]u8 = .{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23 };
+pub var ioapic_activelow: [24]bool = [_]bool{false} ** 24;
+pub var ioapic_leveltrig: [24]bool = [_]bool{false} ** 24;
 
 pub fn setup() void {
     HAL.Arch.wrmsr(0x1b, (HAL.Arch.rdmsr(0x1b) | 0x800) & ~(@as(u64, 1) << @as(u64, 10))); // Enable the Local APIC
@@ -44,6 +49,9 @@ pub fn setup() void {
     write(0x320, 32 | 0x20000);
     // Now, we'll start to recieve interrupts from the timer!
     // This is vital for preemptive multitasking, and will be super useful for the kernel.
+
+    // Now we'll setup the IO APIC
+
 }
 
 pub fn read(reg: usize) u32 {
@@ -52,4 +60,25 @@ pub fn read(reg: usize) u32 {
 
 pub fn write(reg: usize, val: u32) void {
     @intToPtr(*volatile u32, lapic_ptr + reg).* = val;
+}
+
+pub fn readIo32(reg: usize) u32 {
+    ioapic_regSelect.* = @intCast(u32, reg);
+    return ioapic_ioWindow.*;
+}
+
+pub fn writeIo32(reg: usize, val: u32) void {
+    ioapic_regSelect.* = @intCast(u32, reg);
+    ioapic_ioWindow.* = val;
+}
+
+pub fn readIo64(reg: usize) u64 {
+    const low: u64 = @intCast(u64, readIo32(reg));
+    const high: u64 = @intCast(u64, readIo32(reg + 1)) << 32;
+    return high | low;
+}
+
+pub fn writeIo64(reg: usize, val: u64) void {
+    writeIo32(reg, @intCast(u32, val & 0xFFFFFFFF));
+    writeIo32(reg + 1, @intCast(u32, (val >> 32) & 0xFFFFFFFF));
 }
