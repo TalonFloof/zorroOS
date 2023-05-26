@@ -42,7 +42,7 @@ pub fn build(b: *Builder) !void {
     kernel.addModule("limine", limineMod);
     kernel.addModule("hal", halMod);
     kernel.addModule("memory", memoryMod);
-    kernel.addObjectFile("isr.o");
+    kernel.addObjectFile("_lowlevel.o");
     kernel.code_model = .kernel;
     kernel.setLinkerScriptPath(.{ .path = "hal/link_scripts/x86_64-Limine.ld" });
     kernel.override_dest_dir = .{ .custom = "../" };

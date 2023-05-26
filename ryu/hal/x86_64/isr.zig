@@ -7,6 +7,8 @@ pub fn stub() void {} // To ensure that the compiler will not optimize this modu
 pub export fn ExceptionHandler(entry: u8, con: *HAL.Arch.Context, errcode: u32) callconv(.C) void {
     if (entry == 0x8) {
         HAL.Crash.Crash(.RyuDoubleFault, .{ con.rip, con.rsp, 0, 0 });
+    } else if (entry == 0xd) {
+        HAL.Crash.Crash(.RyuProtectionFault, .{ con.rip, errcode, 0, 0 });
     } else if (entry == 0xe) {
         var addr = asm volatile ("mov %%cr2, %[ret]"
             : [ret] "={rax}" (-> usize),
@@ -18,6 +20,8 @@ pub export fn ExceptionHandler(entry: u8, con: *HAL.Arch.Context, errcode: u32) 
         Memory.Paging.PageFault(con.rip, addr, val1 | val2 | val3 | val4);
     } else if (entry == 0x2) {
         @panic("Non-maskable Interrupt!");
+    } else {
+        HAL.Crash.Crash(.RyuUnknownException, .{ con.rip, con.rsp, entry, errcode });
     }
 }
 pub export fn IRQHandler(entry: u8, con: *HAL.Arch.Context) callconv(.C) void {

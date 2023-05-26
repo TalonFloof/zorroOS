@@ -1,8 +1,8 @@
-; Wow, I can't believe I wrote this back in 2021
-; It's amazing how much more I know now than before.
-
 bits 64
 section .text
+;============================================
+; ISR
+
 %macro pushaq 0
     push rax
     push rbx

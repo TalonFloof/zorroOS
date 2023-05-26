@@ -6,13 +6,30 @@ var lapic_ptr: usize = 0;
 pub var ioapic_regSelect: *allowzero volatile u32 = @intToPtr(*allowzero volatile u32, 0);
 pub var ioapic_ioWindow: *allowzero volatile u32 = @intToPtr(*allowzero volatile u32, 0);
 
+const x2apic_register_base: usize = 0x800;
+
 pub var ioapic_redirect: [24]u8 = .{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23 };
 pub var ioapic_activelow: [24]bool = [_]bool{false} ** 24;
 pub var ioapic_leveltrig: [24]bool = [_]bool{false} ** 24;
 
+inline fn x2apicSupport() bool {
+    return (HAL.Arch.cpuid(0x1).ecx & (@intCast(u32, 1) << 21)) != 0;
+}
+
 pub fn setup() void {
-    HAL.Arch.wrmsr(0x1b, (HAL.Arch.rdmsr(0x1b) | 0x800) & ~(@as(u64, 1) << @as(u64, 10))); // Enable the Local APIC
-    lapic_ptr = (HAL.Arch.rdmsr(0x1b) & 0xfffff000) + 0xffff800000000000; // Get the Pointer
+    if (x2apicSupport()) {
+        if (HAL.Arch.GetHCB().hartID == 0) {
+            lapic_ptr = 0xffffffff;
+            HAL.Console.Put("X2APIC is enabled or required by system, switching to X2APIC operations\n", .{});
+        }
+        HAL.Arch.wrmsr(0x1b, (HAL.Arch.rdmsr(0x1b) | 0x800 | 0x400)); // Enable the X2APIC
+        return;
+    } else {
+        HAL.Arch.wrmsr(0x1b, (HAL.Arch.rdmsr(0x1b) | 0x800) & ~(@as(u64, 1) << @as(u64, 10))); // Enable the XAPIC
+        if (HAL.Arch.GetHCB().hartID == 0) {
+            lapic_ptr = (HAL.Arch.rdmsr(0x1b) & 0xfffff000) + 0xffff800000000000; // Get the Pointer
+        }
+    }
     write(0x320, 0x10000);
     write(0xf0, 0x1f0); // Enable Spurious Interrupts (This starts up the Local APIC)
     // Next, we need to calibrate and enable the Local APIC Timer
@@ -55,7 +72,11 @@ pub fn setup() void {
 }
 
 pub fn read(reg: usize) u32 {
-    return @intToPtr(*volatile u32, lapic_ptr + reg).*;
+    if (lapic_ptr == 0xffffffff) { // X2APIC
+        return 0;
+    } else {
+        return @intToPtr(*volatile u32, lapic_ptr + reg).*;
+    }
 }
 
 pub fn write(reg: usize, val: u32) void {

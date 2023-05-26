@@ -1,8 +1,8 @@
 build: limine-zig
-	nasm -f elf64 ryu/hal/x86_64/isr.s -o ryu/isr.o; \
+	nasm -f elf64 ryu/hal/x86_64/_lowlevel.s -o ryu/_lowlevel.o; \
 	cd ryu; \
 	zig build; \
-	rm -f -r zig-cache isr.o; \
+	rm -f -r zig-cache _lowlevel.o; \
 	cd ..
 
 limine-zig:
