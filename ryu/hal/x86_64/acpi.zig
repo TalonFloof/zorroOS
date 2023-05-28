@@ -119,7 +119,16 @@ pub fn initialize() void {
                 }
             } else if (entry.recordType == 2) { // I/O APIC IRQ Redirect
                 var data = @ptrCast(*MADTIRQRedirectRecord, &entry.recordData);
-                _ = data;
+                apic.ioapic_redirect[data.gsi] = @intCast(u8, data.irqSource);
+                if (data.irqSource != data.gsi) {
+                    apic.ioapic_redirect[data.irqSource] = 0xff;
+                }
+                if ((data.flags & 2) != 0) {
+                    apic.ioapic_activelow[data.gsi] = true;
+                }
+                if ((data.flags & 4) != 0) {
+                    apic.ioapic_leveltrig[data.gsi] = true;
+                }
             }
         }
         if (@ptrToInt(apic.ioapic_regSelect) == 0) {

@@ -65,9 +65,14 @@ pub fn setup() void {
     write(0x320, 32 | 0x20000);
     // Now, we'll start to recieve interrupts from the timer!
     // This is vital for preemptive multitasking, and will be super useful for the kernel.
-
     // Now we'll setup the IO APIC
-
+    for (0..24) |i| {
+        if (ioapic_redirect[i] != 0 and ioapic_redirect[i] != 0xff and ioapic_redirect[i] != 8) {
+            const val1: u64 = if (ioapic_leveltrig[i]) @intCast(u64, 1) << 15 else 0;
+            const val2: u64 = if (ioapic_activelow[i]) @intCast(u64, 1) << 13 else 0;
+            writeIo64(0x10 + (2 * i), (ioapic_redirect[i] + 0x20) | val1 | val2);
+        }
+    }
 }
 
 pub fn read(reg: usize) u64 {
