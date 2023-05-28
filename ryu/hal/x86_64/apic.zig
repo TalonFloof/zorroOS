@@ -23,7 +23,6 @@ pub fn setup() void {
             HAL.Console.Put("X2APIC is enabled or required by system, switching to X2APIC operations\n", .{});
         }
         HAL.Arch.wrmsr(0x1b, (HAL.Arch.rdmsr(0x1b) | 0x800 | 0x400)); // Enable the X2APIC
-        return;
     } else {
         HAL.Arch.wrmsr(0x1b, (HAL.Arch.rdmsr(0x1b) | 0x800) & ~(@as(u64, 1) << @as(u64, 10))); // Enable the XAPIC
         if (HAL.Arch.GetHCB().hartID == 0) {
@@ -59,7 +58,7 @@ pub fn setup() void {
         std.atomic.spinLoopHint();
     }
     write(0x320, 0x10000); // Stop the Local APIC Timer
-    var ticks: u32 = 0xffffffff - read(0x390); // We now have the number of ticks that elapses in 10 ms (with divider 16 of course)
+    var ticks: u32 = 0xffffffff - @intCast(u32, read(0x390)); // We now have the number of ticks that elapses in 10 ms (with divider 16 of course)
     // Set the Local APIC timer to Periodic Mode, Divider 16, and to trigger every millisecond.
     write(0x3e0, 0x3);
     write(0x380, ticks / 10);
@@ -71,16 +70,20 @@ pub fn setup() void {
 
 }
 
-pub fn read(reg: usize) u32 {
+pub fn read(reg: usize) u64 {
     if (lapic_ptr == 0xffffffff) { // X2APIC
-        return 0;
+        return HAL.Arch.rdmsr(@intCast(u32, x2apic_register_base + (reg / 16)));
     } else {
-        return @intToPtr(*volatile u32, lapic_ptr + reg).*;
+        return @intCast(u64, @intToPtr(*volatile u32, lapic_ptr + reg).*);
     }
 }
 
-pub fn write(reg: usize, val: u32) void {
-    @intToPtr(*volatile u32, lapic_ptr + reg).* = val;
+pub fn write(reg: usize, val: u64) void {
+    if (lapic_ptr == 0xffffffff) { // X2APIC
+        HAL.Arch.wrmsr(@intCast(u32, x2apic_register_base + (reg / 16)), val);
+    } else {
+        @intToPtr(*volatile u32, lapic_ptr + reg).* = @intCast(u32, val & 0xFFFFFFFF);
+    }
 }
 
 pub fn readIo32(reg: usize) u32 {
