@@ -88,3 +88,20 @@ const ELFHeader = packed struct {
     objType: ELFObjType,
     arch: ELFArch,
 };
+
+const ELFLoadError = error{
+    BadMagic,
+    Not64Bit,
+    IncorrectArcitecture,
+    NotPositionIndependent,
+    NotDynamic,
+};
+
+pub fn LoadELF(ptr: *void, destAddr: ?*void) void!ELFLoadError {
+    _ = destAddr;
+    var header: *ELFHeader = @ptrCast(*ELFHeader, @alignCast(@alignOf(ELFHeader), ptr));
+    if (header.magic != 0x464C457F) {
+        return .BadMagic;
+    }
+    if (header.bits == 1) {}
+}
