@@ -110,7 +110,9 @@ const ELFLoadError = error{
     BadMagic,
     Not64Bit,
     IncorrectArcitecture,
+    NotRelocatable,
     NotDynamic,
+    NotExecutable,
     UnrecognizedRelocation,
 };
 
@@ -128,7 +130,11 @@ pub fn LoadELF(ptr: *void, loadType: ELFLoadType) ELFLoadError!void {
     if (header.bits != 2) {
         return ELFLoadError.Not64Bit;
     }
-    if (header.objType != .Shared and loadType == .Driver) {
+    if (header.objType != .Relocatable and loadType == .Driver) {
+        return ELFLoadError.NotRelocatable;
+    } else if (header.objType != .Shared and loadType == .Library) {
         return ELFLoadError.NotDynamic;
+    } else if (header.objType != .Executable and loadType == .Normal) {
+        return ELFLoadError.NotExecutable;
     }
 }
