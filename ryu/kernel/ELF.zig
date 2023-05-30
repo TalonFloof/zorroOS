@@ -128,7 +128,7 @@ pub fn LoadELF(ptr: *void, loadType: ELFLoadType) ELFLoadError!void {
     if (header.bits != 2) {
         return ELFLoadError.Not64Bit;
     }
-    if (header.objType != .Shared and loadType == .Library) {
+    if (header.objType != .Shared and loadType == .Driver) {
         return ELFLoadError.NotDynamic;
     }
 }

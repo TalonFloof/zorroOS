@@ -11,6 +11,6 @@ pub fn LoadDriver(name: []const u8, relocObj: *void) void {
     const addr = drvrAddrTop;
     _ = addr;
     ELF.LoadELF(relocObj, .Driver) catch |err| {
-        HAL.Console.Put("Failed to Load Driver \"{s}\", Reason: {}", .{ name, err });
+        HAL.Console.Put("Failed to Load Driver \"{s}\", Reason: {}\n", .{ name, err });
     };
 }
