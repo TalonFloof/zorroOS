@@ -9,6 +9,9 @@ const acpi = @import("acpi.zig");
 const apic = @import("apic.zig");
 const hart = @import("hart.zig");
 const HCB = @import("root").HCB;
+const Drivers = @import("root").Drivers;
+
+export var module_request = limine.ModuleRequest{};
 
 pub export fn _archstart() callconv(.Naked) noreturn {
     asm volatile (
@@ -36,6 +39,12 @@ pub fn PreformStartup(stackTop: usize) void {
     acpi.initialize();
     apic.setup();
     hart.startSMP();
+    if (module_request.response) |response| {
+        for (response.modules()) |i| {
+            const name = i.cmdline[0..std.mem.len(i.cmdline)];
+            Drivers.LoadDriver(name, @ptrCast(*void, i.address));
+        }
+    }
 }
 
 pub export fn HartStart(stack: u64) callconv(.C) noreturn {

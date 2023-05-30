@@ -22,6 +22,7 @@ pub const CrashCode = enum(u32) {
     RyuDoubleFault,
     RyuDeadlock,
     RyuZigPanic,
+    RyuDriverAbort,
     RyuIntentionallyTriggeredFailure = 0xdeaddead,
 };
 

@@ -66,7 +66,7 @@ const ELFArch = enum(u16) {
     STMicroElecST19 = 0x4a,
     DigitalVAX = 0x4b,
     AxisCom32 = 0x4c,
-    InfineonTech32 = 0x3d,
+    InfineonTech32 = 0x4d,
     Element14DSP = 0x4e,
     LSILogic = 0x4f,
     TMS320C6000 = 0x8c,
@@ -87,21 +87,48 @@ const ELFHeader = packed struct {
     unused: u64 = 0,
     objType: ELFObjType,
     arch: ELFArch,
+    version: u32,
+    programEntryPos: u64,
+    phtPos: u64, // Program Header Table Position
+    shtPos: u64, // Section Header Table Position
+    flags: u32,
+    headerSize: u16,
+    phtEntrySize: u16,
+    phtEntryCount: u16,
+    shtEntrySize: u16,
+    shtEntryCount: u16,
+    shtNameIndex: u16,
+
+    comptime {
+        if (@sizeOf(@This()) != 64) {
+            @compileError("Size of ELFHeader is not 64 bytes!");
+        }
+    }
 };
 
 const ELFLoadError = error{
     BadMagic,
     Not64Bit,
     IncorrectArcitecture,
-    NotPositionIndependent,
     NotDynamic,
+    UnrecognizedRelocation,
 };
 
-pub fn LoadELF(ptr: *void, destAddr: ?*void) void!ELFLoadError {
-    _ = destAddr;
+const ELFLoadType = enum {
+    Normal,
+    Driver,
+    Library,
+};
+
+pub fn LoadELF(ptr: *void, loadType: ELFLoadType) ELFLoadError!void {
     var header: *ELFHeader = @ptrCast(*ELFHeader, @alignCast(@alignOf(ELFHeader), ptr));
     if (header.magic != 0x464C457F) {
-        return .BadMagic;
+        return ELFLoadError.BadMagic;
     }
-    if (header.bits == 1) {}
+    if (header.bits != 2) {
+        return ELFLoadError.Not64Bit;
+    }
+    if (header.objType != .Shared and loadType == .Library) {
+        return ELFLoadError.NotDynamic;
+    }
 }

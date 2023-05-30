@@ -10,6 +10,7 @@ zorroOS.iso
 *.bin
 limine-zig/
 zig-cache/
+zig-out/
 
 # Ignore common editor/system specific metadata
 .DS_Store
