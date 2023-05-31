@@ -9,6 +9,7 @@ pub const MapExec = 4;
 pub const MapSupervisor = 8;
 pub const MapNoncached = 16;
 pub const MapWriteThru = 32;
+pub const MapWriteComb = 64;
 
 pub var initialPageDir: ?PageDirectory = null;
 
@@ -26,6 +27,7 @@ pub fn MapPage(root: PageDirectory, vaddr: usize, flags: usize, paddr: usize) us
         .userSupervisor = @intCast(u1, (flags >> 3) & 1),
         .nonCached = @intCast(u1, (flags >> 4) & 1),
         .writeThrough = @intCast(u1, (flags >> 5) & 1),
+        .writeCombine = @intCast(u1, (flags >> 6) & 1),
         .reserved = 0,
         .phys = @intCast(u52, paddr >> 12),
     };
@@ -54,6 +56,7 @@ pub fn MapPage(root: PageDirectory, vaddr: usize, flags: usize, paddr: usize) us
                 entry.userSupervisor = pte.userSupervisor;
                 entry.nonCached = 0;
                 entry.writeThrough = 0;
+                entry.writeCombine = 0;
                 entry.phys = @intCast(u52, (@ptrToInt(page.ptr) - 0xffff800000000000) >> 12);
                 HAL.Arch.SetPTE(entries, index, entry);
                 Memory.PFN.ReferencePage(@ptrToInt(entries) - 0xffff800000000000);

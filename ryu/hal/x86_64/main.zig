@@ -12,6 +12,7 @@ const HCB = @import("root").HCB;
 const Drivers = @import("root").Drivers;
 const kernel = @import("root");
 const KernelSettings = @import("root").KernelSettings;
+const Memory = @import("root").Memory;
 
 export var module_request = limine.ModuleRequest{};
 export var kfile_request = limine.KernelFileRequest{};
@@ -36,6 +37,7 @@ pub export fn _hartstart() callconv(.Naked) noreturn {
 
 pub fn PreformStartup(stackTop: usize) void {
     IRQEnableDisable(false);
+    HAL.Arch.wrmsr(0x277, 0x0007040100070406);
     hart.initialize(stackTop);
     gdt.initialize();
     idt.initialize();
@@ -65,14 +67,20 @@ pub fn PreformStartup(stackTop: usize) void {
         noNX = true;
     }
     mem.init(kfstart, kfend);
+    var i: usize = 0;
+    while (i < (HAL.Console.info.pitch * HAL.Console.info.height)) : (i += 4096) {
+        _ = Memory.Paging.MapPage(Memory.Paging.initialPageDir.?, 0xffffffffc0000000 + i, Memory.Paging.MapRead | Memory.Paging.MapWrite | Memory.Paging.MapSupervisor | Memory.Paging.MapWriteComb, i + (@ptrToInt(HAL.Console.info.ptr) - 0xffff800000000000));
+    }
+    HAL.Console.info.ptr = @intToPtr(*allowzero void, 0xffffffffc0000000);
     acpi.initialize();
     apic.setup();
     hart.startSMP();
+    IRQEnableDisable(true);
     if (module_request.response) |response| {
-        for (response.modules()) |i| {
-            const name = i.cmdline[0..std.mem.len(i.cmdline)];
+        for (response.modules()) |mod| {
+            const name = mod.cmdline[0..std.mem.len(mod.cmdline)];
             if (!std.mem.eql(u8, name, "BootLogo")) {
-                kernel.LoadModule(name, i.address[0..i.size]);
+                kernel.LoadModule(name, mod.address[0..mod.size]);
             }
         }
     }
@@ -158,7 +166,9 @@ const NativePTEEntry = packed struct {
     user: u1 = 0,
     writeThrough: u1 = 0,
     cacheDisable: u1 = 0,
-    reserved: u7 = 0,
+    reserved1: u2 = 0,
+    pat: u1 = 0,
+    reserved2: u4 = 0,
     phys: u51 = 0,
     noExecute: u1 = 0,
 };
@@ -175,6 +185,7 @@ pub fn GetPTE(root: *void, index: usize) HAL.PTEEntry {
     }
     entry.nonCached = entries[index].cacheDisable;
     entry.writeThrough = entries[index].writeThrough;
+    entry.writeCombine = entries[index].pat;
     entry.phys = @intCast(u52, entries[index].phys);
     return entry;
 }
@@ -188,6 +199,7 @@ pub fn SetPTE(root: *void, index: usize, entry: HAL.PTEEntry) void {
     }
     entries[index].cacheDisable = entry.nonCached;
     entries[index].writeThrough = entry.writeThrough;
+    entries[index].pat = entry.writeCombine;
     entries[index].phys = @intCast(u51, entry.phys & 0xfffffffff);
 }
 

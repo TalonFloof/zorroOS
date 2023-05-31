@@ -11,7 +11,7 @@ pub const FBInfo = struct {
     set: *const fn (self: *const FBInfo, x: isize, y: isize, w: usize, h: usize, c: usize) callconv(.C) void,
 };
 
-var info: *const FBInfo = undefined;
+pub var info: *FBInfo = undefined;
 var cursorX: usize = 0;
 var cursorY: usize = 0;
 var conHeight: usize = 0;
@@ -43,7 +43,7 @@ fn fbDrawBitmap(x: isize, y: isize, w: usize, h: usize, bitmap: []u8, color: usi
     }
 }
 
-pub fn Init(i: *const FBInfo, bootLogo: ?[]u8) void {
+pub fn Init(i: *FBInfo, bootLogo: ?[]u8) void {
     info = i;
     cursorX = 0;
     cursorY = 0;
@@ -83,7 +83,8 @@ fn newline() void {
     cursorX = 0;
     if (((cursorY + 1) * 12) >= conHeight) {
         // Scroll
-        @memcpy(
+        std.mem.copyForwards(
+            u8,
             @intToPtr([*]u8, @ptrToInt(info.ptr))[0..((conHeight - 12) * info.pitch)],
             @intToPtr([*]u8, @ptrToInt(info.ptr) + (12 * info.pitch))[0..((conHeight - 12) * info.pitch)],
         );
