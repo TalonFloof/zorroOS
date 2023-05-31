@@ -50,8 +50,6 @@ pub fn Init(i: *FBInfo, bootLogo: ?[]u8) void {
     cursorX = 0;
     cursorY = 0;
     conHeight = ((info.height / 2) / 12) * 12;
-    var runtime: usize = 0;
-    _ = runtime;
     if (bootLogo) |logo| {
         var height = logo.len / 16;
         fbDrawBitmap(
@@ -65,20 +63,15 @@ pub fn Init(i: *FBInfo, bootLogo: ?[]u8) void {
         );
     }
     EnableDisable(!KernelSettings.isQuiet);
-    //var y = info.height - 96;
-    //while (y <= info.height) : (y += 1) {
-    //    var x: isize = if ((y % 2) == 1) 1 else 0;
-    //    while (x <= info.width) : (x += 2) {
-    //        info.set(info, x, @intCast(isize, y), 1, 1, 0x1E1E2E);
-    //    }
-    //}
-    //fbDrawBitmap(@divTrunc(@intCast(isize, info.width), 2) - 84, @intCast(isize, info.height) - 96, 96, 24, @constCast(ryuLogo[runtime..ryuLogo.len]), 0xB57BEE);
-    //fbDrawBitmap(@divTrunc(@intCast(isize, info.width), 2) - 84, @intCast(isize, info.height) - 72, 96, 24, @constCast(ryuLogo[runtime + (12 * 24) .. ryuLogo.len]), 0x8B61C1);
-    //fbDrawBitmap(@divTrunc(@intCast(isize, info.width), 2) - 84, @intCast(isize, info.height) - 48, 96, 24, @constCast(ryuLogo[runtime + (24 * 24) .. ryuLogo.len]), 0x624795);
-    //fbDrawBitmap(@divTrunc(@intCast(isize, info.width), 2) - 84, @intCast(isize, info.height) - 24, 96, 24, @constCast(ryuLogo[runtime + (36 * 24) .. ryuLogo.len]), 0x392D69);
-    //fbDrawBitmap(@divTrunc(@intCast(isize, info.width), 2) + 20, @intCast(isize, info.height - 66), 64, 37, @constCast(ryuText[runtime..ryuText.len]), 0xffffff);
     Put("Ryu Kernel Version 0.0.1 (c) 2020-2023 TalonFox\n", .{});
     Put("Celebrating 3 years of zorroOS!\n", .{});
+}
+
+noinline fn flushBuffer() void {
+    @memcpy(
+        @ptrCast([*]u8, bufPtr)[0..(info.pitch * conHeight)],
+        @ptrCast([*]u8, @alignCast(1, info.ptr))[0..(info.pitch * conHeight)],
+    );
 }
 
 fn newline() void {
@@ -91,27 +84,46 @@ fn newline() void {
             @intToPtr([*]u8, @ptrToInt(info.ptr) + (12 * info.pitch))[0..((conHeight - 12) * info.pitch)],
         );
         info.set(info, 0, @intCast(isize, conHeight - 12), info.width, 12, 0x1e1e2e);
+        if (bufPtr != null) {
+            flushBuffer();
+        }
     } else {
         cursorY += 1;
     }
 }
 
-noinline fn flushBuffer() void {
-    @memcpy(
-        @ptrCast([*]u8, bufPtr)[0..(info.pitch * conHeight)],
-        @ptrCast([*]u8, @alignCast(1, info.ptr))[0..(info.pitch * conHeight)],
-    );
+fn swapBuffers() void {
+    var temp: usize = @ptrToInt(info.ptr);
+    info.ptr = @ptrCast(*allowzero void, bufPtr);
+    bufPtr = @intToPtr(*u8, temp);
 }
 
 fn conWriteString(_: @TypeOf(.{}), string: []const u8) error{}!usize {
     for (0..string.len) |i| {
         const c = string[i];
         info.set(info, @intCast(isize, cursorX * 6), @intCast(isize, cursorY * 12), 6, 12, 0x1E1E2E);
-        if (c == '\n') {
+        if (bufPtr != null) {
+            swapBuffers();
+            info.set(info, @intCast(isize, cursorX * 6), @intCast(isize, cursorY * 12), 6, 12, 0x1E1E2E);
+            swapBuffers();
+        }
+        if (c == 8) {
+            if (cursorX == 0) {
+                cursorX = info.width / 6;
+                cursorY -= 1;
+            } else {
+                cursorX -= 1;
+            }
+        } else if (c == '\n') {
             newline();
         } else {
             if (c >= 0x20 and c <= 0x7e) {
                 fbDrawBitmap(@intCast(isize, cursorX * 6), @intCast(isize, cursorY * 12), 8, 12, @constCast(HaikuFont[((@intCast(usize, c) - 0x20) * 12)..HaikuFont.len]), 0xcdd6f4, true);
+                if (bufPtr != null) {
+                    swapBuffers();
+                    fbDrawBitmap(@intCast(isize, cursorX * 6), @intCast(isize, cursorY * 12), 8, 12, @constCast(HaikuFont[((@intCast(usize, c) - 0x20) * 12)..HaikuFont.len]), 0xcdd6f4, true);
+                    swapBuffers();
+                }
             }
             cursorX += 1;
             if ((cursorX * 6) >= info.width) {
@@ -119,9 +131,11 @@ fn conWriteString(_: @TypeOf(.{}), string: []const u8) error{}!usize {
             }
         }
         info.set(info, @intCast(isize, cursorX * 6), @intCast(isize, cursorY * 12), 6, 12, 0xCDD6F4);
-    }
-    if (bufPtr != null) {
-        flushBuffer();
+        if (bufPtr != null) {
+            swapBuffers();
+            info.set(info, @intCast(isize, cursorX * 6), @intCast(isize, cursorY * 12), 6, 12, 0xCDD6F4);
+            swapBuffers();
+        }
     }
     return string.len;
 }
