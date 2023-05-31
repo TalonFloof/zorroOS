@@ -37,7 +37,6 @@ pub export fn _hartstart() callconv(.Naked) noreturn {
 
 pub fn PreformStartup(stackTop: usize) void {
     IRQEnableDisable(false);
-    HAL.Arch.wrmsr(0x277, 0x0007040100070406);
     hart.initialize(stackTop);
     gdt.initialize();
     idt.initialize();
@@ -67,11 +66,6 @@ pub fn PreformStartup(stackTop: usize) void {
         noNX = true;
     }
     mem.init(kfstart, kfend);
-    var i: usize = 0;
-    while (i < (HAL.Console.info.pitch * HAL.Console.info.height)) : (i += 4096) {
-        _ = Memory.Paging.MapPage(Memory.Paging.initialPageDir.?, 0xffffffffc0000000 + i, Memory.Paging.MapRead | Memory.Paging.MapWrite | Memory.Paging.MapSupervisor | Memory.Paging.MapWriteComb, i + (@ptrToInt(HAL.Console.info.ptr) - 0xffff800000000000));
-    }
-    HAL.Console.info.ptr = @intToPtr(*allowzero void, 0xffffffffc0000000);
     acpi.initialize();
     apic.setup();
     hart.startSMP();

@@ -36,4 +36,5 @@ pub fn Initialize(ranges: *[32]PhysicalRange, initialPD: ?Paging.PageDirectory) 
     }
     HAL.Console.Put("Preparing PFN Database [{d} entries, {d} KiB, 0x{x:0>16}]...\n", .{ entries, neededSize / 1024, startAddr });
     PFN.Initialize(startAddr, entries, ranges);
+    HAL.Console.SetupDoubleBuffer();
 }

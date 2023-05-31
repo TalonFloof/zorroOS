@@ -1,6 +1,7 @@
 const std = @import("std");
 const HaikuFont = @import("HALConsoleFont.zig").HaikuFont;
 const KernelSettings = @import("root").KernelSettings;
+const Memory = @import("root").Memory;
 
 pub const FBInfo = struct {
     ptr: *allowzero void = @intToPtr(*allowzero void, 0),
@@ -12,6 +13,7 @@ pub const FBInfo = struct {
 };
 
 pub var info: *FBInfo = undefined;
+var bufPtr: ?*u8 = null;
 var cursorX: usize = 0;
 var cursorY: usize = 0;
 var conHeight: usize = 0;
@@ -94,6 +96,13 @@ fn newline() void {
     }
 }
 
+noinline fn flushBuffer() void {
+    @memcpy(
+        @ptrCast([*]u8, bufPtr)[0..(info.pitch * conHeight)],
+        @ptrCast([*]u8, @alignCast(1, info.ptr))[0..(info.pitch * conHeight)],
+    );
+}
+
 fn conWriteString(_: @TypeOf(.{}), string: []const u8) error{}!usize {
     for (0..string.len) |i| {
         const c = string[i];
@@ -110,6 +119,9 @@ fn conWriteString(_: @TypeOf(.{}), string: []const u8) error{}!usize {
             }
         }
         info.set(info, @intCast(isize, cursorX * 6), @intCast(isize, cursorY * 12), 6, 12, 0xCDD6F4);
+    }
+    if (bufPtr != null) {
+        flushBuffer();
     }
     return string.len;
 }
@@ -129,6 +141,16 @@ pub fn EnableDisable(en: bool) void {
         cursorY = 0;
         info.set(info, 0, 0, info.width, conHeight, 0x1E1E2E);
         info.set(info, @intCast(isize, cursorX * 6), @intCast(isize, cursorY * 12), 6, 12, 0xCDD6F4);
+        if (bufPtr != null) {
+            flushBuffer();
+        }
     }
     conEnabled = en;
+}
+
+pub fn SetupDoubleBuffer() void {
+    var altPtr: *allowzero void = info.ptr;
+    info.ptr = @ptrCast(*allowzero void, Memory.Pool.StaticPool.AllocAnonPages(info.pitch * conHeight).?.ptr);
+    bufPtr = @ptrCast(*u8, @alignCast(1, altPtr));
+    @memcpy(@ptrCast([*]u8, @alignCast(1, info.ptr))[0..(info.pitch * conHeight)], @ptrCast([*]u8, bufPtr)[0..(info.pitch * conHeight)]);
 }
