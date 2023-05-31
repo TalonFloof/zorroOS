@@ -1,4 +1,8 @@
 const std = @import("std");
+const Drivers = @import("root").Drivers;
+const Memory = @import("root").Memory;
+const devlib = @import("devlib");
+const HAL = @import("hal");
 
 const ELFObjType = enum(u16) {
     Relocatable = 1,
@@ -106,6 +110,56 @@ const ELFHeader = packed struct {
     }
 };
 
+const ELFSectionHeader = extern struct {
+    name: u32 align(1),
+    type: u32 align(1),
+    flags: u64 align(1),
+    addr: u64 align(1),
+    offset: u64 align(1),
+    size: u64 align(1),
+    link: u32 align(1),
+    info: u32 align(1),
+    addralign: u64 align(1),
+    entsize: u64 align(1),
+};
+
+const ELFSymbol = extern struct {
+    name: u32 align(1),
+    info: u8 align(1),
+    other: u8 align(1),
+    shndx: u16 align(1),
+    value: u64 align(1),
+    size: u64 align(1),
+
+    comptime {
+        if (@alignOf(@This()) != 1) {
+            @compileError("Wrong Alignment for ELFSymbol!");
+        }
+    }
+};
+
+const ELFRela = extern struct {
+    offset: u64 align(1),
+    info: u64 align(1),
+    addend: i64 align(1),
+};
+
+//#define R_X86_64_64 1
+//#define R_X86_64_32 10
+//#define R_X86_64_32S 11
+//#define R_X86_64_PC32 2
+//#define R_X86_64_PLT32 4
+//#define R_X86_64_RELATIVE 8
+
+const ELFRelocType = enum(u32) {
+    X86_64_64 = 1,
+    X86_64_32 = 10,
+    X86_64_32S = 11,
+    X86_64_PC32 = 2,
+    X86_64_PLT32 = 4,
+    X86_64_RELATIVE = 8,
+};
+
 const ELFLoadError = error{
     BadMagic,
     Not64Bit,
@@ -114,6 +168,8 @@ const ELFLoadError = error{
     NotDynamic,
     NotExecutable,
     UnrecognizedRelocation,
+    NotImplemented,
+    NoDriverInfo,
 };
 
 const ELFLoadType = enum {
@@ -122,7 +178,7 @@ const ELFLoadType = enum {
     Library,
 };
 
-pub fn LoadELF(ptr: *void, loadType: ELFLoadType) ELFLoadError!void {
+pub fn LoadELF(ptr: *void, loadType: ELFLoadType) ELFLoadError!?usize {
     var header: *ELFHeader = @ptrCast(*ELFHeader, @alignCast(@alignOf(ELFHeader), ptr));
     if (header.magic != 0x464C457F) {
         return ELFLoadError.BadMagic;
@@ -137,4 +193,88 @@ pub fn LoadELF(ptr: *void, loadType: ELFLoadType) ELFLoadError!void {
     } else if (header.objType != .Executable and loadType == .Normal) {
         return ELFLoadError.NotExecutable;
     }
+    if (loadType == .Driver) {
+        var i: usize = 0;
+        while (i < header.shtEntryCount) : (i += 1) {
+            var entry: *ELFSectionHeader = @intToPtr(*ELFSectionHeader, @ptrToInt(ptr) + header.shtPos + (i * @intCast(usize, header.shtEntrySize)));
+            if (entry.type == 8) {
+                var size = if (entry.size & 0xFFF != 0) (entry.size & 0xFFFFFFFFFFFFF000) + 4096 else entry.size;
+                entry.addr = @ptrToInt(Memory.Pool.PagedPool.Alloc(size).?.ptr);
+            } else {
+                entry.addr = @ptrToInt(ptr) + entry.offset;
+            }
+        }
+        var drvrInfo: ?*devlib.RyuDriverInfo = null;
+        i = 0;
+        while (i < header.shtEntryCount) : (i += 1) {
+            var entry: *ELFSectionHeader = @intToPtr(*ELFSectionHeader, @ptrToInt(ptr) + header.shtPos + (i * @intCast(usize, header.shtEntrySize)));
+            if (entry.type != 2) {
+                continue;
+            }
+            var strTableHeader = @intToPtr(*ELFSectionHeader, @ptrToInt(ptr) + header.shtPos + (@intCast(usize, header.shtEntrySize) * entry.link));
+            var sym: usize = 0;
+            while (sym < (entry.size / @sizeOf(ELFSymbol))) : (sym += 1) {
+                var symEntry = @intToPtr(*ELFSymbol, entry.addr + (sym * @sizeOf(ELFSymbol)));
+                if (symEntry.shndx > 0 and symEntry.shndx < 0xFF00) {
+                    var e = @intToPtr(*ELFSectionHeader, @ptrToInt(ptr) + header.shtPos + (symEntry.shndx * header.shtEntrySize));
+                    symEntry.value += e.addr;
+                }
+                if (symEntry.name != 0) {
+                    var symbolCName = @intToPtr([*:0]u8, strTableHeader.addr + symEntry.name);
+                    var symbolName: []u8 = symbolCName[0..std.mem.len(symbolCName)];
+                    if (std.mem.eql(u8, symbolName, "DriverInfo")) {
+                        drvrInfo = @intToPtr(*devlib.RyuDriverInfo, symEntry.value);
+                    }
+                }
+            }
+        }
+        if (drvrInfo) |drvr| {
+            if (Drivers.drvrHead == null) {
+                Drivers.drvrHead = drvr;
+                Drivers.drvrTail = drvr;
+            } else {
+                Drivers.drvrTail.?.next = drvr;
+                drvr.prev = Drivers.drvrTail;
+                Drivers.drvrTail = drvr;
+            }
+            drvr.baseAddr = @ptrToInt(ptr);
+        } else {
+            return ELFLoadError.NoDriverInfo;
+        }
+        i = 0;
+        while (i < header.shtEntryCount) : (i += 1) {
+            var entry: *ELFSectionHeader = @intToPtr(*ELFSectionHeader, @ptrToInt(ptr) + header.shtPos + (i * @intCast(usize, header.shtEntrySize)));
+            if (entry.type != 4) {
+                continue;
+            }
+            var relTable = @intToPtr([*]ELFRela, entry.addr)[0..(entry.size / @sizeOf(ELFRela))];
+            var targetSection: *ELFSectionHeader = @intToPtr(*ELFSectionHeader, @ptrToInt(ptr) + header.shtPos + (entry.info * @intCast(usize, header.shtEntrySize)));
+            var symbolSection: *ELFSectionHeader = @intToPtr(*ELFSectionHeader, @ptrToInt(ptr) + header.shtPos + (entry.link * @intCast(usize, header.shtEntrySize)));
+            var symTable = @intToPtr([*]ELFSymbol, symbolSection.addr)[0 .. symbolSection.size / @sizeOf(ELFSymbol)];
+            for (0..relTable.len) |rela| {
+                var target: usize = relTable[rela].offset +% targetSection.addr;
+                var sym: usize = relTable[rela].info >> 32;
+                switch (@intToEnum(ELFRelocType, @intCast(u32, relTable[rela].info & 0xFFFFFFFF))) {
+                    .X86_64_64 => {
+                        @intToPtr(*align(1) u64, target).* = @bitCast(u64, relTable[rela].addend) +% symTable[sym].value;
+                    },
+                    .X86_64_32 => {
+                        @intToPtr(*align(1) u32, target).* = @intCast(u32, @bitCast(u64, relTable[rela].addend) +% symTable[sym].value);
+                    },
+                    .X86_64_PC32, .X86_64_PLT32 => {
+                        @intToPtr(*align(1) u32, target).* = @intCast(u32, @bitCast(u64, relTable[rela].addend) +% symTable[sym].value -% target);
+                    },
+                    .X86_64_32S => {
+                        @intToPtr(*align(1) i32, target).* = @bitCast(i32, @intCast(u32, (@bitCast(u64, relTable[rela].addend) +% symTable[sym].value) & 0xFFFFFFFF));
+                    },
+                    else => {
+                        return ELFLoadError.UnrecognizedRelocation;
+                    },
+                }
+            }
+        }
+    } else {
+        return ELFLoadError.NotImplemented;
+    }
+    return null;
 }

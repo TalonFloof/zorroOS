@@ -5,17 +5,21 @@ pub const Status = enum(c_int) {
 };
 
 pub const RyuDispatch = extern struct {
-    put: *fn ([*c]const u8) callconv(.C) void,
-    abort: *fn ([*c]const u8) void,
+    put: *const fn ([*:0]const u8) callconv(.C) void,
+    abort: *const fn ([*:0]const u8) callconv(.C) noreturn,
 };
 
 pub const RyuDriverInfo = extern struct {
     apiMinor: u16,
     apiMajor: u16,
-    prev: ?*void = null,
-    next: ?*void = null,
+    prev: ?*RyuDriverInfo = null,
+    next: ?*RyuDriverInfo = null,
     baseAddr: usize = 0,
-    drvName: [*c]const u8,
-    krnlDispatch: ?*RyuDispatch = null,
+    baseSize: usize = 0,
     flags: u64 = 0,
+
+    drvName: [*c]const u8,
+    krnlDispatch: ?*const RyuDispatch = null,
+    loadFn: *const fn () callconv(.C) Status,
+    unloadFn: *const fn () callconv(.C) Status,
 };

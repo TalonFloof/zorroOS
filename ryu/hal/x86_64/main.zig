@@ -13,6 +13,8 @@ const Drivers = @import("root").Drivers;
 
 export var module_request = limine.ModuleRequest{};
 
+var noNX: bool = false;
+
 pub export fn _archstart() callconv(.Naked) noreturn {
     asm volatile (
         \\mov %rsp, %rdi
@@ -35,6 +37,13 @@ pub fn PreformStartup(stackTop: usize) void {
     gdt.initialize();
     idt.initialize();
     framebuffer.init();
+    // Detect if NX is supported (just in case we need to warn the user ;3)
+    if (cpuid(0x80000001).edx & (@intCast(u32, 1) << 20) == 0) {
+        HAL.Console.Put("WARNING!!!! Your CPU does not support the NX (No Execute) bit extension!\n", .{});
+        HAL.Console.Put("            This allows for programs to exploit buffer overflows to run malicious code.\n", .{});
+        HAL.Console.Put("            Your machine's security is at risk!\n", .{});
+        noNX = true;
+    }
     mem.init();
     acpi.initialize();
     apic.setup();
@@ -137,7 +146,11 @@ pub fn GetPTE(root: *void, index: usize) HAL.PTEEntry {
     var entry: HAL.PTEEntry = HAL.PTEEntry{};
     entry.r = entries[index].valid;
     entry.w = entries[index].write;
-    entry.x = ~entries[index].noExecute;
+    if (!noNX) {
+        entry.x = ~entries[index].noExecute;
+    } else {
+        entry.x = 1;
+    }
     entry.nonCached = entries[index].cacheDisable;
     entry.writeThrough = entries[index].writeThrough;
     entry.phys = @intCast(u52, entries[index].phys);
@@ -148,7 +161,9 @@ pub fn SetPTE(root: *void, index: usize, entry: HAL.PTEEntry) void {
     var entries: []align(1) NativePTEEntry = @ptrCast([*]align(1) NativePTEEntry, @alignCast(1, root))[0..512];
     entries[index].valid = entry.r;
     entries[index].write = entry.w;
-    entries[index].noExecute = ~entry.x;
+    if (!noNX) {
+        entries[index].noExecute = ~entry.x;
+    }
     entries[index].cacheDisable = entry.nonCached;
     entries[index].writeThrough = entry.writeThrough;
     entries[index].phys = @intCast(u51, entry.phys & 0xfffffffff);

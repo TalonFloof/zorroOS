@@ -5,7 +5,7 @@ build: limine-zig
 	rm -f -r zig-cache _lowlevel.o; \
 	cd ..
 	cd drivers/fop; \
-	zig build; \
+	zig build -Doptimize=ReleaseSmall; \
 	cd ../..
 
 limine-zig:

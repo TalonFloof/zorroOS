@@ -1,4 +1,5 @@
 const HAL = @import("HAL.zig");
+const Drivers = @import("root").Drivers;
 const std = @import("std");
 
 pub const CrashCode = enum(u32) {
@@ -38,6 +39,26 @@ pub fn Crash(code: CrashCode, args: [4]usize) noreturn {
         args[2],
         args[3],
     });
+    if (Drivers.drvrHead != null) {
+        var driver = Drivers.drvrHead;
+        HAL.Console.Put("Driver Name      Driver Address\n", .{});
+        var i: usize = 0;
+        while (driver != null) {
+            i = (i + 1) % 2;
+            var str = driver.?.drvName[0..std.mem.len(driver.?.drvName)];
+            HAL.Console.Put("{s: <16} {x:0>16}", .{ str, driver.?.baseAddr });
+            if (i == 0) {
+                HAL.Console.Put("\n", .{});
+            } else {
+                HAL.Console.Put(" ", .{});
+            }
+            driver = driver.?.next;
+        }
+        if (i != 0) {
+            HAL.Console.Put("\n", .{});
+        }
+        HAL.Console.Put("\n", .{});
+    }
     HAL.Console.Put("Stack Backtrace:\n", .{});
     const frameStart = @returnAddress();
     var it = std.debug.StackIterator.init(frameStart, null);
