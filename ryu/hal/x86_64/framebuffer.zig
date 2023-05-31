@@ -27,7 +27,7 @@ fn setPixels(self: *const HAL.Console.FBInfo, x: isize, y: isize, w: usize, h: u
 
 var info = HAL.Console.FBInfo{ .set = &setPixels };
 
-pub fn init() void {
+pub fn init(bootLogo: ?[]u8) void {
     if (con_request.response) |response| {
         response.write(response.terminals()[0], "\x1b[?25l");
     }
@@ -38,7 +38,7 @@ pub fn init() void {
             info.height = @intCast(usize, fb.height);
             info.pitch = @intCast(usize, fb.pitch);
             info.bpp = @intCast(usize, fb.bpp);
-            HAL.Console.Init(&info);
+            HAL.Console.Init(&info, bootLogo);
             return;
         }
     }

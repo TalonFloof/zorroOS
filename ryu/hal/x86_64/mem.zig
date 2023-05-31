@@ -5,7 +5,7 @@ const HAL = @import("root").HAL;
 
 export var memmap_request: limine.MemoryMapRequest = .{};
 
-pub fn init() void {
+pub fn init(kfStart: usize, kfEnd: usize) void {
     var ranges: [32]Memory.PhysicalRange = [_]Memory.PhysicalRange{.{ .start = 0, .end = 0 }} ** 32;
     var i: usize = 0;
     if (memmap_request.response) |response| {
@@ -17,6 +17,8 @@ pub fn init() void {
             }
         }
     }
+    ranges[i].start = kfStart;
+    ranges[i].end = kfEnd;
     var initial: usize = asm volatile ("mov %%cr3, %[ret]"
         : [ret] "={rax}" (-> usize),
     ) + 0xffff800000000000;

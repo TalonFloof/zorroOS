@@ -10,8 +10,11 @@ const apic = @import("apic.zig");
 const hart = @import("hart.zig");
 const HCB = @import("root").HCB;
 const Drivers = @import("root").Drivers;
+const kernel = @import("root");
+const KernelSettings = @import("root").KernelSettings;
 
 export var module_request = limine.ModuleRequest{};
+export var kfile_request = limine.KernelFileRequest{};
 
 var noNX: bool = false;
 
@@ -36,7 +39,24 @@ pub fn PreformStartup(stackTop: usize) void {
     hart.initialize(stackTop);
     gdt.initialize();
     idt.initialize();
-    framebuffer.init();
+    var kfstart: usize = 0;
+    var kfend: usize = 0;
+    if (kfile_request.response) |response| {
+        KernelSettings.ParseCommandline(response.kernel_file.cmdline[0..std.mem.len(response.kernel_file.cmdline)]);
+        kfstart = @ptrToInt(response.kernel_file.address) - 0xffff800000000000;
+        kfend = if ((response.kernel_file.size % 4096) != 0) (kfstart + ((response.kernel_file.size / 4096 + 1) * 4096)) else (kfstart + response.kernel_file.size);
+    }
+    var bootLogo: ?[]u8 = null;
+    if (module_request.response) |response| {
+        for (response.modules()) |i| {
+            const name = i.cmdline[0..std.mem.len(i.cmdline)];
+            if (std.mem.eql(u8, name, "BootLogo")) {
+                bootLogo = i.address[0..i.size];
+                break;
+            }
+        }
+    }
+    framebuffer.init(bootLogo);
     // Detect if NX is supported (just in case we need to warn the user ;3)
     if (cpuid(0x80000001).edx & (@intCast(u32, 1) << 20) == 0) {
         HAL.Console.Put("WARNING!!!! Your CPU does not support the NX (No Execute) bit extension!\n", .{});
@@ -44,14 +64,16 @@ pub fn PreformStartup(stackTop: usize) void {
         HAL.Console.Put("            Your machine's security is at risk!\n", .{});
         noNX = true;
     }
-    mem.init();
+    mem.init(kfstart, kfend);
     acpi.initialize();
     apic.setup();
     hart.startSMP();
     if (module_request.response) |response| {
         for (response.modules()) |i| {
             const name = i.cmdline[0..std.mem.len(i.cmdline)];
-            Drivers.LoadDriver(name, @ptrCast(*void, i.address));
+            if (!std.mem.eql(u8, name, "BootLogo")) {
+                kernel.LoadModule(name, i.address[0..i.size]);
+            }
         }
     }
 }
