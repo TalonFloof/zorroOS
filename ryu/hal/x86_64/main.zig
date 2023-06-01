@@ -8,6 +8,7 @@ const idt = @import("idt.zig");
 const acpi = @import("acpi.zig");
 const apic = @import("apic.zig");
 const hart = @import("hart.zig");
+const io = @import("io.zig");
 const HCB = @import("root").HCB;
 const Drivers = @import("root").Drivers;
 const kernel = @import("root");
@@ -103,13 +104,9 @@ pub fn IRQEnableDisable(en: bool) void {
     }
 }
 
-pub fn Halt() noreturn {
+pub fn Halt() void {
     asm volatile ("cli");
     SendIPI(-2, .IPIHalt);
-    while (true) {
-        asm volatile ("cli");
-        asm volatile ("hlt");
-    }
 }
 
 pub inline fn WaitForIRQ() void {
@@ -260,4 +257,32 @@ pub inline fn cpuid(leaf: u32) CPUID {
         .edx = edx,
         .ecx = ecx,
     };
+}
+
+// Debugger
+pub fn PrepareForDebug() void {
+    while ((io.inb(0x64) & 1) != 0) { // Empty the PS/2 Keyboard Scancode Queue
+        _ = io.inb(0x60);
+    }
+}
+
+var isShiftPressed: bool = false;
+
+pub fn DebugGet() u8 {
+    while (true) {
+        while ((io.inb(0x64) & 1) != 0) {
+            var key = io.inb(0x60);
+            if (key == 0x2a or key == 0x36) {
+                isShiftPressed = true;
+            } else if (key == 0xaa or key == 0xb6) {
+                isShiftPressed = false;
+            } else if (key < 128) {
+                const char = if (isShiftPressed) HAL.Debug.PS2Keymap.shiftedMap[key] else HAL.Debug.PS2Keymap.unshiftedMap[key];
+                if (char != 0) {
+                    return char;
+                }
+            }
+        }
+        std.atomic.spinLoopHint();
+    }
 }

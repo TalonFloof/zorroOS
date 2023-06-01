@@ -12,7 +12,7 @@ pub export var DriverInfo = devlib.RyuDriverInfo{
 pub fn LoadDriver() callconv(.C) devlib.Status {
     if (DriverInfo.krnlDispatch) |dispatch| {
         dispatch.put("hii i am fop driver, i is fop :3\nHEHEHE NOW I CRASH COMPUTR\n");
-        dispatch.abort("umm, i chewed da cables and it did somin bad owo");
+        //dispatch.abort("umm, i chewed da cables and it did somin bad owo");
         return .Okay;
     }
     return .Failure;

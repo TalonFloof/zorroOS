@@ -165,5 +165,5 @@ pub fn SetupDoubleBuffer() void {
     var altPtr: *allowzero void = info.ptr;
     info.ptr = @ptrCast(*allowzero void, Memory.Pool.StaticPool.AllocAnonPages(info.pitch * conHeight).?.ptr);
     bufPtr = @ptrCast(*u8, @alignCast(1, altPtr));
-    @memcpy(@ptrCast([*]u8, @alignCast(1, info.ptr))[0..(info.pitch * conHeight)], @ptrCast([*]u8, bufPtr)[0..(info.pitch * conHeight)]);
+    @memcpy(@ptrCast([*]u32, @alignCast(4, info.ptr))[0..((info.pitch / 4) * conHeight)], @ptrCast([*]u32, @alignCast(4, bufPtr))[0..((info.pitch / 4) * conHeight)]);
 }

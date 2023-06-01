@@ -1,6 +1,7 @@
 pub const Console = @import("HALConsole.zig");
 pub const Crash = @import("HALCrash.zig");
 pub const Arch = @import("x86_64/main.zig");
+pub const Debug = @import("debug/HALDebug.zig");
 pub const root = @import("root");
 
 pub const PTEEntry = packed struct {

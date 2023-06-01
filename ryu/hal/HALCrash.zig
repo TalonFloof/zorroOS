@@ -68,6 +68,7 @@ pub fn Crash(code: CrashCode, args: [4]usize) noreturn {
         }
         HAL.Console.Put("0x{x:0>16} ", .{frame});
     }
-    HAL.Console.Put("\n\nSystem Halted\n", .{});
+    HAL.Console.Put("\n", .{});
     HAL.Arch.Halt();
+    HAL.Debug.EnterDebugger();
 }
