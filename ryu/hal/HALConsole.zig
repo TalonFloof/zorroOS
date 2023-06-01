@@ -64,7 +64,6 @@ pub fn Init(i: *FBInfo, bootLogo: ?[]u8) void {
     }
     EnableDisable(!KernelSettings.isQuiet);
     Put("Ryu Kernel Version 0.0.1 (c) 2020-2023 TalonFox\n", .{});
-    Put("Celebrating 3 years of zorroOS!\n", .{});
 }
 
 noinline fn flushBuffer() void {

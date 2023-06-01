@@ -2,8 +2,6 @@
 
 # **zorroOS**: A hobby operating system written from scratch
 
-<p align="center"><a href="https://github.com/TalonFox/zorroOS/blob/main/docs/The%20History%20of%20zorroOS.svg">Celebrating 3 years of zorroOS! 🎉🦊</a></p>
-
 **zorroOS** is a hobby operating system written in Zig, currently targeting x86_64 PCs.
 
 ## Building
