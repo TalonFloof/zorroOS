@@ -2,6 +2,7 @@ const HCB = @import("root").HCB;
 const HAL = @import("root").HAL;
 const limine = @import("limine");
 const Memory = @import("root").Memory;
+const IRQL = @import("root").IRQL;
 const std = @import("std");
 
 export var smp_request: limine.SmpRequest = .{ .flags = 0 };
@@ -31,6 +32,18 @@ pub fn startSMP() void {
                 HAL.hcbList.?[@intCast(usize, hartCount)] = hcb;
                 hcb.hartID = hartCount;
                 hcb.archData.apicID = hart.lapic_id;
+                hcb.currentIRQL = .IRQL_LOW;
+                hcb.pendingSoftInts = 0;
+                hcb.pendingSoftIntFirst = [8]?*const fn () callconv(.C) void{
+                    null,
+                    null,
+                    null, // TODO: Add User Dispatching
+                    null, // TODO: Add User Dispatching
+                    &IRQL.KDCSoftInt,
+                    &IRQL.KDCSoftInt,
+                    &IRQL.KDCSoftInt,
+                    &IRQL.KDCSoftInt,
+                };
                 hartData = @ptrToInt(hcb);
                 @intToPtr(*align(1) u64, @ptrToInt(hart) + @offsetOf(limine.SmpInfo, "goto_address")).* = @ptrToInt(&HAL.Arch._hartstart);
                 var cycles: usize = 0;

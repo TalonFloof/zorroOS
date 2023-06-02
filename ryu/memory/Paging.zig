@@ -49,7 +49,7 @@ pub fn MapPage(root: PageDirectory, vaddr: usize, flags: usize, paddr: usize) us
         } else {
             if (entry.r == 0) {
                 // Allocate Page
-                var page = Memory.PFN.AllocatePage(.PageTable, false, @ptrToInt(entries) + (index * @sizeOf(usize))).?;
+                var page = Memory.PFN.AllocatePage(.PageTable, vaddr < 0x800000000000, @ptrToInt(entries) + (index * @sizeOf(usize))).?;
                 entry.r = 1;
                 entry.w = 1;
                 entry.x = 0;

@@ -45,6 +45,7 @@ pub fn Initialize(begin: usize, entryCount: usize, ranges: *[32]Memory.PhysicalR
 }
 
 pub fn AllocatePage(tag: PFNType, swappable: bool, pte: usize) ?[]u8 {
+    const old = HAL.Arch.IRQEnableDisable(false);
     pfnSpinlock.acquire();
     if (pfnZeroedHead) |entry| {
         const phys: usize = ((@ptrToInt(entry) - @ptrToInt(pfnDatabase.ptr)) / @sizeOf(PFNEntry)) << 12;
@@ -59,6 +60,7 @@ pub fn AllocatePage(tag: PFNType, swappable: bool, pte: usize) ?[]u8 {
         entry.pte = pte;
         var ret = @intToPtr([*]u8, phys + 0xFFFF800000000000)[0..4096];
         pfnSpinlock.release();
+        _ = HAL.Arch.IRQEnableDisable(old);
         return ret;
     } else if (pfnFreeHead) |entry| {
         const phys: usize = ((@ptrToInt(entry) - @ptrToInt(pfnDatabase.ptr)) / @sizeOf(PFNEntry)) << 12;
@@ -74,21 +76,26 @@ pub fn AllocatePage(tag: PFNType, swappable: bool, pte: usize) ?[]u8 {
         var ret = @intToPtr([*]u8, phys + 0xFFFF800000000000)[0..4096];
         @memset(ret, 0); // Freed Pages haven't been zeroed yet so we'll manually do it.
         pfnSpinlock.release();
+        _ = HAL.Arch.IRQEnableDisable(old);
         return ret;
     }
     pfnSpinlock.release();
+    _ = HAL.Arch.IRQEnableDisable(old);
     return null;
 }
 
 pub fn ReferencePage(page: usize) void {
     const index: usize = (page >> 12);
+    const old = HAL.Arch.IRQEnableDisable(false);
     pfnSpinlock.acquire();
     pfnDatabase[index].refs += 1;
     pfnSpinlock.release();
+    _ = HAL.Arch.IRQEnableDisable(old);
 }
 
 pub fn DereferencePage(page: usize) void {
     const index: usize = (page >> 12);
+    const old = HAL.Arch.IRQEnableDisable(false);
     pfnSpinlock.acquire();
     pfnDatabase[index].refs -= 1;
     if (pfnDatabase[index].refs == 0) {
@@ -106,17 +113,21 @@ pub fn DereferencePage(page: usize) void {
             pfnFreeHead = &pfnDatabase[index];
             pfnSpinlock.release();
             DereferencePage(pt);
+            _ = HAL.Arch.IRQEnableDisable(old);
             return;
         } else {
             pfnFreeHead = &pfnDatabase[index];
         }
     }
     pfnSpinlock.release();
+    _ = HAL.Arch.IRQEnableDisable(old);
 }
 
 pub fn ChangePTEEntry(page: usize, pte: usize) void {
     const index: usize = (page >> 12);
+    const old = HAL.Arch.IRQEnableDisable(false);
     pfnSpinlock.acquire();
     pfnDatabase[index].pte = pte;
     pfnSpinlock.release();
+    _ = HAL.Arch.IRQEnableDisable(old);
 }

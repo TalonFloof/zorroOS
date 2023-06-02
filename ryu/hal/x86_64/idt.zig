@@ -1,4 +1,5 @@
 pub const isr = @import("isr.zig");
+const HAL = @import("root").HAL;
 const io = @import("io.zig");
 
 const IDTEntry = packed struct { isrLow: u16, kernelCS: u16, ist: u8, attributes: u8, isrMid: u16, isrHigh: u32, zero: u32 };
@@ -25,19 +26,19 @@ pub fn initialize() void {
 
     asm volatile (
         \\lidt (%[idt_ptr])
-        \\sti
         :
         : [idt_ptr] "r" (&IDTptr),
     );
+    _ = HAL.Arch.IRQEnableDisable(true);
 }
 
 pub fn fastInit() void {
     asm volatile (
         \\lidt (%[idt_ptr])
-        \\sti
         :
         : [idt_ptr] "r" (&IDTptr),
     );
+    _ = HAL.Arch.IRQEnableDisable(true);
 }
 
 pub fn setDescriptor(vector: usize, i: *void, flags: u8) void {

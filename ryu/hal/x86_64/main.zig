@@ -37,7 +37,7 @@ pub export fn _hartstart() callconv(.Naked) noreturn {
 }
 
 pub fn PreformStartup(stackTop: usize) void {
-    IRQEnableDisable(false);
+    _ = IRQEnableDisable(false);
     hart.initialize(stackTop);
     gdt.initialize();
     idt.initialize();
@@ -70,7 +70,7 @@ pub fn PreformStartup(stackTop: usize) void {
     acpi.initialize();
     apic.setup();
     hart.startSMP();
-    IRQEnableDisable(true);
+    _ = IRQEnableDisable(true);
     if (module_request.response) |response| {
         for (response.modules()) |mod| {
             const name = mod.cmdline[0..std.mem.len(mod.cmdline)];
@@ -91,17 +91,22 @@ pub export fn HartStart(stack: u64) callconv(.C) noreturn {
     idt.fastInit();
     hart.hartData = 0;
     while (true) {
-        IRQEnableDisable(false);
+        _ = IRQEnableDisable(false);
         WaitForIRQ();
     }
 }
 
-pub fn IRQEnableDisable(en: bool) void {
+var irqStatus: bool = false;
+
+pub fn IRQEnableDisable(en: bool) bool {
     if (en) {
         asm volatile ("sti");
     } else {
         asm volatile ("cli");
     }
+    const old = irqStatus;
+    irqStatus = en;
+    return old;
 }
 
 pub fn Halt() void {

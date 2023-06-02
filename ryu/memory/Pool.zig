@@ -99,6 +99,7 @@ pub const Pool = struct {
         if (size > 65024) {
             return self.AllocAnonPages(size);
         }
+        const old = HAL.Arch.IRQEnableDisable(false);
         self.lock.acquire();
         var index = self.partialBucketHead;
         while (index != null) : (index = index.?.next) {
@@ -125,6 +126,7 @@ pub const Pool = struct {
                 }
                 self.usedBlocks += ((index.?.usedEntries) - oldEntryCount);
                 self.lock.release();
+                _ = HAL.Arch.IRQEnableDisable(old);
                 return ret;
             }
         }
@@ -144,10 +146,12 @@ pub const Pool = struct {
         var ret = bucketHeader.Alloc(size);
         self.usedBlocks += bucketHeader.usedEntries;
         self.lock.release();
+        _ = HAL.Arch.IRQEnableDisable(old);
         return ret;
     }
 
     pub fn AllocAnonPages(self: *Pool, size: usize) ?[]u8 {
+        const old = HAL.Arch.IRQEnableDisable(false);
         if (self.lockHartID != HAL.Arch.GetHCB().hartID) {
             self.lock.acquire();
         }
@@ -170,6 +174,7 @@ pub const Pool = struct {
             } else {
                 self.lockHartID = -1;
             }
+            _ = HAL.Arch.IRQEnableDisable(old);
             return @intToPtr([*]u8, addr)[0..trueSize];
         } else {
             if (self.lockHartID != HAL.Arch.GetHCB().hartID) {
@@ -177,6 +182,7 @@ pub const Pool = struct {
             } else {
                 self.lockHartID = -1;
             }
+            _ = HAL.Arch.IRQEnableDisable(old);
             return null;
         }
         unreachable;
@@ -187,6 +193,7 @@ pub const Pool = struct {
             self.FreeAnonPages(data);
             return;
         }
+        const old = HAL.Arch.IRQEnableDisable(false);
         self.lock.acquire();
         var index = self.partialBucketHead;
         var bucket: ?*Bucket = null;
@@ -247,9 +254,11 @@ pub const Pool = struct {
             @panic("Unable to free pool memory!");
         }
         self.lock.release();
+        _ = HAL.Arch.IRQEnableDisable(old);
     }
 
     pub fn FreeAnonPages(self: *Pool, data: []u8) void {
+        const old = HAL.Arch.IRQEnableDisable(false);
         if (self.lockHartID != HAL.Arch.GetHCB().hartID) {
             self.lock.acquire();
         }
@@ -272,6 +281,7 @@ pub const Pool = struct {
         } else {
             self.lockHartID = -1;
         }
+        _ = HAL.Arch.IRQEnableDisable(old);
     }
 };
 

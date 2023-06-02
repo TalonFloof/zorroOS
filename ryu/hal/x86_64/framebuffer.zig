@@ -10,14 +10,14 @@ fn setPixels(self: *const HAL.Console.FBInfo, x: isize, y: isize, w: usize, h: u
     while (i < (y + @intCast(isize, h))) : (i += 1) {
         if (i < 0) {
             continue;
-        } else if (i >= self.width) {
+        } else if (i >= self.height) {
             return;
         }
         var j: isize = x;
         while (j < (x + @intCast(isize, w))) : (j += 1) {
             if (j < 0) {
                 continue;
-            } else if (i >= self.width) {
+            } else if (j >= self.width) {
                 break;
             }
             @ptrCast([*]u32, @alignCast(4, self.ptr))[(@intCast(usize, i) * (self.pitch / (self.bpp / 8))) + @intCast(usize, j)] = @intCast(u32, c);

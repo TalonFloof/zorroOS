@@ -1,5 +1,6 @@
 const std = @import("std");
 const HAL = @import("root").HAL;
+const Memory = @import("root").Memory;
 pub const PS2Keymap = @import("PS2Keymap.zig");
 
 pub fn EnterDebugger() noreturn {
@@ -7,12 +8,35 @@ pub fn EnterDebugger() noreturn {
     HAL.Console.Put("Welcome to the Ryu Kernel Debugger!\n\n", .{});
     while (true) {
         HAL.Console.Put("kdbg> ", .{});
+        var buf: [256]u8 = [_]u8{0} ** 256;
+        var i: usize = 0;
         while (true) {
             const key = HAL.Arch.DebugGet();
-            HAL.Console.Put("{c}", .{key});
+            if ((key == '\n') or (key != 8 and i < 256) or (key == 8 and i > 0)) {
+                HAL.Console.Put("{c}", .{key});
+            }
             if (key == '\n') {
                 break;
             }
+            if (key == 8) {
+                if (i > 0) {
+                    i -= 1;
+                }
+            } else {
+                if (i < 256) {
+                    buf[i] = key;
+                    i += 1;
+                }
+            }
+        }
+        const txt = buf[0..i];
+        if (std.mem.eql(u8, txt, "pi")) {
+            HAL.Console.Put("StaticPool | Buckets: {} UsedBlocks: {} FreeBlocks: {} TotalBlocks: {}\n", .{ Memory.Pool.StaticPool.buckets, Memory.Pool.StaticPool.usedBlocks, Memory.Pool.StaticPool.totalBlocks - Memory.Pool.StaticPool.usedBlocks, Memory.Pool.StaticPool.totalBlocks });
+            HAL.Console.Put("           | Anonymous: {} KiB Committed: {} KiB Active: {} bytes\n", .{ Memory.Pool.StaticPool.anonymousPages * 4, (Memory.Pool.StaticPool.buckets * 512) + (Memory.Pool.StaticPool.anonymousPages * 4), (Memory.Pool.StaticPool.usedBlocks * 16) + (Memory.Pool.StaticPool.anonymousPages * 4096) });
+            HAL.Console.Put("PagedPool  | Buckets: {} UsedBlocks: {} FreeBlocks: {} TotalBlocks: {}\n", .{ Memory.Pool.PagedPool.buckets, Memory.Pool.PagedPool.usedBlocks, Memory.Pool.PagedPool.totalBlocks - Memory.Pool.PagedPool.usedBlocks, Memory.Pool.PagedPool.totalBlocks });
+            HAL.Console.Put("           | Anonymous: {} KiB Committed: {} KiB Active: {} bytes\n", .{ Memory.Pool.PagedPool.anonymousPages * 4, (Memory.Pool.PagedPool.buckets * 512) + (Memory.Pool.PagedPool.anonymousPages * 4), (Memory.Pool.PagedPool.usedBlocks * 16) + (Memory.Pool.PagedPool.anonymousPages * 4096) });
+        } else {
+            HAL.Console.Put("{s}?\n", .{txt});
         }
     }
 }

@@ -163,7 +163,9 @@ pub fn EnableDisable(en: bool) void {
 
 pub fn SetupDoubleBuffer() void {
     var altPtr: *allowzero void = info.ptr;
-    info.ptr = @ptrCast(*allowzero void, Memory.Pool.StaticPool.AllocAnonPages(info.pitch * conHeight).?.ptr);
+    info.ptr = @ptrCast(*allowzero void, Memory.Pool.StaticPool.Alloc(info.pitch * conHeight).?.ptr);
     bufPtr = @ptrCast(*u8, @alignCast(1, altPtr));
-    @memcpy(@ptrCast([*]u32, @alignCast(4, info.ptr))[0..((info.pitch / 4) * conHeight)], @ptrCast([*]u32, @alignCast(4, bufPtr))[0..((info.pitch / 4) * conHeight)]);
+    if (conEnabled) {
+        @memcpy(@ptrCast([*]u32, @alignCast(4, info.ptr))[0..((info.pitch / 4) * conHeight)], @ptrCast([*]u32, @alignCast(4, bufPtr))[0..((info.pitch / 4) * conHeight)]);
+    }
 }

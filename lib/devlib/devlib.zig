@@ -7,7 +7,10 @@ pub const Status = enum(c_int) {
 pub const RyuDispatch = extern struct {
     put: *const fn ([*:0]const u8) callconv(.C) void,
     abort: *const fn ([*:0]const u8) callconv(.C) noreturn,
+    //deviceCreate: *const fn (*RyuDeviceInfo) callconv(.C) void,
 };
+
+pub const DriverDispatch = extern struct {};
 
 pub const RyuDriverInfo = extern struct {
     apiMinor: u16,
@@ -19,7 +22,12 @@ pub const RyuDriverInfo = extern struct {
     flags: u64 = 0,
 
     drvName: [*c]const u8,
+    drvDispatch: ?*const DriverDispatch = null,
     krnlDispatch: ?*const RyuDispatch = null,
     loadFn: *const fn () callconv(.C) Status,
     unloadFn: *const fn () callconv(.C) Status,
+};
+
+pub const RyuDeviceInfo = extern struct {
+    devName: [*c]const u8,
 };

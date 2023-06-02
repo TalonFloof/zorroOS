@@ -21,6 +21,32 @@ pub const IRQLs = enum(u32) {
     IRQL_HIGH = 15,
 };
 
+pub const KDC = struct { // Kernel Dispatch Call
+    next: ?*KDC,
+    func: *const fn (u64, u64) callconv(.C) void,
+    context1: u64,
+    context2: u64,
+};
+
+pub fn KDCSoftInt() callconv(.C) void {}
+
+pub fn KDCDispatchQueue() void {
+    _ = HAL.Arch.IRQEnableDisable(false);
+    const hcb = HAL.Arch.GetHCB();
+    hcb.kdcActive = true;
+    var kdc = hcb.kdcHead;
+    hcb.kdcHead = null;
+    hcb.kdcTail = null;
+    while (kdc) |dispatch| {
+        _ = HAL.Arch.IRQEnableDisable(true);
+        dispatch.func(dispatch.context1, dispatch.context2);
+        _ = HAL.Arch.IRQEnableDisable(false);
+        kdc = dispatch.next;
+    }
+    hcb.kdcActive = false;
+    _ = HAL.Arch.IRQEnableDisable(true);
+}
+
 pub fn IRQLRaise(newIRQL: IRQLs) IRQLs {
     var oldIRQL = HAL.Arch.GetHCB().currentIRQL;
     if (oldIRQL > newIRQL) {
