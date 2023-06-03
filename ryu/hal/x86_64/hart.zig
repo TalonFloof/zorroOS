@@ -34,16 +34,6 @@ pub fn startSMP() void {
                 hcb.archData.apicID = hart.lapic_id;
                 hcb.currentIRQL = .IRQL_LOW;
                 hcb.pendingSoftInts = 0;
-                hcb.pendingSoftIntFirst = [8]?*const fn () callconv(.C) void{
-                    null,
-                    null,
-                    null, // TODO: Add User Dispatching
-                    null, // TODO: Add User Dispatching
-                    &IRQL.KDCSoftInt,
-                    &IRQL.KDCSoftInt,
-                    &IRQL.KDCSoftInt,
-                    &IRQL.KDCSoftInt,
-                };
                 hartData = @ptrToInt(hcb);
                 @intToPtr(*align(1) u64, @ptrToInt(hart) + @offsetOf(limine.SmpInfo, "goto_address")).* = @ptrToInt(&HAL.Arch._hartstart);
                 var cycles: usize = 0;

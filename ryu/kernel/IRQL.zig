@@ -9,7 +9,7 @@ pub const IRQLs = enum(u32) {
     IRQL_KERNEL_DISPATCH = 2,
     IRQL_INTERACTIVE = 3, // IRQL_DEVICE0
     IRQL_BOARDS = 4, // IRQL_DEVICE1
-    IRQL_SERIAL = 5, // IRQL_DEVICE2
+    IRQL_NETWORK = 5, // IRQL_DEVICE2
     IRQL_DISK = 6, // IRQL_DEVICE3
     IRQL_DMA = 7, // IRQL_DEVICE4
     IRQL_DEVICE5 = 8,
@@ -29,7 +29,21 @@ pub const DPC = extern struct {
     context2: u64 = 0,
 };
 
-pub fn DPCSoftInt() callconv(.C) void {}
+const PendingSoftIntFirst: [8]?*const fn () callconv(.C) void = .{
+    null,
+    null,
+    null, // TODO: Add User Dispatching
+    null, // TODO: Add User Dispatching
+    &DPCSoftInt,
+    &DPCSoftInt,
+    &DPCSoftInt,
+    &DPCSoftInt,
+};
+
+pub fn DPCSoftInt() callconv(.C) void {
+    const hcb = HAL.Arch.GetHCB();
+    _ = hcb;
+}
 
 pub fn DPCDispatchQueue() void {
     _ = HAL.Arch.IRQEnableDisable(false);
@@ -62,7 +76,9 @@ pub fn IRQLLower(oldIRQL: IRQLs) void {
     if (curIRQL < oldIRQL) {
         HAL.Crash.Crash(.RyuIRQLPromoteWhileDemoting, .{ curIRQL, oldIRQL, 0, 0 });
     }
+    const hcb = HAL.Arch.GetHCB();
     const old = HAL.Arch.IRQEnableDisable(false);
+    hcb.currentIRQL = oldIRQL;
 
     _ = HAL.Arch.IRQEnableDisable(old);
 }

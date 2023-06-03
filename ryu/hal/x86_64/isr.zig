@@ -1,6 +1,8 @@
 const HAL = @import("root").HAL;
 const apic = @import("apic.zig");
+
 const Memory = @import("root").Memory;
+const IRQL = @import("root").IRQL;
 
 pub fn stub() void {} // To ensure that the compiler will not optimize this module out.
 
@@ -25,7 +27,13 @@ pub export fn ExceptionHandler(entry: u8, con: *HAL.Arch.Context, errcode: u32) 
     }
 }
 pub export fn IRQHandler(entry: u8, con: *HAL.Arch.Context) callconv(.C) void {
-    _ = entry;
     _ = con;
+    if (HAL.Arch.irqISRs[entry - 0x20]) |isr| {
+        _ = isr;
+        const cur = HAL.Arch.IRQEnableDisable(false); // A small trick used to retrieve IRQ Enable Disable value
+        const oldIRQL = IRQL.IRQLRaise(IRQL.irqIRQLs[entry - 0x20]);
+        _ = oldIRQL;
+        _ = HAL.Arch.IRQEnableDisable(cur);
+    }
     apic.write(0xb0, 0);
 }

@@ -10,6 +10,7 @@ const apic = @import("apic.zig");
 const hart = @import("hart.zig");
 const io = @import("io.zig");
 const HCB = @import("root").HCB;
+const IRQL = @import("root").IRQL;
 const Drivers = @import("root").Drivers;
 const kernel = @import("root");
 const KernelSettings = @import("root").KernelSettings;
@@ -207,6 +208,9 @@ pub const ArchHCBData = struct {
     tss: gdt.TSS = gdt.TSS{},
     apicID: u32 = 0,
 };
+
+pub var irqISRs: [224]?*const fn () callconv(.C) void = [_]?*const fn () callconv(.C) void{null} ** 224;
+pub var irqIRQLs: [224]IRQL.IRQLs = [_]IRQL.IRQLs{IRQL.IRQL_LOW} ** 224;
 
 // x86_64 Exclusives
 pub fn rdmsr(index: u32) u64 {

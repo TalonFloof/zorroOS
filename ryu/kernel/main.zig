@@ -17,7 +17,10 @@ pub fn panic(msg: []const u8, stacktrace: ?*std.builtin.StackTrace, wat: ?usize)
 }
 
 pub export fn RyuInit() noreturn {
-    HAL.Crash.Crash(.RyuKernelInitializationFailure, .{ 0xb007b007b007b007, 0, 0, 0 });
+    //HAL.Crash.Crash(.RyuKernelInitializationFailure, .{ 0xb007b007b007b007, 0, 0, 0 });
+    while (true) {
+        HAL.Arch.WaitForIRQ();
+    }
 }
 
 pub inline fn LoadModule(name: []const u8, data: []u8) void {
