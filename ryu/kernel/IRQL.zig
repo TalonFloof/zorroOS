@@ -1,6 +1,7 @@
 const std = @import("std");
 const HAL = @import("root").HAL;
 const HCB = @import("root").HCB;
+const Memory = @import("root").Memory;
 
 pub const IRQLs = enum(u32) {
     IRQL_LOW = 0,
@@ -21,29 +22,29 @@ pub const IRQLs = enum(u32) {
     IRQL_HIGH = 15,
 };
 
-pub const KDC = struct { // Kernel Dispatch Call
-    next: ?*KDC,
-    func: *const fn (u64, u64) callconv(.C) void,
-    context1: u64,
-    context2: u64,
+pub const DPC = extern struct {
+    next: ?*DPC = null,
+    func: ?*const fn (u64, u64) callconv(.C) void = null,
+    context1: u64 = 0,
+    context2: u64 = 0,
 };
 
-pub fn KDCSoftInt() callconv(.C) void {}
+pub fn DPCSoftInt() callconv(.C) void {}
 
-pub fn KDCDispatchQueue() void {
+pub fn DPCDispatchQueue() void {
     _ = HAL.Arch.IRQEnableDisable(false);
     const hcb = HAL.Arch.GetHCB();
-    hcb.kdcActive = true;
-    var kdc = hcb.kdcHead;
-    hcb.kdcHead = null;
-    hcb.kdcTail = null;
-    while (kdc) |dispatch| {
+    hcb.dpcActive = true;
+    var dpc = hcb.dpcHead;
+    hcb.dpcHead = null;
+    hcb.dpcTail = null;
+    while (dpc) |dispatch| {
         _ = HAL.Arch.IRQEnableDisable(true);
         dispatch.func(dispatch.context1, dispatch.context2);
         _ = HAL.Arch.IRQEnableDisable(false);
-        kdc = dispatch.next;
+        dpc = dispatch.next;
     }
-    hcb.kdcActive = false;
+    hcb.dpcActive = false;
     _ = HAL.Arch.IRQEnableDisable(true);
 }
 
@@ -61,4 +62,7 @@ pub fn IRQLLower(oldIRQL: IRQLs) void {
     if (curIRQL < oldIRQL) {
         HAL.Crash.Crash(.RyuIRQLPromoteWhileDemoting, .{ curIRQL, oldIRQL, 0, 0 });
     }
+    const old = HAL.Arch.IRQEnableDisable(false);
+
+    _ = HAL.Arch.IRQEnableDisable(old);
 }

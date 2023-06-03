@@ -11,12 +11,12 @@ pub const HCB = struct {
         null,
         null, // TODO: Add User Dispatching
         null, // TODO: Add User Dispatching
-        &IRQL.KDCSoftInt,
-        &IRQL.KDCSoftInt,
-        &IRQL.KDCSoftInt,
-        &IRQL.KDCSoftInt,
+        &IRQL.DPCSoftInt,
+        &IRQL.DPCSoftInt,
+        &IRQL.DPCSoftInt,
+        &IRQL.DPCSoftInt,
     },
     kdcActive: bool = false,
-    kdcHead: ?*IRQL.KDC = null,
-    kdcTail: ?*IRQL.KDC = null,
+    kdcHead: ?*IRQL.DPC = null,
+    kdcTail: ?*IRQL.DPC = null,
 };

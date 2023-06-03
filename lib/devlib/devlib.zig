@@ -5,9 +5,9 @@ pub const Status = enum(c_int) {
 };
 
 pub const RyuDispatch = extern struct {
+    // Basic
     put: *const fn ([*:0]const u8) callconv(.C) void,
     abort: *const fn ([*:0]const u8) callconv(.C) noreturn,
-    //deviceCreate: *const fn (*RyuDeviceInfo) callconv(.C) void,
 };
 
 pub const DriverDispatch = extern struct {};
@@ -30,4 +30,11 @@ pub const RyuDriverInfo = extern struct {
 
 pub const RyuDeviceInfo = extern struct {
     devName: [*c]const u8,
+};
+
+pub const DPC = extern struct {
+    next: ?*DPC = null,
+    func: ?*const fn (u64, u64) callconv(.C) void = null,
+    context1: u64 = 0,
+    context2: u64 = 0,
 };

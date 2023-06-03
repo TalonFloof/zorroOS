@@ -1,0 +1,30 @@
+Kernel => Driver:
+
+  Basic:
+    Put - Prints a string to the kernel debug console
+    Abort - Triggers a HAL Crash with the given message
+  DPC:
+    DPCQueue - Queues a DPC, it is defered from being ran until the software interrupt for it occurs
+    DPCQueueAfterDrvrLoad - Queues a DPC after a driver of a specific name is loaded (only allows for one at a time per driver)
+  Devices:
+    DeviceCreate - Creates a new device under the given driver
+    DeviceDestroy - Removes a device of the given type if it is from the same driver as the calling driver
+  Filesystem:
+    FileOpen - Opens a file from the given absolute URL (ex. ahci0p1:///home/talon/Documents/hi). The pointed to FCB will contain the opened file data.
+    FileClose - Closes a File Control Block
+    FileRead - Reads data from a File
+    FileWrite - Writes data to a File
+    
+  Memory:
+    StaticAlloc - Allocates Memory from a bucket (or as Anonymous Pages if too large) on the Static Pool
+    StaticAllocAnon - Allocates Memory from as Anonymous Pages on the Static Pool
+    StaticFree - Frees Memory from a bucket (or frees Anonymous Pages if too large) on the Static Pool
+    StaticFreeAnon - Frees Anonymous Pages on the Static Pool
+    PagedAlloc - Allocates Memory from a bucket (or as Anonymous Pages if too large) on the Paged Pool
+    PagedAllocAnon - Allocates Memory from as Anonymous Pages on the Paged Pool
+    PagedFree - Frees Memory from a bucket (or frees Anonymous Pages if too large) on the Paged Pool
+    PagedFreeAnon - Frees Anonymous Pages on the Paged Pool
+  IRQ:
+    IRQAttach - Attaches an Interrupt Service Routine to an IRQ (up to 16 ISRs can be attached per IRQ)
+    IRQDetach
+    IRQEnableDisable
