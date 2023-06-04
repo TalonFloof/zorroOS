@@ -2,7 +2,7 @@ const HAL = @import("root").HAL;
 const std = @import("std");
 const acpi = @import("acpi.zig");
 
-var lapic_ptr: usize = 0;
+pub var lapic_ptr: usize = 0;
 pub var ioapic_regSelect: *allowzero volatile u32 = @intToPtr(*allowzero volatile u32, 0);
 pub var ioapic_ioWindow: *allowzero volatile u32 = @intToPtr(*allowzero volatile u32, 0);
 

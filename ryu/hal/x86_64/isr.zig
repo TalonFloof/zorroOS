@@ -28,12 +28,19 @@ pub export fn ExceptionHandler(entry: u8, con: *HAL.Arch.Context, errcode: u32) 
 }
 pub export fn IRQHandler(entry: u8, con: *HAL.Arch.Context) callconv(.C) void {
     _ = con;
+    if (entry == 0xf1) { // Halt IPI
+        apic.write(0xb0, 0);
+        while (true) {
+            _ = HAL.Arch.IRQEnableDisable(false);
+            HAL.Arch.WaitForIRQ();
+        }
+    } else if (entry == 0xf2) { // Reschedule IPI
+
+    }
     if (HAL.Arch.irqISRs[entry - 0x20]) |isr| {
-        _ = isr;
-        const cur = HAL.Arch.IRQEnableDisable(false); // A small trick used to retrieve IRQ Enable Disable value
-        const oldIRQL = IRQL.IRQLRaise(IRQL.irqIRQLs[entry - 0x20]);
-        _ = oldIRQL;
-        _ = HAL.Arch.IRQEnableDisable(cur);
+        const oldIRQL = IRQL.IRQLRaise(HAL.Arch.irqIRQLs[entry - 0x20]);
+        isr();
+        IRQL.IRQLLower(oldIRQL);
     }
     apic.write(0xb0, 0);
 }

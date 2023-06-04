@@ -3,7 +3,7 @@ const HAL = @import("root").HAL;
 const HCB = @import("root").HCB;
 const Memory = @import("root").Memory;
 
-pub const IRQLs = enum(u32) {
+pub const IRQLs = enum(u8) {
     IRQL_LOW = 0,
     IRQL_USER_DISPATCH = 1,
     IRQL_KERNEL_DISPATCH = 2,
@@ -64,8 +64,8 @@ pub fn DPCDispatchQueue() void {
 
 pub fn IRQLRaise(newIRQL: IRQLs) IRQLs {
     var oldIRQL = HAL.Arch.GetHCB().currentIRQL;
-    if (oldIRQL > newIRQL) {
-        HAL.Crash.Crash(.RyuIRQLDemoteWhilePromoting, .{ oldIRQL, newIRQL, 0, 0 });
+    if (@enumToInt(oldIRQL) > @enumToInt(newIRQL)) {
+        HAL.Crash.Crash(.RyuIRQLDemoteWhilePromoting, .{ @enumToInt(oldIRQL), @enumToInt(newIRQL), 0, 0 });
     }
     HAL.Arch.GetHCB().currentIRQL = newIRQL;
     return oldIRQL;
@@ -73,8 +73,8 @@ pub fn IRQLRaise(newIRQL: IRQLs) IRQLs {
 
 pub fn IRQLLower(oldIRQL: IRQLs) void {
     var curIRQL = HAL.Arch.GetHCB().currentIRQL;
-    if (curIRQL < oldIRQL) {
-        HAL.Crash.Crash(.RyuIRQLPromoteWhileDemoting, .{ curIRQL, oldIRQL, 0, 0 });
+    if (@enumToInt(curIRQL) < @enumToInt(oldIRQL)) {
+        HAL.Crash.Crash(.RyuIRQLPromoteWhileDemoting, .{ @enumToInt(curIRQL), @enumToInt(oldIRQL), 0, 0 });
     }
     const hcb = HAL.Arch.GetHCB();
     const old = HAL.Arch.IRQEnableDisable(false);

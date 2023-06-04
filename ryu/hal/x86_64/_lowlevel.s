@@ -78,7 +78,6 @@ extern IRQHandler
 %macro IRQ 1
 	global int%1
 	int%1:
-		cli
         pushaq
         mov rdi, %1
         mov rsi, rsp
@@ -136,3 +135,32 @@ ISRTable:
     dq int%[num]
 %assign num (num + 1)
 %endrep
+
+;============================================
+; Syscall
+global _RyuSyscallHandler
+extern _RyuSyscallDispatch
+_RyuSyscallHandler:
+    swapgs
+    mov [gs:8], rsp
+    mov rsp, [gs:0]
+    
+    push qword 0x1b
+    push qword [gs:0x8]
+    push r11
+    push qword 0x18
+    push rcx
+    swapgs
+    sti
+    cld
+    pushaq
+    mov rdi, rsp
+    xor rbp, rbp
+    call _RyuSyscallDispatch
+    popaq
+    
+    cli
+    swapgs
+    mov rsp, [gs:8]
+    swapgs
+    o64 sysret

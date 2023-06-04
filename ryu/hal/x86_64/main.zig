@@ -126,8 +126,29 @@ pub const IPIType = enum {
 };
 
 pub fn SendIPI(hartID: i32, typ: IPIType) void {
-    _ = typ;
-    _ = hartID;
+    var ipi: u64 = switch (typ) {
+        .IPIHalt => 0xf1,
+        .IPIReschedule => 0xf2,
+        .IPIFlushTLB => 0xf3,
+    };
+    if (hartID == -1) {
+        ipi |= 2 << 18;
+    } else if (hartID == -2) {
+        ipi |= 3 << 18;
+    }
+    if (apic.lapic_ptr == 0) {
+        return;
+    }
+    if (apic.lapic_ptr == 0xffffffff) { // X2APIC
+        if (hartID >= 0) {
+            apic.write(0x310, @intCast(u64, hartID));
+        }
+    } else {
+        if (hartID >= 0) {
+            apic.write(0x310, (@intCast(u64, hartID) & 0xFF) << 24);
+        }
+    }
+    apic.write(0x300, ipi);
 }
 
 pub fn GetHCB() *HCB {
@@ -155,6 +176,81 @@ pub const Context = packed struct {
     rflags: u64 = 0x202,
     rsp: u64 = 0,
     ss: u64 = 0,
+
+    pub fn SetMode(self: *Context, kern: bool) void {
+        if (kern) {
+            self.cs = 0x28;
+            self.ss = 0x30;
+        } else {
+            self.cs = 0x43;
+            self.ss = 0x3b;
+        }
+    }
+
+    pub fn SetReg(self: *Context, reg: u8, val: u64) void {
+        switch (reg) {
+            0 => {
+                self.rax = val;
+            },
+            1 => {
+                self.rdi = val;
+            },
+            2 => {
+                self.rsi = val;
+            },
+            3 => {
+                self.rdx = val;
+            },
+            4 => {
+                self.r10 = val;
+            },
+            5 => {
+                self.r8 = val;
+            },
+            6 => {
+                self.r9 = val;
+            },
+            128 => {
+                self.rip = val;
+            },
+            129 => {
+                self.rsp = val;
+            },
+            else => {},
+        }
+    }
+
+    pub fn GetReg(self: *Context, reg: u8) u64 {
+        return switch (reg) {
+            0 => self.rax,
+            1 => self.rdi,
+            2 => self.rsi,
+            3 => self.rdx,
+            4 => self.r10,
+            5 => self.r8,
+            6 => self.r9,
+            128 => self.rip,
+            129 => self.rsp,
+            else => 0,
+        };
+    }
+};
+
+pub const FloatContext = struct {
+    data: [512]u8 = [_]u8{0} ** 512,
+
+    pub fn Save(self: *FloatContext) void {
+        asm volatile ("fxsave64 (%rax)"
+            :
+            : [state] "{rax}" (@ptrToInt(&self.data)),
+        );
+    }
+    pub fn Load(self: *FloatContext) void {
+        asm volatile ("fxrstor64 (%rax)"
+            :
+            : [state] "{rax}" (@ptrToInt(&self.data)),
+        );
+    }
 };
 
 const NativePTEEntry = packed struct {
@@ -210,7 +306,7 @@ pub const ArchHCBData = struct {
 };
 
 pub var irqISRs: [224]?*const fn () callconv(.C) void = [_]?*const fn () callconv(.C) void{null} ** 224;
-pub var irqIRQLs: [224]IRQL.IRQLs = [_]IRQL.IRQLs{IRQL.IRQL_LOW} ** 224;
+pub var irqIRQLs: [224]IRQL.IRQLs = [_]IRQL.IRQLs{IRQL.IRQLs.IRQL_LOW} ** 224;
 
 // x86_64 Exclusives
 pub fn rdmsr(index: u32) u64 {
