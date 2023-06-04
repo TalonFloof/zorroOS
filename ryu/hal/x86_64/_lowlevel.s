@@ -139,8 +139,9 @@ ISRTable:
 ;============================================
 ; Syscall
 global _RyuSyscallHandler
-extern _RyuSyscallDispatch
+extern RyuSyscallDispatch
 _RyuSyscallHandler:
+    cli
     swapgs
     mov [gs:8], rsp
     mov rsp, [gs:0]
@@ -151,12 +152,11 @@ _RyuSyscallHandler:
     push qword 0x18
     push rcx
     swapgs
-    sti
     cld
     pushaq
     mov rdi, rsp
     xor rbp, rbp
-    call _RyuSyscallDispatch
+    call RyuSyscallDispatch
     popaq
     
     cli

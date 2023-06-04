@@ -9,6 +9,7 @@ const acpi = @import("acpi.zig");
 const apic = @import("apic.zig");
 const hart = @import("hart.zig");
 const io = @import("io.zig");
+const syscall = @import("syscall.zig");
 const HCB = @import("root").HCB;
 const IRQL = @import("root").IRQL;
 const Drivers = @import("root").Drivers;
@@ -70,6 +71,7 @@ pub fn PreformStartup(stackTop: usize) void {
     mem.init(kfstart, kfend);
     acpi.initialize();
     apic.setup();
+    syscall.init();
     hart.startSMP();
     _ = IRQEnableDisable(true);
     if (module_request.response) |response| {
@@ -90,6 +92,7 @@ pub export fn HartStart(stack: u64) callconv(.C) noreturn {
     gdt.initialize();
     apic.setup();
     idt.fastInit();
+    syscall.init();
     hart.hartData = 0;
     while (true) {
         _ = IRQEnableDisable(false);

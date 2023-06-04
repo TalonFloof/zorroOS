@@ -19,6 +19,32 @@ pub fn NewPageDirectory() PageDirectory {
     return @ptrCast([*]usize, page)[0..512];
 }
 
+fn derefPageTable(pt: *void, level: usize) void {
+    var i: usize = 0;
+    while (i < 512) : (i += 1) {
+        if (level == 0 and i >= 256) {
+            break;
+        } else if (level + 1 >= HAL.Arch.GetPTELevels()) {
+            const pte = HAL.Arch.GetPTE(pt, i);
+            if (pte.r != 0) {
+                const addr = @intCast(usize, pte.phys) << 12;
+                Memory.PFN.DereferencePage(addr);
+                HAL.Arch.SetPTE(pt, 0);
+                Memory.PFN.DereferencePage(@ptrToInt(pt) - 0xffff800000000000);
+            }
+        } else {
+            const pte = HAL.Arch.GetPTE(pt, i);
+            if (pte.r != 0) {
+                derefPageTable(@intToPtr(*void, @intCast(usize, pte.phys) << 12), level + 1);
+            }
+        }
+    }
+}
+
+pub inline fn DestroyPageDirectory(root: PageDirectory) void {
+    derefPageTable(@ptrCast(*void, root.ptr), 0);
+}
+
 pub fn MapPage(root: PageDirectory, vaddr: usize, flags: usize, paddr: usize) usize {
     const pte = HAL.PTEEntry{
         .r = @intCast(u1, flags & MapRead),

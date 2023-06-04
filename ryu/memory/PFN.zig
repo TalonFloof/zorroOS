@@ -30,7 +30,7 @@ pub fn Initialize(begin: usize, entryCount: usize, ranges: *[32]Memory.PhysicalR
     for (0..pfnDatabase.len) |i| {
         pfnDatabase[i].next = null;
         pfnDatabase[i].refs = 0;
-        pfnDatabase[i].state = .Reserved; // Reserved
+        pfnDatabase[i].state = .Reserved;
         pfnDatabase[i].pte = 0;
     }
     for (ranges) |r| {
@@ -38,7 +38,7 @@ pub fn Initialize(begin: usize, entryCount: usize, ranges: *[32]Memory.PhysicalR
         while (i < r.end) : (i += 4096) {
             pfnDatabase[i >> 12].next = pfnFreeHead;
             pfnDatabase[i >> 12].refs = 0;
-            pfnDatabase[i >> 12].state = .Free; // Free
+            pfnDatabase[i >> 12].state = .Free;
             pfnFreeHead = &pfnDatabase[i >> 12];
         }
     }
