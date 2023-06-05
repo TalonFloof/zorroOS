@@ -2,7 +2,6 @@ const HAL = @import("root").HAL;
 const apic = @import("apic.zig");
 
 const Memory = @import("root").Memory;
-const IRQL = @import("root").IRQL;
 
 pub fn stub() void {} // To ensure that the compiler will not optimize this module out.
 
@@ -38,9 +37,7 @@ pub export fn IRQHandler(entry: u8, con: *HAL.Arch.Context) callconv(.C) void {
 
     }
     if (HAL.Arch.irqISRs[entry - 0x20]) |isr| {
-        const oldIRQL = IRQL.IRQLRaise(HAL.Arch.irqIRQLs[entry - 0x20]);
         isr();
-        IRQL.IRQLLower(oldIRQL);
     }
     apic.write(0xb0, 0);
 }

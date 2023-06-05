@@ -29,7 +29,7 @@ fn derefPageTable(pt: *void, level: usize) void {
             if (pte.r != 0) {
                 const addr = @intCast(usize, pte.phys) << 12;
                 Memory.PFN.DereferencePage(addr);
-                HAL.Arch.SetPTE(pt, 0);
+                HAL.Arch.SetPTE(pt, 0, HAL.PTEEntry{});
                 Memory.PFN.DereferencePage(@ptrToInt(pt) - 0xffff800000000000);
             }
         } else {

@@ -78,6 +78,7 @@ extern IRQHandler
 %macro IRQ 1
 	global int%1
 	int%1:
+        cli
         pushaq
         mov rdi, %1
         mov rsi, rsp

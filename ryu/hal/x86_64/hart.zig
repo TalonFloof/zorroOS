@@ -32,8 +32,6 @@ pub fn startSMP() void {
                 HAL.hcbList.?[@intCast(usize, hartCount)] = hcb;
                 hcb.hartID = hartCount;
                 hcb.archData.apicID = hart.lapic_id;
-                hcb.currentIRQL = .IRQL_LOW;
-                hcb.pendingSoftInts = 0;
                 hartData = @ptrToInt(hcb);
                 @intToPtr(*align(1) u64, @ptrToInt(hart) + @offsetOf(limine.SmpInfo, "goto_address")).* = @ptrToInt(&HAL.Arch._hartstart);
                 var cycles: usize = 0;

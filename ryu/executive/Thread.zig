@@ -1,5 +1,6 @@
 const Team = @import("root").Executive.Team;
 const HAL = @import("root").HAL;
+const AATree = @import("root").AATree;
 
 pub const ThreadState = enum {
     Birth,
@@ -12,6 +13,7 @@ pub const ThreadState = enum {
 
 pub const Thread = extern struct {
     threadID: i64,
+    prevThread: ?*Thread = null,
     nextThread: ?*Thread = null,
     team: *Team.Team,
     name: [32]u8 = [_]u8{0} ** 32,

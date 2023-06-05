@@ -40,6 +40,7 @@ pub fn build(b: *Builder) !void {
         },
     });
     const executiveMod = b.createModule(.{ .source_file = .{ .path = "executive/Executive.zig" } });
+    const compositorMod = b.createModule(.{ .source_file = .{ .path = "compositor/Compositor.zig" } });
     const devlib = b.createModule(.{
         .source_file = .{ .path = "../lib/devlib/devlib.zig" },
         .dependencies = &.{},
@@ -48,6 +49,7 @@ pub fn build(b: *Builder) !void {
     kernel.addModule("hal", halMod);
     kernel.addModule("memory", memoryMod);
     kernel.addModule("executive", executiveMod);
+    kernel.addModule("compositor", compositorMod);
     kernel.addModule("devlib", devlib);
     kernel.addObjectFile("_lowlevel.o");
     kernel.code_model = .kernel;
