@@ -50,17 +50,7 @@ pub fn PreformStartup(stackTop: usize) void {
         kfstart = @ptrToInt(response.kernel_file.address) - 0xffff800000000000;
         kfend = if ((response.kernel_file.size % 4096) != 0) (kfstart + ((response.kernel_file.size / 4096 + 1) * 4096)) else (kfstart + response.kernel_file.size);
     }
-    var bootLogo: ?[]u8 = null;
-    if (module_request.response) |response| {
-        for (response.modules()) |i| {
-            const name = i.cmdline[0..std.mem.len(i.cmdline)];
-            if (std.mem.eql(u8, name, "BootLogo")) {
-                bootLogo = i.address[0..i.size];
-                break;
-            }
-        }
-    }
-    framebuffer.init(bootLogo);
+    framebuffer.init();
     // Detect if NX is supported (just in case we need to warn the user ;3)
     if (cpuid(0x80000001).edx & (@intCast(u32, 1) << 20) == 0) {
         HAL.Console.Put("WARNING!!!! Your CPU does not support the NX (No Execute) bit extension!\n", .{});
@@ -309,7 +299,7 @@ pub const ArchHCBData = struct {
 };
 
 pub var irqISRs: [224]?*const fn () callconv(.C) void = [_]?*const fn () callconv(.C) void{null} ** 224;
-pub var irqIRQLs: [224]IRQL.IRQLs = [_]IRQL.IRQLs{IRQL.IRQLs.IRQL_LOW} ** 224;
+pub const irqSearchStart = 16;
 
 // x86_64 Exclusives
 pub fn rdmsr(index: u32) u64 {

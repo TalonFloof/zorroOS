@@ -24,4 +24,14 @@ const MouseBitmap = [_]u8{
     0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0xee, 0xee, 0x01, 0x01, 0x01, 0x01,
 };
 
-pub fn InitMouseBitmap() void {}
+pub fn InitMouseBitmap() void {
+    var i: usize = 0;
+    while (i < MouseBitmap.len) : (i += 1) {
+        if (MouseBitmap[i] == 1) {
+            Compositor.cursorBuf[i] = 0;
+        } else {
+            const val = @intCast(u32, MouseBitmap[i]);
+            Compositor.cursorBuf[i] = 0xff000000 | (val << 16) | (val << 8) | val;
+        }
+    }
+}

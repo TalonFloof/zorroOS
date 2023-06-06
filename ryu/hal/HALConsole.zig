@@ -44,23 +44,11 @@ fn fbDrawBitmap(x: isize, y: isize, w: usize, h: usize, bitmap: []u8, color: usi
     }
 }
 
-pub fn Init(i: *FBInfo, bootLogo: ?[]u8) void {
+pub fn Init(i: *FBInfo) void {
     info = i;
     cursorX = 0;
     cursorY = 0;
     conHeight = ((info.height / 2) / 12) * 12;
-    if (bootLogo) |logo| {
-        var height = logo.len / 16;
-        fbDrawBitmap(
-            @intCast(isize, (info.width / 2) - 64),
-            @intCast(isize, (info.height / 2) - (height / 2)),
-            128,
-            height,
-            logo,
-            0xffffff,
-            false,
-        );
-    }
     EnableDisable(!KernelSettings.isQuiet);
     Put("Ryu Kernel Version 0.0.1 (c) 2020-2023 TalonFox\n", .{});
 }

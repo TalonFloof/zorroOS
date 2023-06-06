@@ -21,7 +21,7 @@ pub const Window = struct {
 
 var windowHead: ?*Window = null;
 var windowTail: ?*Window = null;
-var cursorBuf: [13 * 21]u32 = [_]u32{0} ** (13 * 21);
+pub var cursorBuf: [13 * 21]u32 = [_]u32{0} ** (13 * 21);
 var cursorWin = Window{
     .id = 0,
     .x = 0,
@@ -40,38 +40,41 @@ pub fn Redraw(x: isize, y: isize, w: usize, h: usize) void {
     var maxX: isize = x + (@intCast(isize, w) - 1);
     var maxY: isize = y + (@intCast(isize, h));
     var win = windowHead;
+    if (win == null) {
+        win = &cursorWin;
+    }
     while (win) |wi| {
-        if (!(maxX <= wi.x or maxY <= wi.y or x >= (wi.x + (wi.w - 1)) or y >= (wi.y + (wi.h - 1)))) {
+        if (!(maxX <= wi.x or maxY <= wi.y or x >= (wi.x + (@intCast(isize, wi.w) - 1)) or y >= (wi.y + (@intCast(isize, wi.h) - 1)))) {
             var fX1 = @max(x, wi.x);
-            var fX2 = @min(maxX, wi.x + (wi.w - 1));
+            var fX2 = @min(maxX, wi.x + (@intCast(isize, wi.w) - 1));
             var fY1 = @max(y, wi.y);
-            var fY2 = @min(maxY, wi.y + (wi.h - 1));
+            var fY2 = @min(maxY, wi.y + (@intCast(isize, wi.h) - 1));
             var i = fY1;
             const pitch = HAL.Console.info.pitch;
             const bytes = HAL.Console.info.bpp / 8;
-            while (i < fY2) : (i += 1) {
+            while (i <= fY2) : (i += 1) {
                 if (i < 0) {
                     continue;
                 } else if (i >= HAL.Console.info.height) {
                     break;
                 }
                 var j = fX1;
-                while (j < fX2) : (j += 1) {
+                while (j <= fX2) : (j += 1) {
                     if (j < 0) {
                         continue;
                     } else if (j >= HAL.Console.info.width) {
                         break;
                     }
-                    var pixel: u32 = @intToPtr(*u32, @ptrToInt(wi.buf.ptr) + ((((i - wi.y) * wi.w) + (j - wi.x)) * bytes)).*;
+                    var pixel: u32 = @intToPtr(*u32, @ptrToInt(wi.buf.ptr) + @intCast(usize, (((i - wi.y) * @intCast(isize, wi.w)) + (j - wi.x)) * @intCast(isize, bytes))).*;
                     if ((pixel & 0xFF000000) == 0xFF000000) {
-                        @intToPtr(*u32, @ptrToInt(HAL.Console.info.ptr) + (i * pitch) + (j * bytes)).* = (pixel & 0xFFFFFF);
+                        @intToPtr(*u32, @ptrToInt(HAL.Console.info.ptr) + (@intCast(usize, i) * pitch) + (@intCast(usize, j) * bytes)).* = (pixel & 0xFFFFFF);
                     }
                 }
                 //@memcpy(@intToPtr([*]u8, @ptrToInt(HAL.Console.info.ptr) + (i * pitch) + (fX1 * bytes))[0..(((fX2 - fX1) + 1) * bytes)], @intToPtr([*]u8, @ptrToInt(wi.buf.ptr) + ((((i - wi.y) * wi.w) + (fX1 - wi.x)) * bytes)[0..(((fX2 - fX1) + 1) * bytes)]));
             }
         }
         if (win == windowTail) {
-            win = cursorWin;
+            win = &cursorWin;
         } else {
             win = wi.next;
         }
@@ -99,4 +102,9 @@ pub fn MoveWinToFront(win: *Window) void {
     win.next = null;
     windowTail = win;
     windowLock.release();
+}
+
+pub fn Init() void {
+    Mouse.InitMouseBitmap();
+    Redraw(0, 0, HAL.Console.info.width, HAL.Console.info.height);
 }

@@ -8,6 +8,17 @@ pub const RyuDispatch = extern struct {
     // Basic
     put: *const fn ([*:0]const u8) callconv(.C) void,
     abort: *const fn ([*:0]const u8) callconv(.C) noreturn,
+    // Memory
+    staticAlloc: *const fn (usize) callconv(.C) *void,
+    staticAllocAnon: *const fn (usize) callconv(.C) *void,
+    staticFree: *const fn (*void, usize) callconv(.C) void,
+    staticFreeAnon: *const fn (*void, usize) callconv(.C) void,
+    pagedAlloc: *const fn (usize) callconv(.C) *void,
+    pagedAllocAnon: *const fn (usize) callconv(.C) *void,
+    pagedFree: *const fn (*void, usize) callconv(.C) void,
+    pagedFreeAnon: *const fn (*void, usize) callconv(.C) void,
+    // IRQ
+    attachDetatchIRQ: *const fn (u16, ?*const fn () callconv(.C) void) callconv(.C) u16,
 };
 
 pub const DriverDispatch = extern struct {};
