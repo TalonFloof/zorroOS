@@ -107,7 +107,7 @@ pub fn GetPage(root: PageDirectory, vaddr: usize) HAL.PTEEntry {
             if (entry.r == 0) {
                 return HAL.PTEEntry{};
             } else {
-                entries = @intToPtr(*void, @intCast(usize, entry.phys) << 12);
+                entries = @intToPtr(*void, (@intCast(usize, entry.phys) << 12) + 0xffff800000000000);
             }
         }
     }

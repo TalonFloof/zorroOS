@@ -5,6 +5,7 @@ pub const Mouse = @import("Mouse.zig");
 
 pub const WINFLAG_NOMOVE = 1;
 pub const WINFLAG_RESIZE = 2;
+pub const WINFLAG_OPAQUE = 4;
 
 pub const Window = struct {
     prev: ?*Window = null,
@@ -22,6 +23,16 @@ pub const Window = struct {
 var windowHead: ?*Window = null;
 var windowTail: ?*Window = null;
 pub var cursorBuf: [13 * 21]u32 = [_]u32{0} ** (13 * 21);
+pub var backgroundWin = Window{
+    .id = 0,
+    .x = 0,
+    .y = 0,
+    .w = 0,
+    .h = 0,
+    .flags = WINFLAG_NOMOVE | WINFLAG_OPAQUE,
+    .buf = @ptrCast([*]u32, &cursorBuf)[0..(13 * 21)], // Temporary
+    .owner = 0,
+};
 pub var cursorWin = Window{
     .id = 0,
     .x = 0,
@@ -39,12 +50,10 @@ pub fn Redraw(x: isize, y: isize, w: usize, h: usize) void {
     windowLock.acquire();
     var maxX: isize = x + (@intCast(isize, w) - 1);
     var maxY: isize = y + (@intCast(isize, h));
-    var win = windowHead;
-    if (win == null) {
-        win = &cursorWin;
-    }
+    var win: ?*Window = &backgroundWin;
     while (win) |wi| {
         if (!(maxX <= wi.x or maxY <= wi.y or x >= (wi.x + (@intCast(isize, wi.w) - 1)) or y >= (wi.y + (@intCast(isize, wi.h) - 1)))) {
+            HAL.Console.Put("{x}\n", .{@ptrToInt(win)});
             var fX1 = @max(x, wi.x);
             var fX2 = @min(maxX, wi.x + (@intCast(isize, wi.w) - 1));
             var fY1 = @max(y, wi.y);
@@ -66,14 +75,20 @@ pub fn Redraw(x: isize, y: isize, w: usize, h: usize) void {
                         break;
                     }
                     var pixel: u32 = @intToPtr(*u32, @ptrToInt(wi.buf.ptr) + @intCast(usize, (((i - wi.y) * @intCast(isize, wi.w)) + (j - wi.x)) * @intCast(isize, bytes))).*;
-                    if ((pixel & 0xFF000000) == 0xFF000000) {
+                    if ((pixel & 0xFF000000) == 0xFF000000 or (wi.flags & WINFLAG_OPAQUE) != 0) {
                         @intToPtr(*u32, @ptrToInt(HAL.Console.info.ptr) + (@intCast(usize, i) * pitch) + (@intCast(usize, j) * bytes)).* = (pixel & 0xFFFFFF);
                     }
                 }
                 //@memcpy(@intToPtr([*]u8, @ptrToInt(HAL.Console.info.ptr) + (i * pitch) + (fX1 * bytes))[0..(((fX2 - fX1) + 1) * bytes)], @intToPtr([*]u8, @ptrToInt(wi.buf.ptr) + ((((i - wi.y) * wi.w) + (fX1 - wi.x)) * bytes)[0..(((fX2 - fX1) + 1) * bytes)]));
             }
         }
-        if (win == windowTail) {
+        if (win == &backgroundWin) {
+            if (windowHead == null) {
+                win = &cursorWin;
+            } else {
+                win = windowHead;
+            }
+        } else if (win == windowTail) {
             win = &cursorWin;
         } else {
             win = wi.next;
@@ -106,5 +121,10 @@ pub fn MoveWinToFront(win: *Window) void {
 
 pub fn Init() void {
     Mouse.InitMouseBitmap();
+    const pixels = (HAL.Console.info.width * HAL.Console.info.height) * (HAL.Console.info.bpp / 8);
+    backgroundWin.buf = @ptrCast([*]u32, @alignCast(4, Memory.Pool.PagedPool.AllocAnonPages(pixels).?.ptr))[0..(pixels / (HAL.Console.info.bpp / 8))];
+    backgroundWin.w = HAL.Console.info.width;
+    backgroundWin.h = HAL.Console.info.height;
+    @memcpy(backgroundWin.buf, @intToPtr([*]u32, @ptrToInt(HAL.Console.info.ptr))[0..(pixels / (HAL.Console.info.bpp / 8))]);
     Redraw(0, 0, HAL.Console.info.width, HAL.Console.info.height);
 }
