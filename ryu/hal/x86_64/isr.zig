@@ -1,5 +1,6 @@
 const HAL = @import("root").HAL;
 const apic = @import("apic.zig");
+const io = @import("io.zig");
 
 const Memory = @import("root").Memory;
 

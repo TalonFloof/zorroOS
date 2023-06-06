@@ -28,9 +28,8 @@ pub fn build(b: *Builder) !void {
         .source_file = .{ .path = "../../lib/devlib/devlib.zig" },
         .dependencies = &.{},
     });
+    driver.code_model = std.builtin.CodeModel.large;
     driver.addModule("devlib", devlib);
-    driver.force_pic = true;
-    driver.pie = true;
     driver.override_dest_dir = .{ .custom = "../../out/" };
     b.installArtifact(driver);
 }

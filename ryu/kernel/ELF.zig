@@ -199,7 +199,7 @@ pub fn LoadELF(ptr: *void, loadType: ELFLoadType) ELFLoadError!?usize {
             var entry: *ELFSectionHeader = @intToPtr(*ELFSectionHeader, @ptrToInt(ptr) + header.shtPos + (i * @intCast(usize, header.shtEntrySize)));
             if (entry.type == 8) {
                 var size = if (entry.size & 0xFFF != 0) (entry.size & 0xFFFFFFFFFFFFF000) + 4096 else entry.size;
-                entry.addr = @ptrToInt(Memory.Pool.PagedPool.Alloc(size).?.ptr);
+                entry.addr = @ptrToInt(Memory.Pool.PagedPool.AllocAnonPages(size).?.ptr);
             } else {
                 entry.addr = @ptrToInt(ptr) + entry.offset;
             }

@@ -19,6 +19,7 @@ const Memory = @import("root").Memory;
 
 export var module_request = limine.ModuleRequest{};
 export var kfile_request = limine.KernelFileRequest{};
+export var highhalf_request = limine.HhdmRequest{};
 
 var noNX: bool = false;
 
@@ -63,6 +64,10 @@ pub fn PreformStartup(stackTop: usize) void {
     apic.setup();
     syscall.init();
     hart.startSMP();
+    var index: usize = 0;
+    while (index < 256) : (index += 1) {
+        Memory.Paging.initialPageDir.?[index] = 0;
+    }
     _ = IRQEnableDisable(true);
     if (module_request.response) |response| {
         for (response.modules()) |mod| {

@@ -21,11 +21,11 @@ pub fn Initialize(ranges: *[32]PhysicalRange, initialPD: ?Paging.PageDirectory) 
     var startAddr: usize = 0;
     for (ranges, 0..) |r, i| {
         if ((r.end - r.start) > neededSize) {
-            startAddr = r.start;
+            startAddr = r.start + 0xffff800000000000;
             ranges[i].start += neededSize;
             break;
         } else if ((r.end - r.start) == neededSize) {
-            startAddr = r.start;
+            startAddr = r.start + 0xffff800000000000;
             ranges[i].start = 0;
             ranges[i].end = 0;
             break;

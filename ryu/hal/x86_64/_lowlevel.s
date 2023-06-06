@@ -55,7 +55,6 @@ extern IRQHandler
         mov rdi, %1
         mov rsi, rsp
         mov rdx, qword [rsp+20*8]
-        xor rbp, rbp
         call ExceptionHandler
         popaq
         iretq
@@ -69,7 +68,6 @@ extern IRQHandler
         mov rdi, %1
         mov rsi, rsp
         xor rdx, rdx
-        xor rbp, rbp
         call ExceptionHandler
         popaq
         iretq
@@ -82,7 +80,6 @@ extern IRQHandler
         pushaq
         mov rdi, %1
         mov rsi, rsp
-        xor rbp, rbp
         call IRQHandler
         popaq
         iretq
