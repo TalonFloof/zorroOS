@@ -39,7 +39,7 @@ pub fn Crash(code: CrashCode, args: [4]usize) noreturn {
         args[2],
         args[3],
     });
-    if (Drivers.drvrHead != null) {
+    if (Drivers.drvrHead != null and false) {
         var driver = Drivers.drvrHead;
         HAL.Console.Put("Driver Name      Driver Address\n", .{});
         var i: usize = 0;

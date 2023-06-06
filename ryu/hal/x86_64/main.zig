@@ -92,7 +92,7 @@ pub export fn HartStart(stack: u64) callconv(.C) noreturn {
 
 var irqStatus: bool = false;
 
-pub fn IRQEnableDisable(en: bool) bool {
+pub fn IRQEnableDisable(en: bool) callconv(.C) bool {
     if (en) {
         asm volatile ("sti");
     } else {

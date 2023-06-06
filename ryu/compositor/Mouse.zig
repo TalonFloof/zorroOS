@@ -1,4 +1,5 @@
 const Compositor = @import("root").Compositor;
+const HAL = @import("root").HAL;
 
 const MouseBitmap = [_]u8{
     0xff, 0xff, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
@@ -34,4 +35,25 @@ pub fn InitMouseBitmap() void {
             Compositor.cursorBuf[i] = 0xff000000 | (val << 16) | (val << 8) | val;
         }
     }
+}
+
+pub fn ProcessMouseUpdate(relX: isize, relY: isize, relZ: isize, buttons: u8) callconv(.C) void {
+    _ = buttons;
+    _ = relZ;
+    const oldX = Compositor.cursorWin.x;
+    const oldY = Compositor.cursorWin.y;
+    Compositor.cursorWin.x += relX;
+    Compositor.cursorWin.y += relY;
+    if (Compositor.cursorWin.x < 0) {
+        Compositor.cursorWin.x = 0;
+    } else if (Compositor.cursorWin.x >= @intCast(isize, HAL.Console.info.width)) {
+        Compositor.cursorWin.x = @intCast(isize, HAL.Console.info.width) - 1;
+    }
+    if (Compositor.cursorWin.y < 0) {
+        Compositor.cursorWin.y = 0;
+    } else if (Compositor.cursorWin.y >= @intCast(isize, HAL.Console.info.height)) {
+        Compositor.cursorWin.y = @intCast(isize, HAL.Console.info.height) - 1;
+    }
+    Compositor.Redraw(oldX, oldY, Compositor.cursorWin.w, Compositor.cursorWin.h);
+    Compositor.Redraw(Compositor.cursorWin.x, Compositor.cursorWin.y, Compositor.cursorWin.w, Compositor.cursorWin.h);
 }

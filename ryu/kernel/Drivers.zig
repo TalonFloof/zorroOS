@@ -2,6 +2,7 @@ const devlib = @import("devlib");
 const HAL = @import("root").HAL;
 const ELF = @import("root").ELF;
 const Memory = @import("root").Memory;
+const Compositor = @import("root").Compositor;
 const std = @import("std");
 
 pub var drvrHead: ?*devlib.RyuDriverInfo = null;
@@ -32,6 +33,8 @@ pub export const KDriverDispatch = devlib.RyuDispatch{
     .pagedFree = &DriverPagedFree,
     .pagedFreeAnon = &DriverPagedFreeAnon,
     .attachDetatchIRQ = &DriverAttachDetatchIRQ,
+    .enableDisableIRQ = &HAL.Arch.IRQEnableDisable,
+    .updateMouse = &Compositor.Mouse.ProcessMouseUpdate,
 };
 
 fn DriverPut(s: [*:0]const u8) callconv(.C) void {
@@ -82,7 +85,7 @@ fn DriverAttachDetatchIRQ(irq: u16, routine: ?*const fn () callconv(.C) void) ca
         while (i < HAL.Arch.irqISRs.len) : (i += 1) {
             if (HAL.Arch.irqISRs[i] == null) {
                 HAL.Arch.irqISRs[i] = routine;
-                return @intCast(u16, i);
+                return @intCast(u16, i & 0xFFFF);
             }
         }
         return 0xffff;

@@ -259,10 +259,10 @@ pub fn LoadELF(ptr: *void, loadType: ELFLoadType) ELFLoadError!?usize {
                         @intToPtr(*align(1) u64, target).* = @bitCast(u64, relTable[rela].addend) +% symTable[sym].value;
                     },
                     .X86_64_32 => {
-                        @intToPtr(*align(1) u32, target).* = @intCast(u32, @bitCast(u64, relTable[rela].addend) +% symTable[sym].value);
+                        @intToPtr(*align(1) u32, target).* = @intCast(u32, (@bitCast(u64, relTable[rela].addend) +% symTable[sym].value) & 0xFFFFFFFF);
                     },
                     .X86_64_PC32, .X86_64_PLT32 => {
-                        @intToPtr(*align(1) u32, target).* = @intCast(u32, @bitCast(u64, relTable[rela].addend) +% symTable[sym].value -% target);
+                        @intToPtr(*align(1) u32, target).* = @intCast(u32, (@bitCast(u64, relTable[rela].addend) +% symTable[sym].value -% target) & 0xFFFFFFFF);
                     },
                     .X86_64_32S => {
                         @intToPtr(*align(1) i32, target).* = @bitCast(i32, @intCast(u32, (@bitCast(u64, relTable[rela].addend) +% symTable[sym].value) & 0xFFFFFFFF));

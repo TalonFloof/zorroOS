@@ -23,6 +23,7 @@ pub export fn RyuInit() noreturn {
     Compositor.Init();
     //HAL.Crash.Crash(.RyuKernelInitializationFailure, .{ 0xb007b007b007b007, 0, 0, 0 });
     while (true) {
+        _ = HAL.Arch.IRQEnableDisable(true);
         HAL.Arch.WaitForIRQ();
     }
 }

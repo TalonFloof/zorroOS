@@ -1,3 +1,5 @@
+pub const io = @import("io.zig");
+
 pub const Status = enum(c_int) {
     Okay = 0,
     Failure = 1,
@@ -18,7 +20,10 @@ pub const RyuDispatch = extern struct {
     pagedFree: *const fn (*void, usize) callconv(.C) void,
     pagedFreeAnon: *const fn (*void, usize) callconv(.C) void,
     // IRQ
+    enableDisableIRQ: *const fn (bool) callconv(.C) bool,
     attachDetatchIRQ: *const fn (u16, ?*const fn () callconv(.C) void) callconv(.C) u16,
+    // Compositor
+    updateMouse: *const fn (isize, isize, isize, u8) callconv(.C) void,
 };
 
 pub const DriverDispatch = extern struct {};
@@ -41,11 +46,4 @@ pub const RyuDriverInfo = extern struct {
 
 pub const RyuDeviceInfo = extern struct {
     devName: [*c]const u8,
-};
-
-pub const DPC = extern struct {
-    next: ?*DPC = null,
-    func: ?*const fn (u64, u64) callconv(.C) void = null,
-    context1: u64 = 0,
-    context2: u64 = 0,
 };

@@ -1,7 +1,7 @@
 const Spinlock = @import("root").Spinlock;
 const Memory = @import("root").Memory;
 const HAL = @import("root").HAL;
-const Mouse = @import("Mouse.zig");
+pub const Mouse = @import("Mouse.zig");
 
 pub const WINFLAG_NOMOVE = 1;
 pub const WINFLAG_RESIZE = 2;
@@ -22,7 +22,7 @@ pub const Window = struct {
 var windowHead: ?*Window = null;
 var windowTail: ?*Window = null;
 pub var cursorBuf: [13 * 21]u32 = [_]u32{0} ** (13 * 21);
-var cursorWin = Window{
+pub var cursorWin = Window{
     .id = 0,
     .x = 0,
     .y = 0,
