@@ -52,8 +52,7 @@ pub fn Redraw(x: isize, y: isize, w: usize, h: usize) void {
     var maxY: isize = y + (@intCast(isize, h));
     var win: ?*Window = &backgroundWin;
     while (win) |wi| {
-        if (!(maxX <= wi.x or maxY <= wi.y or x >= (wi.x + (@intCast(isize, wi.w) - 1)) or y >= (wi.y + (@intCast(isize, wi.h) - 1)))) {
-            HAL.Console.Put("{x}\n", .{@ptrToInt(win)});
+        if (!(maxX <= wi.x or maxY <= wi.y or x >= (wi.x + (@intCast(isize, wi.w))) or y >= (wi.y + (@intCast(isize, wi.h))))) {
             var fX1 = @max(x, wi.x);
             var fX2 = @min(maxX, wi.x + (@intCast(isize, wi.w) - 1));
             var fY1 = @max(y, wi.y);
@@ -125,6 +124,9 @@ pub fn Init() void {
     backgroundWin.buf = @ptrCast([*]u32, @alignCast(4, Memory.Pool.PagedPool.AllocAnonPages(pixels).?.ptr))[0..(pixels / (HAL.Console.info.bpp / 8))];
     backgroundWin.w = HAL.Console.info.width;
     backgroundWin.h = HAL.Console.info.height;
-    @memcpy(backgroundWin.buf, @intToPtr([*]u32, @ptrToInt(HAL.Console.info.ptr))[0..(pixels / (HAL.Console.info.bpp / 8))]);
+    var i: usize = 0;
+    while (i < HAL.Console.info.height) : (i += 1) {
+        @memcpy(@intToPtr([*]u32, @ptrToInt(backgroundWin.buf.ptr) + (i * (HAL.Console.info.width * 4))), @intToPtr([*]u32, @ptrToInt(HAL.Console.info.ptr) + (i * HAL.Console.info.pitch))[0..HAL.Console.info.width]);
+    }
     Redraw(0, 0, HAL.Console.info.width, HAL.Console.info.height);
 }

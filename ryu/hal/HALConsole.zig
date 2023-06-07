@@ -48,7 +48,7 @@ pub fn Init(i: *FBInfo) void {
     info = i;
     cursorX = 0;
     cursorY = 0;
-    conHeight = ((info.height / 2) / 12) * 12;
+    conHeight = (info.height / 12) * 12;
     EnableDisable(!KernelSettings.isQuiet);
     Put("Ryu Kernel Version 0.0.1 (c) 2020-2023 TalonFox\n", .{});
 }
@@ -109,7 +109,7 @@ pub fn EnableDisable(en: bool) void {
     if (en and !conEnabled) {
         cursorX = 0;
         cursorY = 0;
-        info.set(info, 0, 0, info.width, conHeight, 0x1E1E2E);
+        info.set(info, 0, 0, info.width, 12, 0x1E1E2E);
         info.set(info, @intCast(isize, cursorX * 6), @intCast(isize, cursorY * 12), 6, 12, 0xCDD6F4);
     }
     conEnabled = en;
