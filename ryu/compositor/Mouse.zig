@@ -37,23 +37,73 @@ pub fn InitMouseBitmap() void {
     }
 }
 
+var lButton: bool = false;
+var winX: isize = 0;
+var winY: isize = 0;
+var winDrag: ?*Compositor.Window = null;
+
+fn invertPixel(x: isize, y: isize) void {
+    if (x >= 0 and x < HAL.Console.info.width and y >= 0 and y < HAL.Console.info.height) {}
+}
+
+fn renderInvertOutline(x: isize, y: isize, w: usize, h: usize) void {
+    _ = h;
+    _ = w;
+    _ = y;
+    _ = x;
+}
+
 pub fn ProcessMouseUpdate(relX: isize, relY: isize, relZ: isize, buttons: u8) callconv(.C) void {
-    _ = buttons;
     _ = relZ;
-    const oldX = Compositor.cursorWin.x;
-    const oldY = Compositor.cursorWin.y;
-    Compositor.cursorWin.x += relX;
-    Compositor.cursorWin.y += relY;
-    if (Compositor.cursorWin.x < 0) {
-        Compositor.cursorWin.x = 0;
-    } else if (Compositor.cursorWin.x >= @intCast(isize, HAL.Console.info.width)) {
-        Compositor.cursorWin.x = @intCast(isize, HAL.Console.info.width) - 1;
+    if (relX != 0 or relY != 0) {
+        const oldX = Compositor.cursorWin.x;
+        const oldY = Compositor.cursorWin.y;
+        Compositor.cursorWin.x += relX;
+        Compositor.cursorWin.y += relY;
+        if (Compositor.cursorWin.x < 0) {
+            Compositor.cursorWin.x = 0;
+        } else if (Compositor.cursorWin.x >= @intCast(isize, HAL.Console.info.width)) {
+            Compositor.cursorWin.x = @intCast(isize, HAL.Console.info.width) - 1;
+        }
+        if (Compositor.cursorWin.y < 0) {
+            Compositor.cursorWin.y = 0;
+        } else if (Compositor.cursorWin.y >= @intCast(isize, HAL.Console.info.height)) {
+            Compositor.cursorWin.y = @intCast(isize, HAL.Console.info.height) - 1;
+        }
+        Compositor.Redraw(oldX, oldY, Compositor.cursorWin.w, Compositor.cursorWin.h);
+        Compositor.Redraw(Compositor.cursorWin.x, Compositor.cursorWin.y, Compositor.cursorWin.w, Compositor.cursorWin.h);
+        if (winDrag) |win| {
+            const oldWinX = win.x;
+            const oldWinY = win.y;
+            Compositor.windowLock.acquire();
+            win.x = Compositor.cursorWin.x - winX;
+            win.y = Compositor.cursorWin.y - winY;
+            Compositor.windowLock.release();
+            Compositor.Redraw(oldWinX, oldWinY, win.w, win.h);
+            Compositor.Redraw(win.x, win.y, win.w, win.h);
+        }
     }
-    if (Compositor.cursorWin.y < 0) {
-        Compositor.cursorWin.y = 0;
-    } else if (Compositor.cursorWin.y >= @intCast(isize, HAL.Console.info.height)) {
-        Compositor.cursorWin.y = @intCast(isize, HAL.Console.info.height) - 1;
+    if ((buttons & 1) == 0 and lButton and winDrag != null) {
+        winDrag = null;
+    } else if ((buttons & 1) != 0 and !lButton) {
+        Compositor.windowLock.acquire();
+        var win = Compositor.windowTail;
+        while (win) |wi| {
+            if (Compositor.cursorWin.x >= wi.x and Compositor.cursorWin.x < wi.x + @intCast(isize, wi.w) and Compositor.cursorWin.y >= wi.y and Compositor.cursorWin.y < wi.y + 20 and (wi.flags & Compositor.WINFLAG_NOMOVE) == 0) {
+                winDrag = wi;
+                winX = Compositor.cursorWin.x - wi.x;
+                winY = Compositor.cursorWin.y - wi.y;
+                break;
+            } else if (Compositor.cursorWin.x >= wi.x and Compositor.cursorWin.x < wi.x + @intCast(isize, wi.w) and Compositor.cursorWin.y >= wi.y + 20 and Compositor.cursorWin.y < wi.y + @intCast(isize, wi.h)) {
+                // Mouse Click Event
+                break;
+            }
+            win = wi.prev;
+        }
+        Compositor.windowLock.release();
+        if (winDrag) |w| {
+            Compositor.MoveWinToFront(w);
+        }
     }
-    Compositor.Redraw(oldX, oldY, Compositor.cursorWin.w, Compositor.cursorWin.h);
-    Compositor.Redraw(Compositor.cursorWin.x, Compositor.cursorWin.y, Compositor.cursorWin.w, Compositor.cursorWin.h);
+    lButton = (buttons & 1) != 0;
 }
