@@ -11,14 +11,16 @@ pub const ThreadState = enum {
     Locked,
 };
 
-pub const Thread = extern struct {
+pub const Thread = struct {
     threadID: i64,
     prevThread: ?*Thread = null,
     nextThread: ?*Thread = null,
+    nextTeamThread: ?*Thread = null,
     team: *Team.Team,
     name: [32]u8 = [_]u8{0} ** 32,
     state: ThreadState = .Birth,
+    shouldKill: bool = false,
     context: HAL.Arch.Context = HAL.Arch.Context{},
     fcontext: HAL.Arch.FloatContext = HAL.Arch.FloatContext{},
-    kstack: [16384]u8 = [_]u8{0} ** 16384,
+    kstack: []u8,
 };

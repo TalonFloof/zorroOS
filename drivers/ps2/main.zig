@@ -5,6 +5,7 @@ pub export var DriverInfo = devlib.RyuDriverInfo{
     .apiMinor = 1,
     .apiMajor = 0,
     .drvName = "PS2Driver",
+    .exportedDispatch = null,
     .loadFn = &LoadDriver,
     .unloadFn = &UnloadDriver,
 };

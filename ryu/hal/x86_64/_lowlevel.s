@@ -162,8 +162,3 @@ _RyuSyscallHandler:
     mov rsp, [gs:8]
     swapgs
     o64 sysret
-
-section .rodata
-align 4
-global squeekyFopOWO
-squeekyFopOWO: incbin "files/squeekyFopOWO.data"

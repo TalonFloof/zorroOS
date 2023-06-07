@@ -15,8 +15,13 @@ pub var initialPageDir: ?PageDirectory = null;
 
 pub fn NewPageDirectory() PageDirectory {
     const page = Memory.PFN.AllocatePage(.PageTable, false, 0).?;
-    Memory.PFN.ReferencePage(@ptrToInt(page.ptr));
-    return @ptrCast([*]usize, page)[0..512];
+    Memory.PFN.ReferencePage(@ptrToInt(page.ptr) - 0xffff800000000000);
+    var pageDir = @ptrCast([*]usize, @alignCast(@alignOf(usize), page.ptr))[0..512];
+    var i: usize = 256;
+    while (i < 512) : (i += 1) {
+        pageDir[i] = initialPageDir.?[i];
+    }
+    return pageDir;
 }
 
 fn derefPageTable(pt: *void, level: usize) void {

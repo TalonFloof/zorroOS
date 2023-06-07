@@ -26,8 +26,6 @@ pub const RyuDispatch = extern struct {
     updateMouse: *const fn (isize, isize, isize, u8) callconv(.C) void,
 };
 
-pub const DriverDispatch = extern struct {};
-
 pub const RyuDriverInfo = extern struct {
     apiMinor: u16,
     apiMajor: u16,
@@ -38,7 +36,7 @@ pub const RyuDriverInfo = extern struct {
     flags: u64 = 0,
 
     drvName: [*c]const u8,
-    drvDispatch: ?*const DriverDispatch = null,
+    exportedDispatch: ?*void,
     krnlDispatch: ?*const RyuDispatch = null,
     loadFn: *const fn () callconv(.C) Status,
     unloadFn: *const fn () callconv(.C) Status,

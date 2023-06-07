@@ -10,7 +10,7 @@ pub fn AATree(comptime K: type, comptime V: type) type {
         root: ?*Node = null,
 
         fn skew(n: ?*Node) ?*Node {
-            if (n != null) |node| {
+            if (n) |node| {
                 if (node.link[0] == null) {
                     return node;
                 } else if (node.link[0].?.level == node.level) {
@@ -27,7 +27,7 @@ pub fn AATree(comptime K: type, comptime V: type) type {
         }
 
         fn split(n: ?*Node) ?*Node {
-            if (n != null) |node| {
+            if (n) |node| {
                 if (node.link[1] == null) {
                     return node;
                 } else if (node.link[1].?.link[1] == null) {
@@ -55,8 +55,8 @@ pub fn AATree(comptime K: type, comptime V: type) type {
             } else {
                 var it = T;
                 var up = [_]?*Node{null} ** 128;
-                var top = 0;
-                var dir = 0;
+                var top: usize = 0;
+                var dir: usize = 0;
                 while (true) {
                     up[top] = it;
                     top += 1;
@@ -90,7 +90,7 @@ pub fn AATree(comptime K: type, comptime V: type) type {
 
         fn deleteInternal(T: ?*Node, x: *Node) ?*Node {
             var t = T;
-            if (t != null) {
+            if (t) {
                 var it = t;
                 var up = [_]?*Node{null} ** 128;
                 var top = 0;

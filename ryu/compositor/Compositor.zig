@@ -7,8 +7,6 @@ pub const WINFLAG_NOMOVE = 1;
 pub const WINFLAG_RESIZE = 2;
 pub const WINFLAG_OPAQUE = 4;
 
-extern const squeekyFopOWO: *void;
-
 pub const Window = struct {
     prev: ?*Window = null,
     next: ?*Window = null,
@@ -22,19 +20,8 @@ pub const Window = struct {
     owner: i64, // Team ID
 };
 
-var fennecWin = Window{
-    .id = 1,
-    .x = 128,
-    .y = 128,
-    .w = 256,
-    .h = 256,
-    .flags = 0,
-    .buf = @intToPtr([*]u32, 4)[0..1],
-    .owner = 0,
-};
-
-pub var windowHead: ?*Window = &fennecWin;
-pub var windowTail: ?*Window = &fennecWin;
+pub var windowHead: ?*Window = null;
+pub var windowTail: ?*Window = null;
 pub var cursorBuf: [13 * 21]u32 = [_]u32{0} ** (13 * 21);
 pub var backgroundWin = Window{
     .id = 0,
@@ -104,7 +91,6 @@ pub fn Redraw(x: isize, y: isize, w: usize, h: usize) void {
                         @intToPtr(*u32, @ptrToInt(HAL.Console.info.ptr) + (@intCast(usize, i) * pitch) + (@intCast(usize, j) * bytes)).* = BlendPixel(@intToPtr(*u32, @ptrToInt(backgroundWin.buf.ptr) + (@intCast(usize, i) * (backgroundWin.w * bytes)) + (@intCast(usize, j) * bytes)).*, pixel);
                     }
                 }
-                //@memcpy(@intToPtr([*]u8, @ptrToInt(HAL.Console.info.ptr) + (i * pitch) + (fX1 * bytes))[0..(((fX2 - fX1) + 1) * bytes)], @intToPtr([*]u8, @ptrToInt(wi.buf.ptr) + ((((i - wi.y) * wi.w) + (fX1 - wi.x)) * bytes)[0..(((fX2 - fX1) + 1) * bytes)]));
             }
         }
         if (win == &backgroundWin) {
@@ -145,7 +131,6 @@ pub fn MoveWinToFront(win: *Window) void {
 }
 
 pub fn Init() void {
-    fennecWin.buf = @intToPtr([*]u32, @ptrToInt(&squeekyFopOWO))[0..262144];
     Mouse.InitMouseBitmap();
     const pixels = (HAL.Console.info.width * HAL.Console.info.height) * (HAL.Console.info.bpp / 8);
     backgroundWin.buf = @ptrCast([*]u32, @alignCast(4, Memory.Pool.PagedPool.AllocAnonPages(pixels).?.ptr))[0..(pixels / (HAL.Console.info.bpp / 8))];

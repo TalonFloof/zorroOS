@@ -43,14 +43,25 @@ var winY: isize = 0;
 var winDrag: ?*Compositor.Window = null;
 
 fn invertPixel(x: isize, y: isize) void {
-    if (x >= 0 and x < HAL.Console.info.width and y >= 0 and y < HAL.Console.info.height) {}
+    if (x >= 0 and x < HAL.Console.info.width and y >= 0 and y < HAL.Console.info.height) {
+        const ptr: *u32 = @intToPtr(*u32, @ptrToInt(HAL.Console.info.ptr) + (@intCast(usize, y) * HAL.Console.info.pitch) + (@intCast(usize, x) * (HAL.Console.info.bpp / 8)));
+        ptr.* = (~(ptr.*)) & 0xFFFFFF;
+    }
 }
 
 fn renderInvertOutline(x: isize, y: isize, w: usize, h: usize) void {
-    _ = h;
-    _ = w;
-    _ = y;
-    _ = x;
+    var i: isize = 0;
+    while (i < w) : (i += 1) {
+        if (i == 0 or i == w - 1) {
+            var j: isize = 0;
+            while (j < h) : (j += 1) {
+                invertPixel(x + i, y + j);
+            }
+        } else {
+            invertPixel(x + i, y);
+            invertPixel(x + i, y + (@intCast(isize, w) - 1));
+        }
+    }
 }
 
 pub fn ProcessMouseUpdate(relX: isize, relY: isize, relZ: isize, buttons: u8) callconv(.C) void {
@@ -73,17 +84,20 @@ pub fn ProcessMouseUpdate(relX: isize, relY: isize, relZ: isize, buttons: u8) ca
         Compositor.Redraw(oldX, oldY, Compositor.cursorWin.w, Compositor.cursorWin.h);
         Compositor.Redraw(Compositor.cursorWin.x, Compositor.cursorWin.y, Compositor.cursorWin.w, Compositor.cursorWin.h);
         if (winDrag) |win| {
-            const oldWinX = win.x;
-            const oldWinY = win.y;
-            Compositor.windowLock.acquire();
-            win.x = Compositor.cursorWin.x - winX;
-            win.y = Compositor.cursorWin.y - winY;
-            Compositor.windowLock.release();
-            Compositor.Redraw(oldWinX, oldWinY, win.w, win.h);
-            Compositor.Redraw(win.x, win.y, win.w, win.h);
+            renderInvertOutline(oldX - winX, oldY - winY, win.w, win.h);
+            renderInvertOutline(Compositor.cursorWin.x - winX, Compositor.cursorWin.y - winY, win.w, win.h);
         }
     }
     if ((buttons & 1) == 0 and lButton and winDrag != null) {
+        Compositor.windowLock.acquire();
+        const oldX = winDrag.?.x;
+        const oldY = winDrag.?.y;
+        winDrag.?.x = Compositor.cursorWin.x - winX;
+        winDrag.?.y = Compositor.cursorWin.y - winY;
+        Compositor.windowLock.release();
+        Compositor.MoveWinToFront(winDrag.?);
+        Compositor.Redraw(oldX, oldY, winDrag.?.w, winDrag.?.h);
+        Compositor.Redraw(winDrag.?.x, winDrag.?.y, winDrag.?.w, winDrag.?.h);
         winDrag = null;
     } else if ((buttons & 1) != 0 and !lButton) {
         Compositor.windowLock.acquire();
@@ -93,6 +107,7 @@ pub fn ProcessMouseUpdate(relX: isize, relY: isize, relZ: isize, buttons: u8) ca
                 winDrag = wi;
                 winX = Compositor.cursorWin.x - wi.x;
                 winY = Compositor.cursorWin.y - wi.y;
+                renderInvertOutline(Compositor.cursorWin.x - winX, Compositor.cursorWin.y - winY, wi.w, wi.h);
                 break;
             } else if (Compositor.cursorWin.x >= wi.x and Compositor.cursorWin.x < wi.x + @intCast(isize, wi.w) and Compositor.cursorWin.y >= wi.y + 20 and Compositor.cursorWin.y < wi.y + @intCast(isize, wi.h)) {
                 // Mouse Click Event
@@ -101,9 +116,6 @@ pub fn ProcessMouseUpdate(relX: isize, relY: isize, relZ: isize, buttons: u8) ca
             win = wi.prev;
         }
         Compositor.windowLock.release();
-        if (winDrag) |w| {
-            Compositor.MoveWinToFront(w);
-        }
     }
     lButton = (buttons & 1) != 0;
 }
