@@ -72,9 +72,7 @@ pub fn PreformStartup(stackTop: usize) void {
     if (module_request.response) |response| {
         for (response.modules()) |mod| {
             const name = mod.cmdline[0..std.mem.len(mod.cmdline)];
-            if (!std.mem.eql(u8, name, "BootLogo")) {
-                kernel.LoadModule(name, mod.address[0..mod.size]);
-            }
+            kernel.LoadModule(name, mod.address[0..mod.size]);
         }
     }
 }

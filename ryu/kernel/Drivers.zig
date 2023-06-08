@@ -15,9 +15,17 @@ pub fn LoadDriver(name: []const u8, relocObj: *void) void {
         return;
     };
     drvrTail.?.krnlDispatch = &KDriverDispatch;
-    var ret = drvrTail.?.loadFn();
-    if (ret == .Failure) {
-        HAL.Console.Put("Warning: Driver \"{s}\" reported failure while loading!", .{name});
+}
+
+pub fn InitDrivers() void {
+    HAL.Console.Put("Starting up drivers...\n", .{});
+    var index = drvrHead;
+    while (index) |drvr| {
+        var ret = drvr.loadFn();
+        if (ret == .Failure) {
+            HAL.Console.Put("Warning: Driver \"{s}\" reported failure while loading!", .{drvr.drvName});
+        }
+        index = drvr.next;
     }
 }
 

@@ -1,4 +1,5 @@
 pub const io = @import("io.zig");
+const std = @import("std");
 
 pub const Status = enum(c_int) {
     Okay = 0,
@@ -42,6 +43,20 @@ pub const RyuDriverInfo = extern struct {
     unloadFn: *const fn () callconv(.C) Status,
 };
 
-pub const RyuDeviceInfo = extern struct {
-    devName: [*c]const u8,
-};
+pub fn FindDriver(info: *RyuDriverInfo, name: []const u8) ?*void {
+    var index = info.next;
+    while (index) |drvr| {
+        if (std.mem.eql(u8, @ptrCast([*]u8, drvr.drvName)[0..std.mem.len(drvr.drvName)], name)) {
+            return drvr.exportedDispatch;
+        }
+        index = drvr.next;
+    }
+    index = info.prev;
+    while (index) |drvr| {
+        if (std.mem.eql(u8, @ptrCast([*]u8, drvr.drvName)[0..std.mem.len(drvr.drvName)], name)) {
+            return drvr.exportedDispatch;
+        }
+        index = drvr.prev;
+    }
+    return null;
+}

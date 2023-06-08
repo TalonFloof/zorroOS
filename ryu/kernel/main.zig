@@ -19,6 +19,7 @@ pub fn panic(msg: []const u8, stacktrace: ?*std.builtin.StackTrace, wat: ?usize)
 }
 
 pub export fn RyuInit() noreturn {
+    Drivers.InitDrivers();
     Executive.OSCalls.stub();
     Executive.Team.Init();
     Compositor.Init();
