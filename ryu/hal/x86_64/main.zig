@@ -231,10 +231,9 @@ pub const Context = packed struct {
         };
     }
 
-    const enterInternal = 
-
-    pub inline fn Enter(self: *Context) noreturn {
+    pub fn Enter(self: *Context) noreturn {
         _ = self;
+        while (true) {}
     }
 };
 

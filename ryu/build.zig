@@ -40,8 +40,6 @@ pub fn build(b: *Builder) !void {
         },
     });
     const executiveMod = b.createModule(.{ .source_file = .{ .path = "executive/Executive.zig" } });
-    const compositorMod = b.createModule(.{ .source_file = .{ .path = "compositor/Compositor.zig" } });
-    _ = compositorMod;
     const devlib = b.createModule(.{
         .source_file = .{ .path = "../lib/devlib/devlib.zig" },
         .dependencies = &.{},

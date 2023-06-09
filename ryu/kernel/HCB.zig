@@ -1,5 +1,5 @@
 const HAL = @import("hal");
-const Thread = @import("root").Executive.Thread;
+const Thread = @import("root").Executive.Thread.Thread;
 
 pub const HCB = struct {
     activeKstack: u64 = 0,
