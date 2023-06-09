@@ -74,8 +74,10 @@ pub fn PS2MouseIRQ() callconv(.C) void {
     if (packetID == 2) {
         var flags: u8 = packetData[0];
         var relX: isize = @intCast(isize, packetData[1]) - @intCast(isize, (@intCast(u16, flags) << 4) & 0x100);
+        _ = relX;
         var relY: isize = 0 - (@intCast(isize, packetData[2]) - @intCast(isize, (@intCast(u16, flags) << 3) & 0x100));
-        DriverInfo.krnlDispatch.?.updateMouse(relX, relY, 0, flags & 7);
+        _ = relY;
+        //DriverInfo.krnlDispatch.?.updateMouse(relX, relY, 0, flags & 7);
     }
     if (packetID == 0 and (packetData[packetID] & 0x8) == 0) {
         packetID = 0;

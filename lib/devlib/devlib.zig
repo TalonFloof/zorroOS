@@ -23,8 +23,6 @@ pub const RyuDispatch = extern struct {
     // IRQ
     enableDisableIRQ: *const fn (bool) callconv(.C) bool,
     attachDetatchIRQ: *const fn (u16, ?*const fn () callconv(.C) void) callconv(.C) u16,
-    // Compositor
-    updateMouse: *const fn (isize, isize, isize, u8) callconv(.C) void,
 };
 
 pub const RyuDriverInfo = extern struct {

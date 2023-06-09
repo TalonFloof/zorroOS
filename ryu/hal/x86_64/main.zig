@@ -68,7 +68,6 @@ pub fn PreformStartup(stackTop: usize) void {
     while (index < 256) : (index += 1) {
         Memory.Paging.initialPageDir.?[index] = 0;
     }
-    _ = IRQEnableDisable(true);
     if (module_request.response) |response| {
         for (response.modules()) |mod| {
             const name = mod.cmdline[0..std.mem.len(mod.cmdline)];

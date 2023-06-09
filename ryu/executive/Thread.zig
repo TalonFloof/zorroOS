@@ -84,6 +84,18 @@ pub fn Init() void {
     }
 }
 
+pub fn Reschedule() void {
+    threadLock.acquire();
+    const hcb = HAL.Arch.GetHCB();
+    if (hcb.activeThread == null) {
+        if (queueHead == null) {
+            @panic("Attempted to preform preemptive scheduling with no threads in the queue!");
+        }
+        hcb.activeThread = queueHead;
+    }
+    threadLock.release();
+}
+
 fn IdleThread() callconv(.C) void {
     while (true) {
         HAL.Arch.WaitForIRQ();

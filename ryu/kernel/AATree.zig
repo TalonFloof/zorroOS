@@ -50,36 +50,13 @@ pub fn AATree(comptime K: type, comptime V: type) type {
 
         fn insertInternal(t: ?*Node, x: *Node) ?*Node {
             var T = t;
-            if (t == null) {
-                return x;
+            if (T == null) {
+                T = x;
             } else {
-                var it = T;
-                var up = [_]?*Node{null} ** 128;
-                var top: usize = 0;
-                var dir: usize = 0;
-                while (true) {
-                    up[top] = it;
-                    top += 1;
-                    dir = if (it.?.key < x.key) 1 else 0;
-                    if (it.?.link[dir] == null) {
-                        break;
-                    }
-                    it = it.?.link[dir];
-                }
-                it.?.link[dir] = x;
-                while (top >= 0) {
-                    top -= 1;
-                    if (top != 0) {
-                        dir = if (up[top - 1].?.link[1] == up[top]) 1 else 0;
-                    }
-                    up[top] = skew(up[top]);
-                    up[top] = split(up[top]);
-                    if (top != 0) {
-                        up[top - 1].?.link[dir] = up[top];
-                    } else {
-                        T = up[top];
-                    }
-                }
+                var dir: usize = if (T.?.key < x.key) 1 else 0;
+                T.?.link[dir] = insertInternal(T.?.link[dir], x);
+                T = skew(T);
+                T = split(T);
             }
             return T;
         }
@@ -90,68 +67,35 @@ pub fn AATree(comptime K: type, comptime V: type) type {
 
         fn deleteInternal(T: ?*Node, x: *Node) ?*Node {
             var t = T;
-            if (t) {
-                var it = t;
-                var up = [_]?*Node{null} ** 128;
-                var top = 0;
-                var dir = 0;
-                while (true) {
-                    up[top] = it;
-                    top += 1;
-                    if (it == null) {
-                        return t;
-                    } else if (x.key == it.?.key) {
-                        break;
-                    }
-                    dir = if (it.?.key < x.key) 1 else 0;
-                    it = it.?.link[dir];
-                }
-                if (it.?.link[0] == null or it.?.link[1] == null) {
-                    var dir2 = if (it.?.link[0] == null) 1 else 0;
-                    top = top -% 1;
-                    if ((top +% 1) != 0) {
-                        up[top - 1].?.link[dir] = it.?.link[dir2];
+            if (t != null) {
+                if (x.key == t.?.key) {
+                    if (t.?.link[0] != null and t.?.link[1] != null) {
+                        var heir = t.?.link[0];
+                        while (heir.?.link[1] != null) {
+                            heir = heir.?.link[1];
+                        }
+                        t.?.key = heir.key;
+                        t.?.value = heir.value;
+                        t.?.link[0] = deleteInternal(t.?.link[0], t.?);
                     } else {
-                        t = it.?.link[1];
+                        const dir = if (t.?.link[0] == null) 1 else 0;
+                        t = t.?.link[dir];
                     }
                 } else {
-                    var heir = it.?.link[1];
-                    var prev = it;
-                    while (heir.?.link[0] != null) {
-                        up[top] = prev;
-                        prev = heir;
-                        heir = heir.?.link[0];
-                    }
-                    it.?.key = heir.?.key;
-                    it.?.value = heir.?.value;
-                    prev.?.link[if (@ptrToInt(prev) == @ptrToInt(it)) 1 else 0] = heir.?.link[1];
+                    const dir = if (t.?.key < x.key) 1 else 0;
+                    t.?.link[dir] = deleteInternal(t.?.link[dir], x);
                 }
-                while (top >= 0) {
-                    top -= 1;
-                    if (top != 0) {
-                        dir = if (up[top - 1].?.link[1] == up[top]) 1 else 0;
-                    }
-
-                    if ((up[top].?.link[0].?.level < up[top].?.level - 1) or (up[top].?.link[1].?.level < up[top].?.level - 1)) {
-                        if (up[top].?.link[1].?.level > up[top].?.level) {
-                            up[top].?.level -= 1;
-                            up[top].?.link[1].?.level = up[top].?.level;
-                        } else {
-                            up[top].?.level -= 1;
-                        }
-
-                        up[top] = skew(up[top]);
-                        up[top].?.link[1] = skew(up[top].?.link[1]);
-                        up[top].?.link[1].?.link[1] = skew(up[top].?.link[1].?.link[1]);
-                        up[top] = split(up[top]);
-                        up[top].?.link[1] = split(up[top].?.link[1]);
-                    }
-                    if (top != 0) {
-                        up[top - 1].?.link[dir] = up[top];
-                    } else {
-                        t = up[top];
-                    }
+            }
+            if (t.?.link[0].?.level < t.?.level - 1 or t.?.link[1].?.level < t.?.level - 1) {
+                t.?.level -= 1;
+                if (t.?.link[1].?.level > t.?.level) {
+                    t.?.link[1].?.level = t.?.level;
                 }
+                t = skew(t);
+                t.?.link[1] = skew(t.?.link[1]);
+                t.?.link[1].?.link[1] = skew(t.?.link[1].?.link[1]);
+                t = split(t);
+                t.?.link[1] = split(t.?.link[1]);
             }
             return t;
         }
@@ -162,11 +106,11 @@ pub fn AATree(comptime K: type, comptime V: type) type {
 
         pub fn search(self: *Self, key: K) ?*Node {
             var x = self.root;
-            while (x != null) {
-                if (key < x.?.key) {
-                    x = x.?.link[0];
-                } else if (key > x.?.key) {
-                    x = x.?.link[1];
+            while (x) |node| {
+                if (key < node.key) {
+                    x = node.link[0];
+                } else if (key > node.key) {
+                    x = node.link[1];
                 } else {
                     return x;
                 }

@@ -2,7 +2,6 @@ const devlib = @import("devlib");
 const HAL = @import("root").HAL;
 const ELF = @import("root").ELF;
 const Memory = @import("root").Memory;
-const Compositor = @import("root").Compositor;
 const std = @import("std");
 
 pub var drvrHead: ?*devlib.RyuDriverInfo = null;
@@ -42,7 +41,6 @@ pub export const KDriverDispatch = devlib.RyuDispatch{
     .pagedFreeAnon = &DriverPagedFreeAnon,
     .attachDetatchIRQ = &DriverAttachDetatchIRQ,
     .enableDisableIRQ = &HAL.Arch.IRQEnableDisable,
-    .updateMouse = &Compositor.Mouse.ProcessMouseUpdate,
 };
 
 fn DriverPut(s: [*:0]const u8) callconv(.C) void {

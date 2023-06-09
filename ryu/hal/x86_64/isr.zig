@@ -37,7 +37,9 @@ pub export fn IRQHandler(entry: u8, con: *HAL.Arch.Context) callconv(.C) void {
     } else if (entry == 0xf2) { // Reschedule IPI
 
     }
-    if (HAL.Arch.irqISRs[entry - 0x20]) |isr| {
+    if (entry == 0x20) {
+        @panic("Interrupts should be off");
+    } else if (HAL.Arch.irqISRs[entry - 0x20]) |isr| {
         isr();
     }
     apic.write(0xb0, 0);

@@ -29,7 +29,6 @@ pub fn initialize() void {
         :
         : [idt_ptr] "r" (&IDTptr),
     );
-    _ = HAL.Arch.IRQEnableDisable(true);
 }
 
 pub fn fastInit() void {
@@ -38,7 +37,6 @@ pub fn fastInit() void {
         :
         : [idt_ptr] "r" (&IDTptr),
     );
-    _ = HAL.Arch.IRQEnableDisable(true);
 }
 
 pub fn setDescriptor(vector: usize, i: *void, flags: u8) void {
