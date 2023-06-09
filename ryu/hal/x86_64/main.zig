@@ -230,6 +230,12 @@ pub const Context = packed struct {
             else => 0,
         };
     }
+
+    const enterInternal = 
+
+    pub inline fn Enter(self: *Context) noreturn {
+        _ = self;
+    }
 };
 
 pub const FloatContext = struct {

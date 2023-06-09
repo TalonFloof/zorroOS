@@ -1,6 +1,7 @@
 const HAL = @import("HAL.zig");
 const Drivers = @import("root").Drivers;
 const std = @import("std");
+const builtin = @import("builtin");
 
 pub const CrashCode = enum(u32) {
     RyuUnknownCrash = 0,
@@ -30,14 +31,18 @@ pub const CrashCode = enum(u32) {
 pub fn Crash(code: CrashCode, args: [4]usize) noreturn {
     _ = HAL.Arch.IRQEnableDisable(false);
     HAL.Console.EnableDisable(true);
-    HAL.Console.Put("System Failure: hart={d}; code={x:0>8} {s}\n({x:0>16},{x:0>16},{x:0>16},{x:0>16})\n\n", .{
-        HAL.Arch.GetHCB().hartID,
+    if (builtin.mode != .Debug) {
+        // 120, 81, 169
+
+    }
+    HAL.Console.Put("System Failure: code={x:0>8} {s}\n({x:0>16},{x:0>16},{x:0>16},{x:0>16}) hart {d}\n\n", .{
         @enumToInt(code),
         @tagName(code),
         args[0],
         args[1],
         args[2],
         args[3],
+        HAL.Arch.GetHCB().hartID,
     });
     if (Drivers.drvrHead != null) {
         var driver = Drivers.drvrHead;

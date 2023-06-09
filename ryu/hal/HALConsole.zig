@@ -12,6 +12,8 @@ pub const FBInfo = struct {
     set: *const fn (self: *const FBInfo, x: isize, y: isize, w: usize, h: usize, c: usize) callconv(.C) void,
 };
 
+pub var bgColor: usize = 0x1e1e2e;
+pub var showCursor: bool = true;
 pub var info: *FBInfo = undefined;
 var cursorX: usize = 0;
 var cursorY: usize = 0;
@@ -66,13 +68,15 @@ fn newline() void {
     } else {
         cursorY += 1;
     }
-    info.set(info, 0, @intCast(isize, cursorY * 12), info.width, 12, 0x1e1e2e);
+    info.set(info, 0, @intCast(isize, cursorY * 12), info.width, 12, bgColor);
 }
 
 fn conWriteString(_: @TypeOf(.{}), string: []const u8) error{}!usize {
     for (0..string.len) |i| {
         const c = string[i];
-        info.set(info, @intCast(isize, cursorX * 6), @intCast(isize, cursorY * 12), 6, 12, 0x1E1E2E);
+        if (showCursor) {
+            info.set(info, @intCast(isize, cursorX * 6), @intCast(isize, cursorY * 12), 6, 12, bgColor);
+        }
         if (c == 8) {
             if (cursorX == 0) {
                 cursorX = info.width / 6;
@@ -91,7 +95,9 @@ fn conWriteString(_: @TypeOf(.{}), string: []const u8) error{}!usize {
                 newline();
             }
         }
-        info.set(info, @intCast(isize, cursorX * 6), @intCast(isize, cursorY * 12), 6, 12, 0xCDD6F4);
+        if (showCursor) {
+            info.set(info, @intCast(isize, cursorX * 6), @intCast(isize, cursorY * 12), 6, 12, 0xCDD6F4);
+        }
     }
     return string.len;
 }
@@ -109,8 +115,10 @@ pub fn EnableDisable(en: bool) void {
     if (en and !conEnabled) {
         cursorX = 0;
         cursorY = 0;
-        info.set(info, 0, 0, info.width, 12, 0x1E1E2E);
-        info.set(info, @intCast(isize, cursorX * 6), @intCast(isize, cursorY * 12), 6, 12, 0xCDD6F4);
+        info.set(info, 0, 0, info.width, 12, bgColor);
+        if (showCursor) {
+            info.set(info, @intCast(isize, cursorX * 6), @intCast(isize, cursorY * 12), 6, 12, 0xCDD6F4);
+        }
     }
     conEnabled = en;
 }

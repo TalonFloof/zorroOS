@@ -162,3 +162,11 @@ _RyuSyscallHandler:
     mov rsp, [gs:8]
     swapgs
     o64 sysret
+
+;============================================
+; Context
+global ContextEnter
+ContextEnter:
+    mov rsp, rdi
+    popaq
+    iretq

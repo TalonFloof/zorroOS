@@ -1,6 +1,7 @@
 const HAL = @import("root").HAL;
 const apic = @import("apic.zig");
 const io = @import("io.zig");
+const Thread = @import("root").Executive.Thread;
 
 const Memory = @import("root").Memory;
 
@@ -34,11 +35,18 @@ pub export fn IRQHandler(entry: u8, con: *HAL.Arch.Context) callconv(.C) void {
             _ = HAL.Arch.IRQEnableDisable(false);
             HAL.Arch.WaitForIRQ();
         }
-    } else if (entry == 0xf2) { // Reschedule IPI
-
-    }
-    if (entry == 0x20) {
-        @panic("Interrupts should be off");
+    } else if (entry == 0xf2 or entry == 0x20) { // Reschedule (either via IPI or Preemption Clock)
+        if (entry == 0x20) {
+            const hcb = HAL.Arch.GetHCB();
+            if (hcb.quantumsLeft > 1) {
+                hcb.quantumsLeft -= 1;
+                apic.write(0xb0, 0);
+                return;
+            }
+        }
+        apic.write(0xb0, 0);
+        Thread.Reschedule();
+        unreachable;
     } else if (HAL.Arch.irqISRs[entry - 0x20]) |isr| {
         isr();
     }

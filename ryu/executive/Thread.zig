@@ -34,8 +34,34 @@ pub var threads: ThreadTreeType = ThreadTreeType{};
 var threadLock: Spinlock = .unaquired;
 pub var nextThreadID: i64 = 1;
 
+var queueLock: Spinlock = .unaquired;
 var queueHead: ?*Thread = null;
 var queueTail: ?*Thread = null;
+
+fn AddToQueue(t: *Thread) void {
+    t.nextThread = null;
+    t.prevThread = queueTail;
+    if (queueTail) |tail| { // hehehe tail owo~
+        tail.nextThread = t;
+    }
+    queueTail = t;
+    if (queueHead == null) {
+        queueHead = t;
+    }
+}
+
+fn RemoveFromQueue(t: *Thread) void {
+    if (t.nextThread) |nxt| {
+        nxt.prevThread = t.prevThread;
+    } else {
+        queueTail = t.prevThread;
+    }
+    if (t.prevThread) |prev| {
+        prev.nextThread = t.nextThread;
+    } else {
+        queueHead = t.nextThread;
+    }
+}
 
 pub fn NewThread(
     team: *Team.Team,
@@ -84,16 +110,44 @@ pub fn Init() void {
     }
 }
 
-pub fn Reschedule() void {
-    threadLock.acquire();
+pub fn Reschedule() noreturn {
+    queueLock.acquire();
     const hcb = HAL.Arch.GetHCB();
     if (hcb.activeThread == null) {
         if (queueHead == null) {
             @panic("Attempted to preform preemptive scheduling with no threads in the queue!");
         }
         hcb.activeThread = queueHead;
+    } else {
+        hcb.activeThread.?.state = .Runnable;
+        AddToQueue(hcb.activeThread.?);
     }
-    threadLock.release();
+    var thr: ?*Thread = hcb.activeThread.?.nextThread;
+    while (true) {
+        if (thr) |t| {
+            if (t.shouldKill) {
+                RemoveFromQueue(t);
+                // TODO: Discard the thread
+                thr = t.nextThread;
+            } else {
+                if (t.state == .Runnable and (t.hartID == -1 or t.hartID == hcb.hartID)) {
+                    t.state = .Running;
+                    RemoveFromQueue(t);
+                    break;
+                }
+                thr = t.nextThread;
+            }
+        } else {
+            thr = queueHead;
+        }
+    }
+    queueLock.release();
+    hcb.activeThread = thr;
+    hcb.activeKstack = @ptrToInt(thr.?.kstack.ptr) + thr.?.kstack.len;
+    hcb.activeUstack = 0;
+    hcb.quantumsLeft = 10; // 10 ms
+    thr.?.fcontext.Load();
+    thr.?.context.Enter();
 }
 
 fn IdleThread() callconv(.C) void {
