@@ -2,6 +2,7 @@ const std = @import("std");
 const HAL = @import("root").HAL;
 const Memory = @import("root").Memory;
 const Team = @import("root").Executive.Team;
+const Thread = @import("root").Executive.Thread;
 pub const PS2Keymap = @import("PS2Keymap.zig");
 
 pub fn EnterDebugger() noreturn {
@@ -41,6 +42,19 @@ pub fn EnterDebugger() noreturn {
             while (ind < Team.nextTeamID) : (ind += 1) {
                 if (Team.teams.search(ind)) |team| {
                     HAL.Console.Put("{}: {x:0>16} {s}\n", .{ ind, @ptrToInt(&(team.value)), team.value.name });
+                }
+            }
+        } else if (std.mem.eql(u8, txt, "threads")) {
+            var ind: i64 = 1;
+            while (ind < Thread.nextThreadID) : (ind += 1) {
+                if (Thread.threads.search(ind)) |thread| {
+                    HAL.Console.Put("{}: {x:0>16} {s} IP: {x:0>16} SP: {x:0>16}\n", .{
+                        ind,
+                        @ptrToInt(&(thread.value)),
+                        thread.value.name,
+                        thread.value.context.GetReg(128),
+                        thread.value.context.GetReg(129),
+                    });
                 }
             }
         } else {

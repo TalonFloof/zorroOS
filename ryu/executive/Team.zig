@@ -43,7 +43,19 @@ pub fn NewTeam(parent: ?*Team, name: []const u8) *Team {
     return &team.value;
 }
 
+pub fn GetTeamByID(id: i64) ?*Team {
+    const old = HAL.Arch.IRQEnableDisable(false);
+    teamLock.acquire();
+    const val = teams.search(id);
+    teamLock.release();
+    _ = HAL.Arch.IRQEnableDisable(old);
+    if (val) |v| {
+        return &v.value;
+    } else {
+        return null;
+    }
+}
+
 pub fn Init() void {
-    var team = NewTeam(null, "Kernel Team");
-    _ = team;
+    _ = NewTeam(null, "Kernel Team");
 }

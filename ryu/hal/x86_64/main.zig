@@ -181,6 +181,7 @@ pub const Context = packed struct {
             self.cs = 0x43;
             self.ss = 0x3b;
         }
+        self.rflags = 0x202;
     }
 
     pub fn SetReg(self: *Context, reg: u8, val: u64) void {

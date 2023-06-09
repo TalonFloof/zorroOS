@@ -22,6 +22,7 @@ pub export fn RyuInit() noreturn {
     Drivers.InitDrivers();
     Executive.OSCalls.stub();
     Executive.Team.Init();
+    Executive.Thread.Init();
     Compositor.Init();
     //HAL.Crash.Crash(.RyuKernelInitializationFailure, .{ 0xb007b007b007b007, 0, 0, 0 });
     while (true) {
