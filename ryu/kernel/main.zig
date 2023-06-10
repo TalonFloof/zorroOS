@@ -23,7 +23,7 @@ pub export fn RyuInit() noreturn {
     Executive.OSCalls.stub();
     Executive.Team.Init();
     Executive.Thread.Init();
-    HAL.Crash.Crash(.RyuNoRootFilesystem, .{ 0, 0, 0, 0 });
+    //HAL.Crash.Crash(.RyuNoRootFilesystem, .{ 0, 0, 0, 0 });
 }
 
 pub inline fn LoadModule(name: []const u8, data: []u8) void {

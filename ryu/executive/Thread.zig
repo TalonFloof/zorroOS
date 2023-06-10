@@ -34,6 +34,8 @@ pub var threads: ThreadTreeType = ThreadTreeType{};
 var threadLock: Spinlock = .unaquired;
 pub var nextThreadID: i64 = 1;
 
+pub var startScheduler: bool = false;
+
 var queueLock: Spinlock = .unaquired;
 var queueHead: ?*Thread = null;
 var queueTail: ?*Thread = null;
@@ -41,8 +43,8 @@ var queueTail: ?*Thread = null;
 fn AddToQueue(t: *Thread) void {
     t.nextThread = null;
     t.prevThread = queueTail;
-    if (queueTail) |tail| { // hehehe tail owo~
-        tail.nextThread = t;
+    if (queueTail != null) { // hehehe tail owo~
+        queueTail.?.nextThread = t;
     }
     queueTail = t;
     if (queueHead == null) {
@@ -53,13 +55,15 @@ fn AddToQueue(t: *Thread) void {
 fn RemoveFromQueue(t: *Thread) void {
     if (t.nextThread) |nxt| {
         nxt.prevThread = t.prevThread;
-    } else {
-        queueTail = t.prevThread;
     }
     if (t.prevThread) |prev| {
         prev.nextThread = t.nextThread;
-    } else {
+    }
+    if (@ptrToInt(queueHead) == @ptrToInt(t)) {
         queueHead = t.nextThread;
+    }
+    if (@ptrToInt(queueTail) == @ptrToInt(t)) {
+        queueTail = t.prevThread;
     }
 }
 
@@ -78,8 +82,6 @@ pub fn NewThread(
     thread.value.threadID = nextThreadID;
     thread.key = nextThreadID;
     nextThreadID += 1;
-    thread.value.prevThread = queueTail;
-    queueTail = &thread.value;
     thread.value.state = .Runnable;
     var stack = Memory.Pool.PagedPool.AllocAnonPages(16384).?;
     thread.value.kstack = stack;
@@ -92,12 +94,15 @@ pub fn NewThread(
     }
     thread.value.context.SetReg(128, ip);
     threads.insert(thread);
+    queueLock.acquire();
+    AddToQueue(&thread.value);
+    queueLock.release();
     threadLock.release();
     _ = HAL.Arch.IRQEnableDisable(old);
     return &thread.value;
 }
 
-pub fn Init() void {
+pub fn Init() noreturn {
     var kteam = Team.GetTeamByID(1).?;
     var i: i32 = 0;
     var buf: [32]u8 = [_]u8{0} ** 32;
@@ -108,10 +113,21 @@ pub fn Init() void {
         var thread = NewThread(kteam, name, @ptrToInt(&IdleThread), null);
         thread.hartID = i;
     }
+    startScheduler = true;
+    Reschedule();
+}
+
+pub fn GetNextThread() *Thread {
+    const hcb = HAL.Arch.GetHCB();
+    _ = hcb;
+    queueLock.acquire();
+    var t = queueHead.?;
+    RemoveFromQueue(t);
+    queueLock.release();
+    return t;
 }
 
 pub fn Reschedule() noreturn {
-    queueLock.acquire();
     const hcb = HAL.Arch.GetHCB();
     if (hcb.activeThread == null) {
         if (queueHead == null) {
@@ -120,34 +136,30 @@ pub fn Reschedule() noreturn {
         hcb.activeThread = queueHead;
     } else {
         hcb.activeThread.?.state = .Runnable;
+        queueLock.acquire();
         AddToQueue(hcb.activeThread.?);
+        queueLock.release();
     }
-    var thr: ?*Thread = hcb.activeThread.?.nextThread;
+    var thr: *Thread = GetNextThread();
     while (true) {
-        if (thr) |t| {
-            if (t.shouldKill) {
-                RemoveFromQueue(t);
-                // TODO: Discard the thread
-                thr = t.nextThread;
-            } else {
-                if (t.state == .Runnable and (t.hartID == -1 or t.hartID == hcb.hartID)) {
-                    t.state = .Running;
-                    RemoveFromQueue(t);
-                    break;
-                }
-                thr = t.nextThread;
-            }
+        if (thr.shouldKill) {
+            // TODO: Destroy the thread
+        } else if (thr.state == .Runnable and (thr.hartID == -1 or thr.hartID == hcb.hartID)) {
+            thr.state = .Running;
+            break;
         } else {
-            thr = queueHead;
+            queueLock.acquire();
+            AddToQueue(thr);
+            queueLock.release();
         }
+        thr = GetNextThread();
     }
-    queueLock.release();
     hcb.activeThread = thr;
-    hcb.activeKstack = @ptrToInt(thr.?.kstack.ptr) + thr.?.kstack.len;
+    hcb.activeKstack = @ptrToInt(thr.kstack.ptr) + thr.kstack.len;
     hcb.activeUstack = 0;
     hcb.quantumsLeft = 10; // 10 ms
-    thr.?.fcontext.Load();
-    thr.?.context.Enter();
+    thr.fcontext.Load();
+    thr.context.Enter();
 }
 
 fn IdleThread() callconv(.C) void {

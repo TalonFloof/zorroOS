@@ -33,14 +33,19 @@ pub export fn _archstart() callconv(.Naked) noreturn {
 
 pub export fn _hartstart() callconv(.Naked) noreturn {
     asm volatile (
+        \\cli
         \\mov %rsp, %rdi
         \\jmp HartStart
     );
     unreachable;
 }
 
+extern fn ContextEnter(context: *allowzero void) callconv(.C) noreturn;
+extern fn ContextSetupFPU() callconv(.C) void;
+
 pub fn PreformStartup(stackTop: usize) void {
     _ = IRQEnableDisable(false);
+    ContextSetupFPU();
     hart.initialize(stackTop);
     gdt.initialize();
     idt.initialize();
@@ -86,10 +91,10 @@ pub export fn HartStart(stack: u64) callconv(.C) noreturn {
     idt.fastInit();
     syscall.init();
     hart.hartData = 0;
-    while (true) {
-        _ = IRQEnableDisable(false);
-        WaitForIRQ();
+    while (!kernel.Executive.Thread.startScheduler) {
+        std.atomic.spinLoopHint();
     }
+    kernel.Executive.Thread.Reschedule();
 }
 
 var irqStatus: bool = false;
@@ -122,7 +127,7 @@ pub const IPIType = enum {
 
 pub fn SendIPI(hartID: i32, typ: IPIType) void {
     var ipi: u64 = switch (typ) {
-        .IPIHalt => 0xf1,
+        .IPIHalt => 0x4f1,
         .IPIReschedule => 0xf2,
         .IPIFlushTLB => 0xf3,
     };
@@ -231,25 +236,24 @@ pub const Context = packed struct {
         };
     }
 
-    pub fn Enter(self: *Context) noreturn {
-        _ = self;
-        while (true) {}
+    pub inline fn Enter(self: *Context) noreturn {
+        ContextEnter(@intToPtr(*allowzero void, @ptrToInt(self)));
     }
 };
 
 pub const FloatContext = struct {
-    data: [512]u8 = [_]u8{0} ** 512,
+    data: [512]u8 align(16) = [_]u8{0} ** 512,
 
     pub fn Save(self: *FloatContext) void {
         asm volatile ("fxsave64 (%rax)"
             :
-            : [state] "{rax}" (@ptrToInt(&self.data)),
+            : [state] "{rax}" (@ptrToInt(&(self.data))),
         );
     }
     pub fn Load(self: *FloatContext) void {
         asm volatile ("fxrstor64 (%rax)"
             :
-            : [state] "{rax}" (@ptrToInt(&self.data)),
+            : [state] "{rax}" (@ptrToInt(&(self.data))),
         );
     }
 };

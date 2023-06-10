@@ -78,13 +78,13 @@ pub fn Init(i: *FBInfo) void {
 fn newline() void {
     cursorX = 0;
     if (largeFont) {
-        if (((cursorY + 1) * 16) >= conHeight) {
+        cursorY += 1;
+    } else {
+        if (((cursorY + 1) * 12) >= conHeight) {
             cursorY = 0;
         } else {
             cursorY += 1;
         }
-    } else {
-        cursorY += 1;
     }
     if (largeFont) {
         if (showCursor) {

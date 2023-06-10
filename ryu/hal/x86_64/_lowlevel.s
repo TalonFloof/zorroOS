@@ -133,6 +133,7 @@ ISRTable:
     dq int%[num]
 %assign num (num + 1)
 %endrep
+section .text
 
 ;============================================
 ; Syscall
@@ -170,3 +171,19 @@ ContextEnter:
     mov rsp, rdi
     popaq
     iretq
+    ud2
+    ud2
+
+global ContextSetupFPU
+ContextSetupFPU:
+    push rax
+    mov rax, cr0
+    and al, 0xfb
+    or al, 0x22
+    mov cr0, rax
+    mov rax, cr4
+    or eax, 0x600
+    mov cr4, rax
+    fninit
+    pop rax
+    ret
