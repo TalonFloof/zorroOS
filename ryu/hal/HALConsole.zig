@@ -1,5 +1,6 @@
 const std = @import("std");
 const HaikuFont = @import("HALConsoleFont.zig").HaikuFont;
+const LargeFont = @import("HALConsoleFont.zig").LargeFont;
 const KernelSettings = @import("root").KernelSettings;
 const Memory = @import("root").Memory;
 
@@ -14,6 +15,7 @@ pub const FBInfo = struct {
 
 pub var bgColor: usize = 0x1e1e2e;
 pub var showCursor: bool = true;
+pub var largeFont: bool = false;
 pub var info: *FBInfo = undefined;
 var cursorX: usize = 0;
 var cursorY: usize = 0;
@@ -46,6 +48,24 @@ fn fbDrawBitmap(x: isize, y: isize, w: usize, h: usize, bitmap: []u8, color: usi
     }
 }
 
+pub fn DrawScaledBitmap(x: isize, y: isize, w: usize, h: usize, scW: usize, scH: usize, bitmap: []u8, color: usize) void {
+    const x_ratio: usize = ((w << 16) / scW) + 1;
+    const y_ratio: usize = ((h << 16) / scH) + 1;
+    var i: usize = 0;
+    while (i < scH) : (i += 1) {
+        var j: usize = 0;
+        while (j < scW) : (j += 1) {
+            var finalX: usize = (j * x_ratio) >> 16;
+            var finalY: usize = (i * y_ratio) >> 16;
+            var index = (finalY * w) + finalX;
+            var dat = bitmap[index / 8];
+            if ((dat >> @intCast(u3, 7 - (index % 8))) & 1 != 0) {
+                info.set(info, @intCast(isize, j) + x, @intCast(isize, i) + y, 1, 1, color);
+            }
+        }
+    }
+}
+
 pub fn Init(i: *FBInfo) void {
     info = i;
     cursorX = 0;
@@ -57,29 +77,41 @@ pub fn Init(i: *FBInfo) void {
 
 fn newline() void {
     cursorX = 0;
-    if (((cursorY + 1) * 12) >= conHeight) {
-        // Scroll
-        //std.mem.copyForwards(
-        //    u8,
-        //    @intToPtr([*]u8, @ptrToInt(info.ptr))[0..((conHeight - 12) * info.pitch)],
-        //    @intToPtr([*]u8, @ptrToInt(info.ptr) + (12 * info.pitch))[0..((conHeight - 12) * info.pitch)],
-        //);
-        cursorY = 0;
+    if (largeFont) {
+        if (((cursorY + 1) * 16) >= conHeight) {
+            cursorY = 0;
+        } else {
+            cursorY += 1;
+        }
     } else {
         cursorY += 1;
     }
-    info.set(info, 0, @intCast(isize, cursorY * 12), info.width, 12, bgColor);
+    if (largeFont) {
+        if (showCursor) {
+            info.set(info, 0, @intCast(isize, cursorY * 16), info.width, 16, bgColor);
+        }
+    } else {
+        info.set(info, 0, @intCast(isize, cursorY * 12), info.width, 12, bgColor);
+    }
 }
 
 fn conWriteString(_: @TypeOf(.{}), string: []const u8) error{}!usize {
     for (0..string.len) |i| {
         const c = string[i];
         if (showCursor) {
-            info.set(info, @intCast(isize, cursorX * 6), @intCast(isize, cursorY * 12), 6, 12, bgColor);
+            if (largeFont) {
+                info.set(info, @intCast(isize, cursorX * 9), @intCast(isize, cursorY * 16), 9, 16, bgColor);
+            } else {
+                info.set(info, @intCast(isize, cursorX * 6), @intCast(isize, cursorY * 12), 6, 12, bgColor);
+            }
         }
         if (c == 8) {
             if (cursorX == 0) {
-                cursorX = info.width / 6;
+                if (largeFont) {
+                    cursorX = info.width / 9;
+                } else {
+                    cursorX = info.width / 6;
+                }
                 cursorY -= 1;
             } else {
                 cursorX -= 1;
@@ -88,15 +120,37 @@ fn conWriteString(_: @TypeOf(.{}), string: []const u8) error{}!usize {
             newline();
         } else {
             if (c >= 0x20 and c <= 0x7e) {
-                fbDrawBitmap(@intCast(isize, cursorX * 6), @intCast(isize, cursorY * 12), 8, 12, @constCast(HaikuFont[((@intCast(usize, c) - 0x20) * 12)..HaikuFont.len]), 0xcdd6f4, true);
+                if (largeFont) {
+                    fbDrawBitmap(
+                        @intCast(isize, cursorX * 9),
+                        @intCast(isize, cursorY * 16),
+                        16,
+                        16,
+                        @constCast(LargeFont[((@intCast(usize, c) - 0x20) * (16 * 2))..LargeFont.len]),
+                        0xcdd6f4,
+                        false,
+                    );
+                } else {
+                    fbDrawBitmap(@intCast(isize, cursorX * 6), @intCast(isize, cursorY * 12), 8, 12, @constCast(HaikuFont[((@intCast(usize, c) - 0x20) * 12)..HaikuFont.len]), 0xcdd6f4, true);
+                }
             }
             cursorX += 1;
-            if ((cursorX * 6) >= info.width) {
-                newline();
+            if (largeFont) {
+                if ((cursorX * 9) >= info.width) {
+                    newline();
+                }
+            } else {
+                if ((cursorX * 6) >= info.width) {
+                    newline();
+                }
             }
         }
         if (showCursor) {
-            info.set(info, @intCast(isize, cursorX * 6), @intCast(isize, cursorY * 12), 6, 12, 0xCDD6F4);
+            if (largeFont) {
+                info.set(info, @intCast(isize, cursorX * 9), @intCast(isize, cursorY * 16), 9, 16, 0xCDD6F4);
+            } else {
+                info.set(info, @intCast(isize, cursorX * 6), @intCast(isize, cursorY * 12), 6, 12, 0xCDD6F4);
+            }
         }
     }
     return string.len;
@@ -115,9 +169,17 @@ pub fn EnableDisable(en: bool) void {
     if (en and !conEnabled) {
         cursorX = 0;
         cursorY = 0;
-        info.set(info, 0, 0, info.width, 12, bgColor);
+        if (largeFont) {
+            info.set(info, 0, 0, info.width, 16, bgColor);
+        } else {
+            info.set(info, 0, 0, info.width, 12, bgColor);
+        }
         if (showCursor) {
-            info.set(info, @intCast(isize, cursorX * 6), @intCast(isize, cursorY * 12), 6, 12, 0xCDD6F4);
+            if (largeFont) {
+                info.set(info, @intCast(isize, cursorX * 9), @intCast(isize, cursorY * 16), 9, 16, 0xCDD6F4);
+            } else {
+                info.set(info, @intCast(isize, cursorX * 6), @intCast(isize, cursorY * 12), 6, 12, 0xCDD6F4);
+            }
         }
     }
     conEnabled = en;

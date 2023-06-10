@@ -8,6 +8,7 @@ pub const Drivers = @import("Drivers.zig");
 pub const KernelSettings = @import("KernelSettings.zig");
 pub const AATree = @import("AATree.zig").AATree;
 const std = @import("std");
+const builtin = @import("builtin");
 
 pub fn panic(msg: []const u8, stacktrace: ?*std.builtin.StackTrace, wat: ?usize) noreturn {
     _ = wat;
@@ -22,7 +23,7 @@ pub export fn RyuInit() noreturn {
     Executive.OSCalls.stub();
     Executive.Team.Init();
     Executive.Thread.Init();
-    HAL.Crash.Crash(.RyuKernelInitializationFailure, .{ 0x746f6f526f4e, 0, 0, 0 });
+    HAL.Crash.Crash(.RyuNoRootFilesystem, .{ 0, 0, 0, 0 });
 }
 
 pub inline fn LoadModule(name: []const u8, data: []u8) void {
