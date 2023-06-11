@@ -19,10 +19,12 @@ pub fn panic(msg: []const u8, stacktrace: ?*std.builtin.StackTrace, wat: ?usize)
 }
 
 pub export fn RyuInit() noreturn {
-    Drivers.InitDrivers();
-    Executive.OSCalls.stub();
     Executive.Team.Init();
     Executive.Thread.Init();
+    Drivers.InitDrivers();
+    Executive.OSCalls.stub();
+    Executive.Thread.startScheduler = true;
+    Executive.Thread.Reschedule();
     //HAL.Crash.Crash(.RyuNoRootFilesystem, .{ 0, 0, 0, 0 });
 }
 

@@ -102,7 +102,7 @@ pub fn NewThread(
     return &thread.value;
 }
 
-pub fn Init() noreturn {
+pub fn Init() void {
     var kteam = Team.GetTeamByID(1).?;
     var i: i32 = 0;
     var buf: [32]u8 = [_]u8{0} ** 32;
@@ -113,8 +113,6 @@ pub fn Init() noreturn {
         var thread = NewThread(kteam, name, @ptrToInt(&IdleThread), null);
         thread.hartID = i;
     }
-    startScheduler = true;
-    Reschedule();
 }
 
 pub fn GetNextThread() *Thread {
@@ -135,6 +133,7 @@ pub fn Reschedule() noreturn {
         }
         hcb.activeThread = queueHead;
     } else {
+        HAL.Arch.SwitchPT(@intToPtr(*void, @ptrToInt(Memory.Paging.initialPageDir.?.ptr) - 0xffff800000000000));
         hcb.activeThread.?.state = .Runnable;
         queueLock.acquire();
         AddToQueue(hcb.activeThread.?);
@@ -158,12 +157,34 @@ pub fn Reschedule() noreturn {
     hcb.activeKstack = @ptrToInt(thr.kstack.ptr) + thr.kstack.len;
     hcb.activeUstack = 0;
     hcb.quantumsLeft = 10; // 10 ms
+    HAL.Arch.SwitchPT(@intToPtr(*void, @ptrToInt(thr.team.addressSpace.ptr) - 0xffff800000000000));
     thr.fcontext.Load();
     thr.context.Enter();
 }
 
 fn IdleThread() callconv(.C) void {
     while (true) {
-        HAL.Arch.WaitForIRQ();
+        if (Memory.PFN.pfnFreeHead != null) {
+            const old = HAL.Arch.IRQEnableDisable(false);
+            Memory.PFN.pfnSpinlock.acquire();
+            if (Memory.PFN.pfnFreeHead != null) {
+                var page = Memory.PFN.pfnFreeHead.?;
+                Memory.PFN.pfnFreeHead = page.next;
+                if (page.next == null) {
+                    HAL.Console.Put("Freed the last non-zeroed page!\n", .{});
+                }
+                page.next = Memory.PFN.pfnZeroedHead;
+                page.state = .Zeroed;
+                page.swappable = 0;
+                page.refs = 0;
+                var index: usize = (@ptrToInt(page) - @ptrToInt(Memory.PFN.pfnDatabase.ptr)) / @sizeOf(Memory.PFN.PFNEntry);
+                @memset(@intToPtr([*]u8, (index << 12) + 0xffff800000000000)[0..4096], 0);
+                Memory.PFN.pfnZeroedHead = page;
+            }
+            Memory.PFN.pfnSpinlock.release();
+            _ = HAL.Arch.IRQEnableDisable(old);
+        } else {
+            HAL.Arch.WaitForIRQ();
+        }
     }
 }

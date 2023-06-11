@@ -44,7 +44,7 @@ extern fn ContextEnter(context: *allowzero void) callconv(.C) noreturn;
 extern fn ContextSetupFPU() callconv(.C) void;
 
 pub fn PreformStartup(stackTop: usize) void {
-    _ = IRQEnableDisable(false);
+    asm volatile ("cli");
     ContextSetupFPU();
     hart.initialize(stackTop);
     gdt.initialize();
@@ -97,17 +97,18 @@ pub export fn HartStart(stack: u64) callconv(.C) noreturn {
     kernel.Executive.Thread.Reschedule();
 }
 
-var irqStatus: bool = false;
-
 pub fn IRQEnableDisable(en: bool) callconv(.C) bool {
+    const old = asm volatile (
+        \\pushfq
+        \\popq %rax
+        : [o] "={rax}" (-> u64),
+    );
     if (en) {
         asm volatile ("sti");
     } else {
         asm volatile ("cli");
     }
-    const old = irqStatus;
-    irqStatus = en;
-    return old;
+    return old & 0x200 != 0;
 }
 
 pub fn Halt() void {
@@ -305,6 +306,13 @@ pub inline fn GetPTELevels() usize {
     return 4;
 }
 
+pub inline fn SwitchPT(root: *void) void {
+    asm volatile ("mov %rax, %%cr3"
+        :
+        : [pt] "{rax}" (@ptrToInt(root)),
+    );
+}
+
 pub const ArchHCBData = struct {
     tss: gdt.TSS = gdt.TSS{},
     apicID: u32 = 0,
@@ -391,6 +399,40 @@ pub fn DebugGet() u8 {
                 if (char != 0) {
                     return char;
                 }
+            }
+        }
+        std.atomic.spinLoopHint();
+    }
+}
+
+pub fn DebugWaitForSalute() void {
+    var progress: usize = 0;
+    while (true) {
+        // 0x1d 0x38 0xe0 0x53 >> CTRL+ALT+DEL
+        while ((io.inb(0x64) & 1) != 0) {
+            var key = io.inb(0x60);
+            if (progress == 0) {
+                if (key == 0x1d) {
+                    progress = 1;
+                    continue;
+                }
+            } else if (progress == 1) {
+                if (key == 0x38) {
+                    progress = 2;
+                    continue;
+                }
+                progress = 0;
+            } else if (progress == 2) {
+                if (key == 0xe0) {
+                    progress = 3;
+                    continue;
+                }
+                progress = 0;
+            } else if (progress == 3) {
+                if (key == 0x53) {
+                    return;
+                }
+                progress = 0;
             }
         }
         std.atomic.spinLoopHint();

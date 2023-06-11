@@ -17,8 +17,8 @@ pub var bgColor: usize = 0x1e1e2e;
 pub var showCursor: bool = true;
 pub var largeFont: bool = false;
 pub var info: *FBInfo = undefined;
-var cursorX: usize = 0;
-var cursorY: usize = 0;
+pub var cursorX: usize = 0;
+pub var cursorY: usize = 0;
 var conHeight: usize = 0;
 var conEnabled: bool = false;
 

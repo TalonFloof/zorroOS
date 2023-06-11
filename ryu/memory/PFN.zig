@@ -6,7 +6,7 @@ const std = @import("std");
 pub var pfnDatabase: []PFNEntry = undefined;
 pub var pfnFreeHead: ?*PFNEntry = null;
 pub var pfnZeroedHead: ?*PFNEntry = null;
-var pfnSpinlock: Spinlock = .unaquired;
+pub var pfnSpinlock: Spinlock = .unaquired;
 
 pub const PFNType = enum(u3) {
     Free = 0,

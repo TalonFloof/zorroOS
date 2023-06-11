@@ -23,9 +23,13 @@ pub export fn ExceptionHandler(entry: u8, con: *HAL.Arch.Context, errcode: u32) 
         Memory.Paging.PageFault(con.rip, addr, val1 | val2 | val3 | val4);
     } else if (entry == 0x2) {
         apic.write(0xb0, 0);
-        while (true) {
-            _ = HAL.Arch.IRQEnableDisable(false);
-            HAL.Arch.WaitForIRQ();
+        if (HAL.Crash.hasCrashed) {
+            while (true) {
+                _ = HAL.Arch.IRQEnableDisable(false);
+                HAL.Arch.WaitForIRQ();
+            }
+        } else {
+            @panic("Non-maskable interrupt!");
         }
     } else {
         HAL.Crash.Crash(.RyuUnknownException, .{ con.rip, con.rsp, entry, errcode });

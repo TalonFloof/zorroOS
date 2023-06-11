@@ -25,8 +25,11 @@ pub const CrashCode = enum(u32) {
     RyuIntentionallyTriggeredFailure = 0xdeaddead,
 };
 
+pub var hasCrashed: bool = false;
+
 pub fn Crash(code: CrashCode, args: [4]usize) noreturn {
     _ = HAL.Arch.IRQEnableDisable(false);
+    hasCrashed = true;
     HAL.Arch.Halt();
     if (builtin.mode != .Debug) {
         HAL.Console.bgColor = 0x392D69;
@@ -107,13 +110,15 @@ pub fn Crash(code: CrashCode, args: [4]usize) noreturn {
         HAL.Console.Put("{x:0>16} ", .{frame});
     }
     HAL.Console.Put("\n", .{});
-    if (builtin.mode == .Debug) {
-        HAL.Debug.EnterDebugger();
-    } else {
-        while (true) {
-            HAL.Arch.WaitForIRQ();
-        }
+    if (builtin.mode != .Debug) {
+        HAL.Arch.DebugWaitForSalute();
+        HAL.Console.bgColor = 0x1e1e2e;
+        HAL.Console.showCursor = true;
+        HAL.Console.largeFont = false;
+        HAL.Console.cursorX = 0;
+        HAL.Console.cursorY = 0;
     }
+    HAL.Debug.EnterDebugger();
     unreachable;
 }
 
