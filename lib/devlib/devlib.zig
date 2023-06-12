@@ -1,4 +1,5 @@
 pub const io = @import("io.zig");
+pub const fs = @import("fs.zig");
 const std = @import("std");
 
 pub const Status = enum(c_int) {

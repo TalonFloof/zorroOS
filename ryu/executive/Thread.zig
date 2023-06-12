@@ -169,15 +169,20 @@ fn IdleThread() callconv(.C) void {
             Memory.PFN.pfnSpinlock.acquire();
             if (Memory.PFN.pfnFreeHead != null) {
                 var page = Memory.PFN.pfnFreeHead.?;
-                Memory.PFN.pfnFreeHead = page.next;
-                if (page.next == null) {
-                    HAL.Console.Put("Freed the last non-zeroed page!\n", .{});
+                var index: usize = (@ptrToInt(page) - @ptrToInt(Memory.PFN.pfnDatabase.ptr)) / @sizeOf(Memory.PFN.PFNEntry);
+                if (page.state != .Free) {
+                    HAL.Crash.Crash(.RyuPFNCorruption, .{
+                        (index << 12) + 0xffff800000000000,
+                        @enumToInt(@as(Memory.PFN.PFNType, page.state)),
+                        @enumToInt(Memory.PFN.PFNType.Free),
+                        0,
+                    });
                 }
+                Memory.PFN.pfnFreeHead = page.next;
                 page.next = Memory.PFN.pfnZeroedHead;
                 page.state = .Zeroed;
                 page.swappable = 0;
                 page.refs = 0;
-                var index: usize = (@ptrToInt(page) - @ptrToInt(Memory.PFN.pfnDatabase.ptr)) / @sizeOf(Memory.PFN.PFNEntry);
                 @memset(@intToPtr([*]u8, (index << 12) + 0xffff800000000000)[0..4096], 0);
                 Memory.PFN.pfnZeroedHead = page;
             }
