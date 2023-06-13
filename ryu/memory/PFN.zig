@@ -97,26 +97,28 @@ pub fn DereferencePage(page: usize) void {
     const index: usize = (page >> 12);
     const old = HAL.Arch.IRQEnableDisable(false);
     pfnSpinlock.acquire();
-    pfnDatabase[index].refs -= 1;
-    if (pfnDatabase[index].refs == 0) {
-        const oldState = pfnDatabase[index].state;
-        pfnDatabase[index].state = .Free;
-        pfnDatabase[index].next = pfnFreeHead;
-        pfnDatabase[index].swappable = 0;
-        if (pfnDatabase[index].pte != 0 and oldState == .PageTable) {
-            const entry: usize = pfnDatabase[index].pte;
-            const pt = entry & (~@intCast(usize, 0xFFF));
-            if (pfnDatabase[pt >> 12].state != .PageTable) {
-                HAL.Crash.Crash(.RyuPFNCorruption, .{ pt, @enumToInt(pfnDatabase[pt >> 12].state), @enumToInt(PFNType.PageTable), 0 });
+    if (pfnDatabase[index].state != .Reserved) {
+        pfnDatabase[index].refs -= 1;
+        if (pfnDatabase[index].refs == 0) {
+            const oldState = pfnDatabase[index].state;
+            pfnDatabase[index].state = .Free;
+            pfnDatabase[index].next = pfnFreeHead;
+            pfnDatabase[index].swappable = 0;
+            if (pfnDatabase[index].pte != 0 and oldState == .PageTable) {
+                const entry: usize = pfnDatabase[index].pte;
+                const pt = entry & (~@intCast(usize, 0xFFF));
+                if (pfnDatabase[pt >> 12].state != .PageTable) {
+                    HAL.Crash.Crash(.RyuPFNCorruption, .{ pt, @enumToInt(pfnDatabase[pt >> 12].state), @enumToInt(PFNType.PageTable), 0 });
+                }
+                @intToPtr(*usize, entry).* = 0;
+                pfnFreeHead = &pfnDatabase[index];
+                pfnSpinlock.release();
+                DereferencePage(pt);
+                _ = HAL.Arch.IRQEnableDisable(old);
+                return;
+            } else {
+                pfnFreeHead = &pfnDatabase[index];
             }
-            @intToPtr(*usize, entry).* = 0;
-            pfnFreeHead = &pfnDatabase[index];
-            pfnSpinlock.release();
-            DereferencePage(pt);
-            _ = HAL.Arch.IRQEnableDisable(old);
-            return;
-        } else {
-            pfnFreeHead = &pfnDatabase[index];
         }
     }
     pfnSpinlock.release();

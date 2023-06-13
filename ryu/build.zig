@@ -40,14 +40,18 @@ pub fn build(b: *Builder) !void {
         },
     });
     const executiveMod = b.createModule(.{ .source_file = .{ .path = "executive/Executive.zig" } });
-    const devlib = b.createModule(.{
-        .source_file = .{ .path = "../lib/devlib/devlib.zig" },
-        .dependencies = &.{},
+    const devlib = b.createModule(.{ .source_file = .{ .path = "../lib/devlib/devlib.zig" }, .dependencies = &.{} });
+    const fsMod = b.createModule(.{
+        .source_file = .{ .path = "fs/VFS.zig" },
+        .dependencies = &.{
+            .{ .name = "devlib", .module = devlib },
+        },
     });
     kernel.addModule("limine", limineMod);
     kernel.addModule("hal", halMod);
     kernel.addModule("memory", memoryMod);
     kernel.addModule("executive", executiveMod);
+    kernel.addModule("fs", fsMod);
     kernel.addModule("devlib", devlib);
     kernel.addObjectFile("_lowlevel.o");
     kernel.code_model = .kernel;

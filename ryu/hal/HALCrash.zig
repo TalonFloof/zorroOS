@@ -80,6 +80,19 @@ pub fn Crash(code: CrashCode, args: [4]usize) noreturn {
             @constCast(ryuLogo[0..ryuLogo.len]),
             0x624795,
         );
+        if (code == .RyuNoRootFilesystem) {
+            HAL.Console.Put("Your bootloader did not specify what filesystem was the root filesystem for the OS to use.\n", .{});
+            HAL.Console.Put("Because of this, the Ryu Kernel cannot continue booting.\n", .{});
+            HAL.Console.Put("This is likely due to an incomplete or invalid boot configuration.\n\n", .{});
+            HAL.Console.Put("Within the Kernel's Command Line, add one of the follow options:\n\n", .{});
+            HAL.Console.Put("If a RamDisk other than the module one (module ramdisk is not used on all bootloaders) is loaded, set it to \"-root=ramdks\"\n", .{});
+            HAL.Console.Put("If on a physical filesystem, specify its UUID using \"-root=physdks,UUID=[UUID]\"\n", .{});
+            HAL.Console.Put("or specify the device file using \"-root=physdks,dev=[Path to device]\"\n", .{});
+            HAL.Console.Put("\nSystem Halted", .{});
+            while (true) {
+                HAL.Arch.WaitForIRQ();
+            }
+        }
         HAL.Console.Put("An error occured that if the system were to continue, could lead to system instability or hardware damage.\n", .{});
         HAL.Console.Put("To prevent damage, your system has now been shutdown.\nAny unsaved work is lost and disks may contain corrupted data.\n", .{});
         HAL.Console.Put("\n{s}\n", .{@tagName(code)});

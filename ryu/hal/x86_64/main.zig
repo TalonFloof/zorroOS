@@ -296,8 +296,8 @@ pub fn SetPTE(root: *void, index: usize, entry: HAL.PTEEntry) void {
     if (!noNX) {
         entries[index].noExecute = ~entry.x;
     }
-    entries[index].cacheDisable = entry.nonCached;
-    entries[index].writeThrough = entry.writeThrough;
+    entries[index].cacheDisable = entry.nonCached | entry.writeCombine;
+    entries[index].writeThrough = entry.writeThrough | entry.writeCombine;
     entries[index].pat = entry.writeCombine;
     entries[index].phys = @intCast(u51, entry.phys & 0xfffffffff);
 }

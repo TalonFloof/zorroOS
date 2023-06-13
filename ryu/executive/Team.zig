@@ -13,7 +13,6 @@ pub const Team = struct {
     siblingNext: ?*Team = null,
     mainThread: *allowzero Thread.Thread,
     addressSpace: Memory.Paging.PageDirectory,
-    firstFree: u64 = 0x1000, // Temporary, will be replaced with a better system later.
 };
 
 const TeamTreeType = AATree(i64, Team);
@@ -28,7 +27,6 @@ pub fn NewTeam(parent: ?*Team, name: []const u8) *Team {
     var team = @ptrCast(*TeamTreeType.Node, @alignCast(@alignOf(TeamTreeType.Node), Memory.Pool.PagedPool.Alloc(@sizeOf(TeamTreeType.Node)).?.ptr));
     team.value.addressSpace = Memory.Paging.NewPageDirectory();
     @memcpy(@intToPtr([*]u8, @ptrToInt(&team.value.name)), name);
-    team.value.firstFree = 0x1000;
     team.value.parent = parent;
     if (parent) |p| {
         team.value.siblingNext = p;
