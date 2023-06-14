@@ -25,9 +25,11 @@ pub export fn RyuInit() noreturn {
     Executive.Thread.Init();
     Drivers.InitDrivers();
     Executive.OSCalls.stub();
-    //Executive.Thread.startScheduler = true;
-    //Executive.Thread.Reschedule();
-    HAL.Crash.Crash(.RyuNoRootFilesystem, .{ 0, 0, 0, 0 });
+    if (KernelSettings.rootFS == null) {
+        HAL.Crash.Crash(.RyuNoRootFilesystem, .{ 0, 0, 0, 0 });
+    }
+    Executive.Thread.startScheduler = true;
+    Executive.Thread.Reschedule();
 }
 
 pub inline fn LoadModule(name: []const u8, data: []u8) void {

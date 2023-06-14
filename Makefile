@@ -8,6 +8,9 @@ build: limine-zig
 	cd drivers/ps2; \
 	zig build -Doptimize=ReleaseSmall; \
 	cd ../..
+	cd drivers/ramdks; \
+	zig build -Doptimize=ReleaseSmall; \
+	cd ../..
 
 limine-zig:
 	git clone https://github.com/limine-bootloader/limine-zig.git --depth=1
