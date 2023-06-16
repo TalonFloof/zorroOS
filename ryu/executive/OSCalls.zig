@@ -40,6 +40,13 @@ const ProcessFuncs = enum(u16) {
     SetGroups = 20,
 };
 
+const MemoryFuncs = enum(u16) {
+    Allocate = 1,
+    Free = 2,
+    AllocateShared = 3,
+    MapShared = 4,
+};
+
 pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
     const cat: CallCategory = @intToEnum(CallCategory, @intCast(u16, (regs.GetReg(0) & 0xFFFF0000) >> 16));
     const func: u16 = @intCast(u16, regs.GetReg(0) & 0xFFFF);
