@@ -1,6 +1,6 @@
-<!--<p align="center"><a href="https://github.com/Talon396/zorroOS/tree/legacy">Looking for owlOS? You can find it here.</a><br><img align="center" height="128" src="docs/zorroOS.svg"><br></p>-->
+<p align="center"><img align="center" src="files/zorroOS Banner.svg" width="371px"></p>
 
-# **zorroOS**: A hobby operating system written from scratch
+---
 
 **zorroOS** is a hobby operating system written in Zig, currently targeting x86_64 PCs.
 

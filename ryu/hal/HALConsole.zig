@@ -3,6 +3,7 @@ const HaikuFont = @import("HALConsoleFont.zig").HaikuFont;
 const LargeFont = @import("HALConsoleFont.zig").LargeFont;
 const KernelSettings = @import("root").KernelSettings;
 const Memory = @import("root").Memory;
+const Splash = @import("root").HAL.Splash;
 
 pub const FBInfo = struct {
     ptr: *allowzero void = @intToPtr(*allowzero void, 0),
@@ -73,6 +74,7 @@ pub fn Init(i: *FBInfo) void {
     conHeight = (info.height / 12) * 12;
     EnableDisable(!KernelSettings.isQuiet);
     Put("Ryu Kernel Version 0.0.1 (c) 2020-2023 TalonFox\n", .{});
+    Splash.Init();
 }
 
 fn newline() void {
