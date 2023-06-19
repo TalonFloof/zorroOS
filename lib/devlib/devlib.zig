@@ -24,6 +24,7 @@ pub const RyuDispatch = extern struct {
     // IRQ
     enableDisableIRQ: *const fn (bool) callconv(.C) bool,
     attachDetatchIRQ: *const fn (u16, ?*const fn () callconv(.C) void) callconv(.C) u16,
+    // Ramdisk
 };
 
 pub const RyuDriverInfo = extern struct {

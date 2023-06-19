@@ -20,18 +20,25 @@ pub fn panic(msg: []const u8, stacktrace: ?*std.builtin.StackTrace, wat: ?usize)
 }
 
 pub export fn RyuInit() noreturn {
+    HAL.Splash.UpdateStatus("Setting up UNIX Filesystems...");
     FS.Init();
+    HAL.Splash.UpdateStatus("Creating Kernel Team...");
     Executive.Team.Init();
+    HAL.Splash.UpdateStatus("Creating Hart Idle Threads...");
     Executive.Thread.Init();
+    HAL.Splash.UpdateStatus("Loading Drivers...");
     Drivers.InitDrivers();
     Executive.OSCalls.stub();
+    HAL.Splash.UpdateStatus("Mounting Root Filesystem...");
     if (KernelSettings.rootFS == null) {
         HAL.Crash.Crash(.RyuNoRootFilesystem, .{ 0, 0, 0, 0 });
     }
+    HAL.Splash.UpdateStatus("Kernel Setup Complete");
     Executive.Thread.startScheduler = true;
     Executive.Thread.Reschedule();
 }
 
 pub inline fn LoadModule(name: []const u8, data: []u8) void {
+    if (std.mem.eql(name, "Ramdisk")) {}
     Drivers.LoadDriver(name, @ptrCast(*void, data.ptr));
 }

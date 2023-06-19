@@ -1,6 +1,7 @@
 const std = @import("std");
 const HAL = @import("root").HAL;
 const KernelSettings = @import("root").KernelSettings;
+const LargeFont = @import("HALConsoleFont.zig").LargeFont;
 
 const zorroOSLogo = [_]u8{ // 376x128x1
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -517,10 +518,28 @@ pub fn Init() void {
             128,
             376,
             128,
-            @ptrCast([*]u8, @constCast(&zorroOSLogo))[0..6016],
+            @ptrCast([*]u8, @constCast(&zorroOSLogo))[0..zorroOSLogo.len],
             0xffffff,
         );
+        UpdateStatus("Initializing HAL...");
     }
 }
 
-pub fn UpdateStatus() void {}
+pub fn UpdateStatus(s: []const u8) void {
+    if (KernelSettings.isQuiet) {
+        const x: isize = @intCast(isize, (HAL.Console.info.width / 2) - ((s.len * 9) / 2));
+        HAL.Console.info.set(HAL.Console.info, 0, @divFloor(@intCast(isize, HAL.Console.info.height), 2) + 96, HAL.Console.info.width, 20, 0);
+        for (s, 0..) |c, i| {
+            HAL.Console.DrawScaledBitmap(
+                x + (@intCast(isize, i) * 9),
+                @divFloor(@intCast(isize, HAL.Console.info.height), 2) + 96,
+                16,
+                20,
+                16,
+                20,
+                @constCast(LargeFont[((@intCast(usize, c) - 0x20) * (20 * 2))..LargeFont.len]),
+                0xffffff,
+            );
+        }
+    }
+}
