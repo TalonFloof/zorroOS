@@ -17,53 +17,26 @@ pub const Metadata = extern struct {
     blocks: i64 = 0,
 };
 
-pub const FCB = extern struct {
-    file: ?*void = null,
-    mount: ?*Mountpoint = null,
-    path: [*c]u8 = null,
-    offset: i64,
-    mode: usize,
-    isDir: bool,
+pub const Inode = extern struct {
+    stat: Metadata = Metadata{ .ID = 0 },
+    private: *allowzero void = @intToPtr(*allowzero void, 0),
+    parent: ?*Inode = null,
+    children: ?*Inode = null,
+    nextSibling: ?*Inode = null,
+    mountOwner: ?*Inode = null,
+    mountPoint: ?*Inode = null,
+
+    open: ?*const fn (*Inode, usize) callconv(.C) isize = null,
+    close: ?*const fn (*Inode) callconv(.C) void = null,
+    read: ?*const fn (*Inode, isize, *void, isize) callconv(.C) isize = null,
+    readdir: ?*const fn (*Inode, isize) callconv(.C) ?*Inode = null,
+    finddir: ?*const fn (*Inode, [*c]const u8) callconv(.C) ?*Inode = null,
+    write: ?*const fn (*Inode, isize, *void, isize) callconv(.C) isize = null,
+    unlink: ?*const fn (*Inode) callconv(.C) isize = null,
+    ioctl: ?*const fn (*Inode, usize, *void) callconv(.C) isize = null,
+    create: ?*const fn (*Inode, [*c]const u8, usize) callconv(.C) isize = null,
+    map: ?*const fn (*Inode, isize, *allowzero void, usize) callconv(.C) isize = null,
+    unmap: ?*const fn (*Inode, *allowzero void, usize) callconv(.C) isize = null,
 };
 
-fn stub1(mount: *Mountpoint) callconv(.C) void {
-    _ = mount;
-}
-
-fn stub2(mount: *Mountpoint, path: [*c]const u8, mode: usize) callconv(.C) ?*FCB {
-    _ = mode;
-    _ = path;
-    _ = mount;
-    return null;
-}
-
-fn stub3() callconv(.C) i64 {
-    return -38;
-}
-
-fn stub4(mount: *Mountpoint, path: [*c]const u8) callconv(.C) Metadata {
-    _ = path;
-    _ = mount;
-    return Metadata{ .ID = -38 };
-}
-
-pub const Mountpoint = extern struct {
-    path: [*c]const u8,
-    device: [*c]const u8 = null,
-    data: ?*void = null,
-
-    mount: *const fn (*Mountpoint) callconv(.C) void = &stub1,
-    umount: *const fn (*Mountpoint) callconv(.C) void = &stub1,
-    open: *const fn (*Mountpoint, [*c]const u8, usize) callconv(.C) ?*FCB = &stub2,
-    close: *const fn (*FCB) callconv(.C) i64 = @ptrCast(*const fn (*FCB) callconv(.C) i64, &stub3),
-    read: *const fn (*FCB, *void, i64) callconv(.C) i64 = @ptrCast(*const fn (*FCB, *void, i64) callconv(.C) i64, &stub3),
-    readDir: *const fn (*FCB, *void) callconv(.C) i64 = @ptrCast(*const fn (*FCB, *void) callconv(.C) i64, &stub3),
-    write: *const fn (*FCB, *void, i64) callconv(.C) i64 = @ptrCast(*const fn (*FCB, *void, i64) callconv(.C) i64, &stub3),
-    ioctl: *const fn (*FCB, usize, *void, *c_int) callconv(.C) i64 = @ptrCast(*const fn (*FCB, usize, *void, *c_int) callconv(.C) i64, &stub3),
-    map: *const fn (*FCB, *allowzero void, usize) callconv(.C) i64 = @ptrCast(*const fn (*FCB, *allowzero void, usize) callconv(.C) i64, &stub3),
-    mkdir: *const fn (*Mountpoint, [*c]const u8) callconv(.C) i64 = @ptrCast(*const fn (*Mountpoint, [*c]const u8) callconv(.C) i64, &stub3),
-    unlink: *const fn (*Mountpoint, [*c]const u8) callconv(.C) i64 = @ptrCast(*const fn (*Mountpoint, [*c]const u8) callconv(.C) i64, &stub3),
-    stat: *const fn (*Mountpoint, [*c]const u8) callconv(.C) Metadata = &stub4,
-    chown: *const fn (*Mountpoint, [*c]const u8, u32, u32) callconv(.C) i64 = @ptrCast(*const fn (*Mountpoint, [*c]const u8, u32, u32) callconv(.C) i64, &stub3),
-    chmod: *const fn (*Mountpoint, [*c]const u8, usize) callconv(.C) i64 = @ptrCast(*const fn (*Mountpoint, [*c]const u8, usize) callconv(.C) i64, &stub3),
-};
+pub const DirEntry = extern struct {};

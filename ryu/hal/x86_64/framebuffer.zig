@@ -2,7 +2,6 @@ const limine = @import("limine");
 const std = @import("std");
 const HAL = @import("../HAL.zig");
 
-export var con_request: limine.TerminalRequest = .{};
 export var fb_request: limine.FramebufferRequest = .{};
 
 fn setPixels(self: *const HAL.Console.FBInfo, x: isize, y: isize, w: usize, h: usize, c: usize) callconv(.C) void {
@@ -28,9 +27,6 @@ fn setPixels(self: *const HAL.Console.FBInfo, x: isize, y: isize, w: usize, h: u
 var info = HAL.Console.FBInfo{ .set = &setPixels };
 
 pub fn init() void {
-    if (con_request.response) |response| {
-        response.write(response.terminals()[0], "\x1b[?25l");
-    }
     if (fb_request.response) |response| {
         for (response.framebuffers()) |fb| {
             info.ptr = @ptrCast(*allowzero void, fb.address + 0);

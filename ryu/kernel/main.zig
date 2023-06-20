@@ -39,6 +39,9 @@ pub export fn RyuInit() noreturn {
 }
 
 pub inline fn LoadModule(name: []const u8, data: []u8) void {
-    if (std.mem.eql(name, "Ramdisk")) {}
-    Drivers.LoadDriver(name, @ptrCast(*void, data.ptr));
+    if (std.mem.eql(u8, name, "Ramdisk")) {
+        //
+    } else {
+        Drivers.LoadDriver(name, @ptrCast(*void, data.ptr));
+    }
 }

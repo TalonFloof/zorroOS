@@ -8,24 +8,21 @@ build: limine-zig
 	cd drivers/ps2; \
 	zig build -Doptimize=ReleaseSmall; \
 	cd ../..
-	cd drivers/ramdks; \
-	zig build -Doptimize=ReleaseSmall; \
-	cd ../..
 
 limine-zig:
 	git clone https://github.com/limine-bootloader/limine-zig.git --depth=1
 	rm -f -r limine-zig/.git
 
 iso: build
-	git clone --branch v4.x-branch-binary --depth 1 https://github.com/limine-bootloader/limine /tmp/limine
+	git clone --branch v5.x-branch-binary --depth 1 https://github.com/limine-bootloader/limine /tmp/limine
 	mkdir -p /tmp/zorro_iso/EFI/BOOT
 	mkdir /tmp/zorro_iso/Drivers/
-	cp --force /tmp/limine/BOOTX64.EFI /tmp/limine/limine-cd-efi.bin /tmp/limine/limine-cd.bin /tmp/limine/limine.sys boot/x86_64/* ryu/Ryu /tmp/zorro_iso
+	cp --force /tmp/limine/BOOTX64.EFI /tmp/limine/limine-uefi-cd.bin /tmp/limine/limine-bios-cd.bin /tmp/limine/limine-bios.sys boot/x86_64/* ryu/Ryu /tmp/zorro_iso
 	cp --force drivers/out/* /tmp/zorro_iso/Drivers
 	mv /tmp/zorro_iso/BOOTX64.EFI /tmp/zorro_iso/EFI/BOOT/BOOTX64.EFI
-	xorriso -as mkisofs -b limine-cd.bin -no-emul-boot -boot-load-size 4 -boot-info-table --efi-boot limine-cd-efi.bin -efi-boot-part --efi-boot-image --protective-msdos-label /tmp/zorro_iso -o zorroOS.iso
-	zig cc /tmp/limine/limine-deploy.c -o /tmp/limine/limine-deploy
-	/tmp/limine/limine-deploy zorroOS.iso
+	xorriso -as mkisofs -b limine-bios-cd.bin -no-emul-boot -boot-load-size 4 -boot-info-table --efi-boot limine-uefi-cd.bin -efi-boot-part --efi-boot-image --protective-msdos-label /tmp/zorro_iso -o zorroOS.iso
+	zig cc /tmp/limine/limine.c -o /tmp/limine/limine
+	/tmp/limine/limine bios-install zorroOS.iso
 	rm -r --force /tmp/limine
 	rm -r --force /tmp/zorro_iso
 .PHONY: build iso
