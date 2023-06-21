@@ -18,11 +18,11 @@ pub const Metadata = extern struct {
 };
 
 pub const Inode = extern struct {
+    name: [256]u8,
     stat: Metadata = Metadata{ .ID = 0 },
     private: *allowzero void = @intToPtr(*allowzero void, 0),
     parent: ?*Inode = null,
-    children: ?*Inode = null,
-    nextSibling: ?*Inode = null,
+    children: ?*DirEntry = null,
     mountOwner: ?*Inode = null,
     mountPoint: ?*Inode = null,
 
@@ -39,4 +39,7 @@ pub const Inode = extern struct {
     unmap: ?*const fn (*Inode, *allowzero void, usize) callconv(.C) isize = null,
 };
 
-pub const DirEntry = extern struct {};
+pub const DirEntry = extern struct {
+    inode: *Inode,
+    name: []u8,
+};
