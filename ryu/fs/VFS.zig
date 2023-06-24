@@ -35,7 +35,6 @@ pub fn NewDirInode(name: []const u8) *Inode {
     inode.stat.nlinks = 1;
     inode.stat.mode = 0o0040755;
     AddInodeToParent(inode);
-    fileLock.release();
     return inode;
 }
 
