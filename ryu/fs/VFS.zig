@@ -38,6 +38,73 @@ pub fn NewDirInode(name: []const u8) *Inode {
     return inode;
 }
 
+pub fn ReadDir(i: *Inode, off: usize) ?*Inode {
+    fileLock.acquire();
+    if (!i.hasReadEntries) {
+        if (i.readdir) |readdir| {
+            if (i.parent == null) {
+                readdir(i, false);
+            } else {
+                readdir(i, true);
+            }
+            i.hasReadEntries = true;
+        }
+    }
+    var ind: usize = 0;
+    var ent: ?*Inode = i.children;
+    while (ind < off) : (ind += 1) {
+        if (ent == null) {
+            fileLock.release();
+            return null;
+        }
+        ent = ent.?.nextSibling;
+    }
+    fileLock.release();
+    return ent;
+}
+
+pub fn FindDir(i: *Inode, name: []const u8) ?*Inode {
+    if (!i.hasReadEntries) {
+        if (i.readdir) |readdir| {
+            if (i.parent == null) {
+                readdir(i, false);
+            } else {
+                readdir(i, true);
+            }
+            i.hasReadEntries = true;
+        }
+    }
+    var ent: ?*Inode = i.children;
+    while (ent) |e| {
+        const str: [*c]const u8 = @ptrCast([*c]const u8, &e.name);
+        if (std.mem.eql(u8, name, str[0..std.mem.len(str)])) {
+            break;
+        }
+        ent = e.nextSibling;
+    }
+    return ent;
+}
+
+pub fn GetInode(path: []const u8, base: *Inode) ?*Inode {
+    fileLock.acquire();
+    var curNode: ?*Inode = base;
+    var iter = std.mem.split(u8, path[path.len], "/");
+    while (iter.next()) |name| {
+        if (std.mem.eql(u8, name, "..")) {
+            curNode = curNode.?.parent;
+        } else if (name.len == 0 or std.mem.eql(u8, name, ".")) {
+            continue;
+        } else {
+            curNode = FindDir(curNode.?, name);
+        }
+        if (curNode == null) {
+            break;
+        }
+    }
+    fileLock.release();
+    return curNode;
+}
+
 pub fn Init() void {
     rootInode = @ptrCast(*Inode, @alignCast(@alignOf(*Inode), Memory.Pool.PagedPool.Alloc(@sizeOf(Inode)).?.ptr));
     rootInode.?.stat.ID = 1;
