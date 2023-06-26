@@ -41,6 +41,7 @@ pub const Inode = extern struct {
     read: ?*const fn (*Inode, isize, *void, isize) callconv(.C) isize = null,
     readdir: ?*const fn (*Inode, bool) callconv(.C) isize = null, // is called when we need to refresh the list of children
     write: ?*const fn (*Inode, isize, *void, isize) callconv(.C) isize = null,
+    trunc: ?*const fn (*Inode, isize) callconv(.C) isize = null,
     unlink: ?*const fn (*Inode) callconv(.C) isize = null,
     ioctl: ?*const fn (*Inode, usize, *allowzero void) callconv(.C) isize = null,
     create: ?*const fn (*Inode, [*c]const u8, usize) callconv(.C) isize = null,

@@ -6,9 +6,9 @@ const Spinlock = @import("root").Spinlock;
 const HAL = @import("root").HAL;
 const std = @import("std");
 pub const DevFS = @import("DevFS.zig");
+pub const CpioFS = @import("CpioFS.zig");
 
 pub var rootInode: ?*Inode = null;
-var nextID: i64 = 2;
 pub var fileLock: Spinlock = .unaquired;
 
 const FSType = struct {
@@ -41,7 +41,7 @@ pub fn NewDirInode(name: []const u8) *Inode {
     @memcpy(@intToPtr([*]u8, @ptrToInt(&inode.name)), name);
     inode.parent = rootInode;
     inode.children = null;
-    inode.stat.ID = 1;
+    inode.stat.ID = 2;
     inode.stat.uid = 1;
     inode.stat.gid = 1;
     inode.stat.nlinks = 1;

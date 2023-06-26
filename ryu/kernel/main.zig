@@ -19,6 +19,8 @@ pub fn panic(msg: []const u8, stacktrace: ?*std.builtin.StackTrace, wat: ?usize)
     HAL.Crash.Crash(.RyuZigPanic, .{ 0, 0, 0, 0 });
 }
 
+var ramdksImage: ?[]u8 = null;
+
 pub export fn RyuInit() noreturn {
     HAL.Splash.UpdateStatus("Setting up UNIX Filesystems...");
     FS.Init();
@@ -35,6 +37,16 @@ pub export fn RyuInit() noreturn {
     } else {
         if (std.mem.eql(u8, KernelSettings.rootFS.?, "ramdks")) {
             HAL.Console.Put("Bootloader has requested a RamDisk boot\n", .{});
+            if (ramdksImage) |dks| {
+                FS.CpioFS.Init(dks);
+            } else {
+                HAL.Console.EnableDisable(true);
+                HAL.Console.Put("No RamDisk was given by the bootloader even though we're suppost to mount one as root?!\n\nSystem Halted ", .{});
+                _ = HAL.Arch.IRQEnableDisable(false);
+                while (true) {
+                    HAL.Arch.WaitForIRQ();
+                }
+            }
         }
     }
     HAL.Splash.UpdateStatus("Kernel Setup Complete");
@@ -44,7 +56,7 @@ pub export fn RyuInit() noreturn {
 
 pub inline fn LoadModule(name: []const u8, data: []u8) void {
     if (std.mem.eql(u8, name, "Ramdisk")) {
-        //
+        ramdksImage = data;
     } else {
         Drivers.LoadDriver(name, @ptrCast(*void, data.ptr));
     }

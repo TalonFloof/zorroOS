@@ -24,9 +24,9 @@ pub fn RegisterDevice(name: []const u8, inode: *FS.Inode) void {
 //////// Basic UNIX Devices ////////
 
 pub fn ReadZero(inode: *FS.Inode, offset: isize, bufBegin: *void, bufSize: isize) callconv(.C) isize {
-    _ = bufBegin;
     _ = offset;
     _ = inode;
+    @memset(@ptrCast([*]u8, @alignCast(@alignOf([*]u8), bufBegin))[0..@intCast(usize, bufSize)], 0);
     return bufSize;
 }
 
