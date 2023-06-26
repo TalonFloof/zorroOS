@@ -1,15 +1,27 @@
 const Memory = @import("root").Memory;
 pub const Inode = @import("devlib").fs.Inode;
-pub const DirEntry = @import("devlib").DirEntry;
-pub const Metadata = @import("devlib").Metadata;
+pub const Metadata = @import("devlib").fs.Metadata;
+pub const Filesystem = @import("devlib").fs.Filesystem;
 const Spinlock = @import("root").Spinlock;
 const HAL = @import("root").HAL;
 const std = @import("std");
-const DevFS = @import("DevFS.zig");
+pub const DevFS = @import("DevFS.zig");
 
-var rootInode: ?*Inode = null;
+pub var rootInode: ?*Inode = null;
 var nextID: i64 = 2;
-var fileLock: Spinlock = .unaquired;
+pub var fileLock: Spinlock = .unaquired;
+
+const FSType = struct {
+    prev: ?*FSType,
+    next: ?*FSType,
+    name: []const u8,
+    mount: *const fn (*Filesystem) callconv(.C) bool,
+    umount: *const fn (*Filesystem) callconv(.C) void,
+};
+
+var fsHead: ?*FSType = null;
+var fsTail: ?*FSType = null;
+var fsLock: Spinlock = .unaquired;
 
 pub fn AddInodeToParent(i: *Inode) void {
     i.prevSibling = null;
@@ -35,6 +47,7 @@ pub fn NewDirInode(name: []const u8) *Inode {
     inode.stat.nlinks = 1;
     inode.stat.mode = 0o0040755;
     AddInodeToParent(inode);
+    fileLock.release();
     return inode;
 }
 
@@ -43,9 +56,9 @@ pub fn ReadDir(i: *Inode, off: usize) ?*Inode {
     if (!i.hasReadEntries) {
         if (i.readdir) |readdir| {
             if (i.parent == null) {
-                readdir(i, false);
+                _ = readdir(i, false);
             } else {
-                readdir(i, true);
+                _ = readdir(i, true);
             }
             i.hasReadEntries = true;
         }
@@ -67,9 +80,9 @@ pub fn FindDir(i: *Inode, name: []const u8) ?*Inode {
     if (!i.hasReadEntries) {
         if (i.readdir) |readdir| {
             if (i.parent == null) {
-                readdir(i, false);
+                _ = readdir(i, false);
             } else {
-                readdir(i, true);
+                _ = readdir(i, true);
             }
             i.hasReadEntries = true;
         }
@@ -88,7 +101,7 @@ pub fn FindDir(i: *Inode, name: []const u8) ?*Inode {
 pub fn GetInode(path: []const u8, base: *Inode) ?*Inode {
     fileLock.acquire();
     var curNode: ?*Inode = base;
-    var iter = std.mem.split(u8, path[path.len], "/");
+    var iter = std.mem.split(u8, path, "/");
     while (iter.next()) |name| {
         if (std.mem.eql(u8, name, "..")) {
             curNode = curNode.?.parent;
@@ -105,6 +118,53 @@ pub fn GetInode(path: []const u8, base: *Inode) ?*Inode {
     return curNode;
 }
 
+pub fn Mount(inode: *Inode, dev: ?*Inode, fs: []const u8) bool {
+    fsLock.acquire();
+    // Find Filesystem
+    var index = fsHead;
+    while (index) |i| {
+        if (std.mem.eql(u8, fs, i.name)) {
+            break;
+        }
+        index = i.next;
+    }
+    if (index == null) {
+        fsLock.release();
+        return false;
+    }
+    var newFS: *Filesystem = @ptrCast(*Filesystem, @alignCast(@alignOf(*Filesystem), Memory.Pool.PagedPool.Alloc(@sizeOf(Filesystem)).?.ptr));
+    newFS.dev = dev;
+    newFS.root = inode;
+    newFS.mount = index.?.mount;
+    newFS.umount = index.?.umount;
+    fsLock.release();
+    var result = newFS.mount(newFS);
+    if (!result) {
+        Memory.Pool.PagedPool.Free(@intToPtr([*]u8, @ptrToInt(newFS))[0..@sizeOf(Filesystem)]);
+    } else {
+        HAL.Console.Put("Successfully mounted filesystem {s} to inode named \"{s}\"\n", .{ fs, newFS.root.name[0..std.mem.len(@ptrCast([*c]const u8, &newFS.root.name))] });
+    }
+    return result;
+}
+
+pub fn RegisterFilesystem(name: []const u8, mount: *const fn (*Filesystem) callconv(.C) bool, umount: *const fn (*Filesystem) callconv(.C) void) void {
+    fsLock.acquire();
+    var newFSType: *FSType = @ptrCast(*FSType, @alignCast(@alignOf(*FSType), Memory.Pool.PagedPool.Alloc(@sizeOf(FSType)).?.ptr));
+    newFSType.name = name;
+    newFSType.mount = mount;
+    newFSType.umount = umount;
+    newFSType.next = null;
+    newFSType.prev = fsTail;
+    if (fsTail) |tail| {
+        tail.next = newFSType;
+    }
+    fsTail = newFSType;
+    if (fsHead == null) {
+        fsHead = newFSType;
+    }
+    fsLock.release();
+}
+
 pub fn Init() void {
     rootInode = @ptrCast(*Inode, @alignCast(@alignOf(*Inode), Memory.Pool.PagedPool.Alloc(@sizeOf(Inode)).?.ptr));
     rootInode.?.stat.ID = 1;
@@ -115,6 +175,6 @@ pub fn Init() void {
     rootInode.?.children = null;
     rootInode.?.nextSibling = null;
     rootInode.?.prevSibling = null;
-    var devInode = NewDirInode("dev");
-    _ = devInode;
+    _ = NewDirInode("dev");
+    DevFS.Init();
 }

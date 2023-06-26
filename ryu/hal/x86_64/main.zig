@@ -45,6 +45,7 @@ extern fn ContextSetupFPU() callconv(.C) void;
 
 pub fn PreformStartup(stackTop: usize) void {
     asm volatile ("cli");
+    wrmsr(0x277, 0x0107040600070406); // Enable write combining when PAT, PCD, and PWT is set
     ContextSetupFPU();
     hart.initialize(stackTop);
     gdt.initialize();
@@ -83,6 +84,7 @@ pub fn PreformStartup(stackTop: usize) void {
 
 pub export fn HartStart(stack: u64) callconv(.C) noreturn {
     wrmsr(0xC0000102, hart.hartData);
+    wrmsr(0x277, 0x0107040600070406); // Enable write combining when PAT, PCD, and PWT is set
     GetHCB().archData.tss.rsp[0] = stack;
     GetHCB().archData.tss.ist[0] = stack;
     GetHCB().archData.tss.ist[1] = stack;

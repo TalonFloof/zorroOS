@@ -32,6 +32,10 @@ pub export fn RyuInit() noreturn {
     HAL.Splash.UpdateStatus("Mounting Root Filesystem...");
     if (KernelSettings.rootFS == null) {
         HAL.Crash.Crash(.RyuNoRootFilesystem, .{ 0, 0, 0, 0 });
+    } else {
+        if (std.mem.eql(u8, KernelSettings.rootFS.?, "ramdks")) {
+            HAL.Console.Put("Bootloader has requested a RamDisk boot\n", .{});
+        }
     }
     HAL.Splash.UpdateStatus("Kernel Setup Complete");
     Executive.Thread.startScheduler = true;

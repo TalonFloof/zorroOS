@@ -144,13 +144,6 @@ const ELFRela = extern struct {
     addend: i64 align(1),
 };
 
-//#define R_X86_64_64 1
-//#define R_X86_64_32 10
-//#define R_X86_64_32S 11
-//#define R_X86_64_PC32 2
-//#define R_X86_64_PLT32 4
-//#define R_X86_64_RELATIVE 8
-
 const ELFRelocType = enum(u32) {
     X86_64_64 = 1,
     X86_64_32 = 10,
@@ -175,7 +168,6 @@ const ELFLoadError = error{
 const ELFLoadType = enum {
     Normal,
     Driver,
-    Library,
 };
 
 pub fn LoadELF(ptr: *void, loadType: ELFLoadType) ELFLoadError!?usize {
@@ -188,12 +180,10 @@ pub fn LoadELF(ptr: *void, loadType: ELFLoadType) ELFLoadError!?usize {
     }
     if (header.objType != .Relocatable and loadType == .Driver) {
         return ELFLoadError.NotRelocatable;
-    } else if (header.objType != .Shared and loadType == .Library) {
-        return ELFLoadError.NotDynamic;
     } else if (header.objType != .Executable and loadType == .Normal) {
         return ELFLoadError.NotExecutable;
     }
-    if (loadType == .Driver) {
+    if (loadType == .Normal) {} else if (loadType == .Driver) {
         var i: usize = 0;
         while (i < header.shtEntryCount) : (i += 1) {
             var entry: *ELFSectionHeader = @intToPtr(*ELFSectionHeader, @ptrToInt(ptr) + header.shtPos + (i * @intCast(usize, header.shtEntrySize)));
