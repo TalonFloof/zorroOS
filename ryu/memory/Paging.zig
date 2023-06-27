@@ -89,7 +89,7 @@ pub fn MapPage(root: PageDirectory, vaddr: usize, flags: usize, paddr: usize) us
                 var page = Memory.PFN.AllocatePage(.PageTable, vaddr < 0x800000000000, @ptrToInt(entries) + (index * @sizeOf(usize))).?;
                 entry.r = 1;
                 entry.w = 1;
-                entry.x = 0;
+                entry.x = 1;
                 entry.userSupervisor = pte.userSupervisor;
                 entry.nonCached = 0;
                 entry.writeThrough = 0;
