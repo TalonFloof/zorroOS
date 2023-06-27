@@ -86,8 +86,6 @@ pub export fn HartStart(stack: u64) callconv(.C) noreturn {
     wrmsr(0xC0000102, hart.hartData);
     wrmsr(0x277, 0x0107040600070406); // Enable write combining when PAT, PCD, and PWT is set
     GetHCB().archData.tss.rsp[0] = stack;
-    GetHCB().archData.tss.ist[0] = stack;
-    GetHCB().archData.tss.ist[1] = stack;
     gdt.initialize();
     apic.setup();
     idt.fastInit();
@@ -174,6 +172,7 @@ pub const Context = packed struct {
     rcx: u64 = 0,
     rbx: u64 = 0,
     rax: u64 = 0,
+    errcode: u64 = 0,
     rip: u64 = 0,
     cs: u64 = 0,
     rflags: u64 = 0x202,
@@ -284,6 +283,7 @@ pub fn GetPTE(root: *void, index: usize) HAL.PTEEntry {
     } else {
         entry.x = 1;
     }
+    entry.userSupervisor = ~entries[index].user;
     entry.nonCached = entries[index].cacheDisable;
     entry.writeThrough = entries[index].writeThrough;
     entry.writeCombine = entries[index].pat;
@@ -298,6 +298,7 @@ pub fn SetPTE(root: *void, index: usize, entry: HAL.PTEEntry) void {
     if (!noNX) {
         entries[index].noExecute = ~entry.x;
     }
+    entries[index].user = ~entry.userSupervisor;
     entries[index].cacheDisable = entry.nonCached | entry.writeCombine;
     entries[index].writeThrough = entry.writeThrough | entry.writeCombine;
     entries[index].pat = entry.writeCombine;
@@ -312,6 +313,13 @@ pub inline fn SwitchPT(root: *void) void {
     asm volatile ("mov %rax, %%cr3"
         :
         : [pt] "{rax}" (@ptrToInt(root)),
+    );
+}
+
+pub inline fn InvalidatePage(page: usize) void {
+    asm volatile ("invlpg (%rax)"
+        :
+        : [pg] "{rax}" (page),
     );
 }
 

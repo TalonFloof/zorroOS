@@ -125,6 +125,19 @@ pub fn DereferencePage(page: usize) void {
     _ = HAL.Arch.IRQEnableDisable(old);
 }
 
+pub fn ForceFreePage(page: usize) void {
+    const index: usize = (page >> 12);
+    const old = HAL.Arch.IRQEnableDisable(false);
+    pfnSpinlock.acquire();
+    pfnDatabase[index].state = .Free;
+    pfnDatabase[index].next = pfnFreeHead;
+    pfnDatabase[index].swappable = 0;
+    pfnDatabase[index].refs = 0;
+    pfnFreeHead = &pfnDatabase[index];
+    pfnSpinlock.release();
+    _ = HAL.Arch.IRQEnableDisable(old);
+}
+
 pub fn ChangePTEEntry(page: usize, pte: usize) void {
     const index: usize = (page >> 12);
     const old = HAL.Arch.IRQEnableDisable(false);

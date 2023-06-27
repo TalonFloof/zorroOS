@@ -46,17 +46,12 @@ extern IRQHandler
 	global int%1
 	int%1:
         cli
-        push qword [rsp+5*8] ; SS
-        push qword [rsp+5*8] ; RSP
-        push qword [rsp+5*8] ; RFLAGS
-        push qword [rsp+5*8] ; CS
-        push qword [rsp+5*8] ; RIP
         pushaq
         mov rdi, %1
         mov rsi, rsp
-        mov rdx, qword [rsp+20*8]
         call ExceptionHandler
         popaq
+        add rsp, 8
         iretq
 %endmacro
 
@@ -64,12 +59,13 @@ extern IRQHandler
 	global int%1
 	int%1:
 		cli
+        o64 push 0
         pushaq
         mov rdi, %1
         mov rsi, rsp
-        xor rdx, rdx
         call ExceptionHandler
         popaq
+        add rsp, 8
         iretq
 %endmacro
 
@@ -77,11 +73,13 @@ extern IRQHandler
 	global int%1
 	int%1:
         cli
+        o64 push 0
         pushaq
         mov rdi, %1
         mov rsi, rsp
         call IRQHandler
         popaq
+        add rsp, 8
         iretq
 %endmacro
 
@@ -145,11 +143,12 @@ _RyuSyscallHandler:
     mov [gs:8], rsp
     mov rsp, [gs:0]
     
-    push qword 0x1b
+    push qword 0x3b
     push qword [gs:0x8]
     push r11
-    push qword 0x18
+    push qword 0x43
     push rcx
+    push qword 0
     swapgs
     cld
     pushaq
@@ -170,6 +169,7 @@ global ContextEnter
 ContextEnter:
     mov rsp, rdi
     popaq
+    add rsp, 8
     iretq
     ud2
     ud2

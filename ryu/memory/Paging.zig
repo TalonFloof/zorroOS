@@ -70,12 +70,14 @@ pub fn MapPage(root: PageDirectory, vaddr: usize, flags: usize, paddr: usize) us
         if (i + 1 >= HAL.Arch.GetPTELevels()) {
             if (pte.r == 0) {
                 HAL.Arch.SetPTE(entries, index, HAL.PTEEntry{});
+                HAL.Arch.InvalidatePage(vaddr);
                 if (entry.r != 0) {
                     Memory.PFN.DereferencePage(@ptrToInt(entries) - 0xffff800000000000);
                 }
                 return @ptrToInt(entries) + (index * @sizeOf(Memory.PFN.PFNEntry));
             } else {
                 HAL.Arch.SetPTE(entries, index, pte);
+                HAL.Arch.InvalidatePage(vaddr);
                 if (entry.r == 0) {
                     Memory.PFN.ReferencePage(@ptrToInt(entries) - 0xffff800000000000);
                 }
@@ -155,5 +157,8 @@ pub fn PageFault(pc: usize, addr: usize, accessType: usize) void {
         } else {
             HAL.Crash.Crash(.RyuUnhandledPageFault, .{ addr, accessType, 0, pc });
         }
+    } else {
+        HAL.Console.Put("Userspace Page Fault!! (pc: 0x{x}, addr 0x{x}, accessType: 0x{x})\n", .{ pc, addr, accessType });
+        HAL.Crash.Crash(.RyuUnhandledPageFault, .{ addr, accessType, 0, pc });
     }
 }

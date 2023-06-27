@@ -74,7 +74,7 @@ pub fn LoadELFImage(path: []const u8, team: *Team) ?usize {
                 team.addressSpace,
                 i,
                 Memory.Paging.MapRead | Memory.Paging.MapWrite,
-                @ptrToInt(page.ptr),
+                @ptrToInt(page.ptr) - 0xffff800000000000,
             );
         }
         _ = HAL.Arch.IRQEnableDisable(old);

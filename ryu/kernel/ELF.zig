@@ -207,20 +207,11 @@ pub fn LoadELF(ptr: *void, loadType: ELFLoadType, pd: ?Memory.Paging.PageDirecto
                     _ = Memory.Paging.MapPage(
                         pd.?,
                         addr,
-                        Memory.Paging.MapRead | Memory.Paging.MapWrite | Memory.Paging.MapExec,
-                        @ptrToInt(page.ptr),
+                        Memory.Paging.MapRead | (entry.flags & 2) | ((entry.flags & 1) << 2),
+                        @ptrToInt(page.ptr) - 0xffff800000000000,
                     );
                     @memcpy(@intToPtr([*]u8, @ptrToInt(page.ptr))[0..4096], @intToPtr([*]u8, @ptrToInt(ptr) + @intCast(usize, entry.offset))[off..(off + 4096)]);
                     off += 4096;
-                }
-                addr = @intCast(usize, entry.vaddr);
-                while (addr < @intCast(usize, entry.vaddr) + trueSize) : (addr += 4096) {
-                    _ = Memory.Paging.MapPage(
-                        pd.?,
-                        addr,
-                        Memory.Paging.MapRead | (entry.flags & 2) | ((entry.flags & 1) << 2),
-                        @intCast(usize, Memory.Paging.GetPage(pd.?, addr).phys) << 12,
-                    );
                 }
             }
         }

@@ -127,6 +127,7 @@ pub const Pool = struct {
                 self.usedBlocks += ((index.?.usedEntries) - oldEntryCount);
                 self.lock.release();
                 _ = HAL.Arch.IRQEnableDisable(old);
+                @memset(ret.?, 0);
                 return ret;
             }
         }

@@ -76,6 +76,7 @@ pub fn NewThread(
     const old = HAL.Arch.IRQEnableDisable(false);
     threadLock.acquire();
     var thread = @ptrCast(*ThreadTreeType.Node, @alignCast(@alignOf(ThreadTreeType.Node), Memory.Pool.PagedPool.Alloc(@sizeOf(ThreadTreeType.Node)).?.ptr));
+    @memset(@intToPtr([*]u8, @ptrToInt(&thread.value.name))[0..32], 0);
     @memcpy(@intToPtr([*]u8, @ptrToInt(&thread.value.name)), name);
     thread.value.team = team;
     thread.value.hartID = -1;
@@ -92,6 +93,7 @@ pub fn NewThread(
         thread.value.context.SetMode(false);
         thread.value.context.SetReg(129, sp.?);
     }
+    @memset(@intToPtr([*]u8, @ptrToInt(&thread.value.fcontext.data))[0..512], 0);
     thread.value.context.SetReg(128, ip);
     threads.insert(thread);
     queueLock.acquire();

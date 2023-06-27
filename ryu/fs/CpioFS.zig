@@ -174,6 +174,6 @@ pub fn Init(image: []u8) void {
     }
     i = 0;
     while (i < image.len) : (i += 4096) {
-        Memory.PFN.DereferencePage((@ptrToInt(image.ptr) - 0xffff800000000000) + i);
+        Memory.PFN.ForceFreePage((@ptrToInt(image.ptr) - 0xffff800000000000) + i);
     }
 }

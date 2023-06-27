@@ -1,4 +1,5 @@
 const std = @import("std");
+const HAL = @import("root").HAL;
 
 var gdtEntries = [16]u64{
     0x0000000000000000, // 0x00: NULL
@@ -24,7 +25,7 @@ const GDTRegister = packed struct {
     base: *const u64,
 };
 
-pub const TSS = struct {
+pub const TSS = extern struct {
     reserved1: u32 align(1) = 0,
     rsp: [3]u64 align(1) = [_]u64{0} ** 3,
     reserved2: u64 align(1) = 0,
@@ -39,8 +40,9 @@ pub fn initialize() void {
         .limit = (16 * 8) - 1,
         .base = @ptrCast(*const u64, &gdtEntries),
     };
-    gdtEntries[9] = 0x0000E90000000067 | ((0 & 0xFFFFFF) << 16) | (((0 & 0xFF000000) >> 24) << 56);
-    gdtEntries[10] = 0 >> 32;
+    var tss: usize = @ptrToInt(&HAL.Arch.GetHCB().archData.tss);
+    gdtEntries[9] = 0x0000E90000000067 | ((tss & 0xFFFFFF) << 16) | (((tss & 0xFF000000) >> 24) << 56);
+    gdtEntries[10] = tss >> 32;
     asm volatile (
         \\lgdt (%rdi)
         \\mov $0x30, %ax
