@@ -100,7 +100,7 @@ pub export fn HartStart(stack: u64) callconv(.C) noreturn {
     while (!kernel.Executive.Thread.startScheduler) {
         std.atomic.spinLoopHint();
     }
-    kernel.Executive.Thread.Reschedule();
+    kernel.Executive.Thread.Reschedule(false);
 }
 
 pub fn IRQEnableDisable(en: bool) callconv(.C) bool {

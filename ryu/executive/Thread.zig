@@ -10,7 +10,8 @@ pub const ThreadState = enum {
     Debugging,
     Runnable,
     Running,
-    Waiting,
+    Eeping, // :3
+    Waiting, // When awoken, a threads priority will increase
 };
 
 pub const Thread = struct {
@@ -19,10 +20,12 @@ pub const Thread = struct {
     nextThread: ?*Thread = null,
     prevTeamThread: ?*Thread = null,
     nextTeamThread: ?*Thread = null,
+    nextEventThread: ?*Thread = null,
     team: *Team.Team,
     name: [32]u8 = [_]u8{0} ** 32,
     state: ThreadState = .Stopped,
     shouldKill: bool = false,
+    priority: usize = 8,
     context: HAL.Arch.Context = HAL.Arch.Context{},
     fcontext: HAL.Arch.FloatContext = HAL.Arch.FloatContext{},
     kstack: []u8,
@@ -37,42 +40,49 @@ pub var nextThreadID: i64 = 1;
 
 pub var startScheduler: bool = false;
 
-var queueLock: Spinlock = .unaquired;
-var queueHead: ?*Thread = null;
-var queueTail: ?*Thread = null;
+pub const Queue = struct {
+    lock: Spinlock = .unaquired,
+    head: ?*Thread = null,
+    tail: ?*Thread = null,
 
-fn AddToQueue(t: *Thread) void {
-    t.nextThread = null;
-    t.prevThread = queueTail;
-    if (queueTail != null) { // hehehe tail owo~
-        queueTail.?.nextThread = t;
+    pub fn Add(self: *Queue, t: *Thread) void {
+        t.nextThread = null;
+        t.prevThread = self.tail;
+        if (self.tail != null) { // hehehe tail owo~
+            self.tail.?.nextThread = t;
+        }
+        self.tail = t;
+        if (self.head == null) {
+            self.head = t;
+        }
     }
-    queueTail = t;
-    if (queueHead == null) {
-        queueHead = t;
-    }
-}
 
-fn RemoveFromQueue(t: *Thread) void {
-    if (t.nextThread) |nxt| {
-        nxt.prevThread = t.prevThread;
+    pub fn Remove(self: *Queue, t: *Thread) void {
+        if (t.nextThread) |nxt| {
+            nxt.prevThread = t.prevThread;
+        }
+        if (t.prevThread) |prev| {
+            prev.nextThread = t.nextThread;
+        }
+        if (@ptrToInt(self.head) == @ptrToInt(t)) {
+            self.head = t.nextThread;
+        }
+        if (@ptrToInt(self.tail) == @ptrToInt(t)) {
+            self.tail = t.prevThread;
+        }
+        t.nextThread = null;
+        t.prevThread = null;
     }
-    if (t.prevThread) |prev| {
-        prev.nextThread = t.nextThread;
-    }
-    if (@ptrToInt(queueHead) == @ptrToInt(t)) {
-        queueHead = t.nextThread;
-    }
-    if (@ptrToInt(queueTail) == @ptrToInt(t)) {
-        queueTail = t.prevThread;
-    }
-}
+};
+
+var queues: [16]Queue = [_]Queue{Queue{}} ** 16;
 
 pub fn NewThread(
     team: *Team.Team,
     name: []u8,
     ip: usize,
     sp: ?usize,
+    prior: usize,
 ) *Thread { // If SP is null then this is a kernel thread
     const old = HAL.Arch.IRQEnableDisable(false);
     threadLock.acquire();
@@ -85,6 +95,7 @@ pub fn NewThread(
     thread.key = nextThreadID;
     nextThreadID += 1;
     thread.value.state = .Runnable;
+    thread.value.priority = prior;
     var stack = Memory.Pool.PagedPool.AllocAnonPages(16384).?;
     thread.value.kstack = stack;
     if (sp == null) {
@@ -97,9 +108,9 @@ pub fn NewThread(
     @memset(@intToPtr([*]u8, @ptrToInt(&thread.value.fcontext.data))[0..512], 0);
     thread.value.context.SetReg(128, ip);
     threads.insert(thread);
-    queueLock.acquire();
-    AddToQueue(&thread.value);
-    queueLock.release();
+    queues[prior].lock.acquire();
+    queues[prior].Add(&thread.value);
+    queues[prior].lock.release();
     threadLock.release();
     _ = HAL.Arch.IRQEnableDisable(old);
     return &thread.value;
@@ -117,34 +128,44 @@ pub fn Init() void {
         const name = std.fmt.bufPrint(buf[0..32], "Hart #{} Idle Thread", .{i}) catch {
             @panic("Unable to parse string!");
         };
-        var thread = NewThread(kteam, name, @ptrToInt(&IdleThread), null);
+        var thread = NewThread(kteam, name, @ptrToInt(&IdleThread), null, 0);
         thread.hartID = i;
     }
 }
 
 pub fn GetNextThread() *Thread {
-    const hcb = HAL.Arch.GetHCB();
-    _ = hcb;
-    queueLock.acquire();
-    var t = queueHead.?;
-    RemoveFromQueue(t);
-    queueLock.release();
-    return t;
+    var i: usize = 15;
+    while (true) : (i -= 1) {
+        if (queues[i].head != null) {
+            queues[i].lock.acquire();
+            if (queues[i].head != null) {
+                var t = queues[i].head.?;
+                queues[i].Remove(t);
+                queues[i].lock.release();
+                return t;
+            } else {
+                queues[i].lock.release();
+                continue;
+            }
+        }
+        if (i == 0) {
+            @panic("No Available Threads in any of the Run Queues!");
+        }
+    }
 }
 
-pub fn Reschedule() noreturn {
+pub fn Reschedule(demote: bool) noreturn {
     const hcb = HAL.Arch.GetHCB();
-    if (hcb.activeThread == null) {
-        if (queueHead == null) {
-            @panic("Attempted to preform preemptive scheduling with no threads in the queue!");
-        }
-        hcb.activeThread = queueHead;
-    } else {
+    if (hcb.activeThread != null) {
         HAL.Arch.SwitchPT(@intToPtr(*void, @ptrToInt(Memory.Paging.initialPageDir.?.ptr) - 0xffff800000000000));
         hcb.activeThread.?.state = .Runnable;
-        queueLock.acquire();
-        AddToQueue(hcb.activeThread.?);
-        queueLock.release();
+        if (demote) {
+            if (hcb.activeThread.?.priority > 1)
+                hcb.activeThread.?.priority -= 1;
+        }
+        queues[hcb.activeThread.?.priority].lock.acquire();
+        queues[hcb.activeThread.?.priority].Add(hcb.activeThread.?);
+        queues[hcb.activeThread.?.priority].lock.release();
     }
     var thr: *Thread = GetNextThread();
     while (true) {
@@ -154,9 +175,9 @@ pub fn Reschedule() noreturn {
             thr.state = .Running;
             break;
         } else {
-            queueLock.acquire();
-            AddToQueue(thr);
-            queueLock.release();
+            queues[thr.priority].lock.acquire();
+            queues[thr.priority].Add(thr);
+            queues[thr.priority].lock.release();
         }
         thr = GetNextThread();
     }

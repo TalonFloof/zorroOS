@@ -49,7 +49,7 @@ pub export fn IRQHandler(entry: u8, con: *HAL.Arch.Context) callconv(.C) void {
         const hcb = HAL.Arch.GetHCB();
         hcb.activeThread.?.context = con.*;
         hcb.activeThread.?.fcontext.Save();
-        Thread.Reschedule();
+        Thread.Reschedule(entry == 0x20);
         unreachable;
     } else if (HAL.Arch.irqISRs[entry - 0x20]) |isr| {
         isr();

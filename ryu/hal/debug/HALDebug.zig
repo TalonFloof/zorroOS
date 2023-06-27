@@ -48,7 +48,7 @@ pub fn EnterDebugger() noreturn {
             var ind: i64 = 1;
             while (ind < Thread.nextThreadID) : (ind += 1) {
                 if (Thread.threads.search(ind)) |thread| {
-                    HAL.Console.Put("{}: {x:0>16} {s} {s} IP: {x:0>16} SP: {x:0>16} Team #{}\n", .{
+                    HAL.Console.Put("{}: {x:0>16} {s} {s} IP: {x:0>16} SP: {x:0>16} Team #{} Priority: {}\n", .{
                         ind,
                         @ptrToInt(&(thread.value)),
                         thread.value.name,
@@ -56,6 +56,7 @@ pub fn EnterDebugger() noreturn {
                         thread.value.context.GetReg(128),
                         thread.value.context.GetReg(129),
                         thread.value.team.teamID,
+                        thread.value.priority,
                     });
                 }
             }

@@ -53,10 +53,10 @@ pub export fn RyuInit() noreturn {
     var team = Executive.Team.GetTeamByID(2).?;
     HAL.Splash.UpdateStatus("Load /bin/init...");
     var entry = Executive.Team.LoadELFImage("/bin/init", team).?;
-    _ = Executive.Thread.NewThread(team, @ptrCast([*]u8, @constCast("Main Thread"))[0..11], entry, 0x9ff8);
+    _ = Executive.Thread.NewThread(team, @ptrCast([*]u8, @constCast("Main Thread"))[0..11], entry, 0x9ff8, 8);
     HAL.Splash.UpdateStatus("Kernel Setup Complete");
     Executive.Thread.startScheduler = true;
-    Executive.Thread.Reschedule();
+    Executive.Thread.Reschedule(false);
 }
 
 pub inline fn LoadModule(name: []const u8, data: []u8) void {
