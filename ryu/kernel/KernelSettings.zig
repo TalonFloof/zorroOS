@@ -3,6 +3,7 @@ const std = @import("std");
 pub var isQuiet: bool = false;
 pub var noSMP: bool = false;
 pub var rescueMode: bool = false;
+pub var pride: bool = false;
 var rootConfigBuf: [256]u8 = [_]u8{0} ** 256;
 pub var rootFS: ?[]u8 = null;
 
@@ -15,6 +16,8 @@ pub fn ParseCommandline(s: []const u8) void {
             noSMP = true;
         } else if (std.mem.eql(u8, arg, "-rescue")) {
             rescueMode = true;
+        } else if (std.mem.eql(u8, arg, "-pride")) {
+            pride = true;
         } else if (arg.len >= 6) {
             if (std.mem.eql(u8, arg[0..6], "-root=")) {
                 @memcpy(rootConfigBuf[0..(arg.len - 6)], arg[6..arg.len]);

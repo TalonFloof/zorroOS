@@ -20,6 +20,7 @@ const Memory = @import("root").Memory;
 export var module_request = limine.ModuleRequest{};
 export var kfile_request = limine.KernelFileRequest{};
 export var highhalf_request = limine.HhdmRequest{};
+export var unixtime_request = limine.BootTimeRequest{};
 
 var noNX: bool = false;
 
@@ -43,6 +44,8 @@ pub export fn _hartstart() callconv(.Naked) noreturn {
 extern fn ContextEnter(context: *allowzero void) callconv(.C) noreturn;
 extern fn ContextSetupFPU() callconv(.C) void;
 
+var initialUNIXTime: i64 = 0;
+
 pub fn PreformStartup(stackTop: usize) void {
     asm volatile ("cli");
     wrmsr(0x277, 0x0107040600070406); // Enable write combining when PAT, PCD, and PWT is set
@@ -50,6 +53,9 @@ pub fn PreformStartup(stackTop: usize) void {
     hart.initialize(stackTop);
     gdt.initialize();
     idt.initialize();
+    if (unixtime_request.response) |response| {
+        initialUNIXTime = response.boot_time;
+    }
     var kfstart: usize = 0;
     var kfend: usize = 0;
     if (kfile_request.response) |response| {
@@ -447,4 +453,8 @@ pub fn DebugWaitForSalute() void {
         }
         std.atomic.spinLoopHint();
     }
+}
+
+pub fn GetStartupTimestamp() i64 {
+    return initialUNIXTime;
 }

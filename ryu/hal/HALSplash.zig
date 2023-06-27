@@ -508,19 +508,78 @@ const zorroOSLogo = [_]u8{ // 376x128x1
     0x00, 0x00, 0x00, 0x00,
 };
 
+fn daysInYear(year: i64) i64 {
+    return if ((@rem(year, 4) == 0 and @rem(year, 100) != 0) or @rem(year, 400) == 0) 366 else 365;
+}
+
+fn daysInMonth(month: i64, year: i64) i64 {
+    return switch (month) {
+        0, 2, 4, 6, 7, 9, 11 => 31,
+        3, 5, 8, 10 => 30,
+        1 => if (daysInYear(year) == 366) 29 else 28,
+        else => 0,
+    };
+}
+
 pub fn Init() void {
     if (KernelSettings.isQuiet) {
         HAL.Console.info.set(HAL.Console.info, 0, 0, HAL.Console.info.width, HAL.Console.info.height, 0);
-        HAL.Console.DrawScaledBitmap(
-            @divFloor(@intCast(isize, HAL.Console.info.width), 2) - (371 / 2),
-            @divFloor(@intCast(isize, HAL.Console.info.height), 2) - 64,
-            376,
-            128,
-            376,
-            128,
-            @ptrCast([*]u8, @constCast(&zorroOSLogo))[0..zorroOSLogo.len],
-            0xffffff,
-        );
+        var days: i64 = @divFloor(HAL.Arch.GetStartupTimestamp(), @intCast(i64, std.time.s_per_day));
+        var year: i64 = 1970;
+        while (days >= daysInYear(year)) {
+            days -= daysInYear(year);
+            year += 1;
+        }
+        var month: i64 = 0;
+        while (days >= daysInMonth(month, year)) {
+            days -= daysInMonth(month, year);
+            month += 1;
+        }
+        if (month == 5 or KernelSettings.pride) {
+            const pal = [_]u32{
+                0xff000e,
+                0xfd6614,
+                0xfad220,
+                0x138f3e,
+                0x3558a0,
+                0x880082,
+                0x880082,
+            };
+            var i: isize = 0;
+            HAL.Console.DrawScaledBitmap(
+                @divFloor(@intCast(isize, HAL.Console.info.width), 2) - (371 / 2),
+                @divFloor(@intCast(isize, HAL.Console.info.height), 2) - 64,
+                376,
+                128,
+                376,
+                128,
+                @ptrCast([*]u8, @constCast(&zorroOSLogo))[0..zorroOSLogo.len],
+                0xffffff,
+            );
+            while (i < 128) : (i += 1) {
+                HAL.Console.DrawScaledBitmap(
+                    @divFloor(@intCast(isize, HAL.Console.info.width), 2) - (371 / 2),
+                    (@divFloor(@intCast(isize, HAL.Console.info.height), 2) - 64) + i,
+                    140,
+                    1,
+                    140,
+                    1,
+                    @ptrCast([*]u8, @constCast(&zorroOSLogo))[(47 * @intCast(usize, i))..zorroOSLogo.len],
+                    pal[@intCast(usize, i) / 21],
+                );
+            }
+        } else {
+            HAL.Console.DrawScaledBitmap(
+                @divFloor(@intCast(isize, HAL.Console.info.width), 2) - (371 / 2),
+                @divFloor(@intCast(isize, HAL.Console.info.height), 2) - 64,
+                376,
+                128,
+                376,
+                128,
+                @ptrCast([*]u8, @constCast(&zorroOSLogo))[0..zorroOSLogo.len],
+                0xffffff,
+            );
+        }
         UpdateStatus("Initializing HAL...");
     }
 }

@@ -17,6 +17,7 @@ pub const Thread = struct {
     threadID: i64,
     prevThread: ?*Thread = null,
     nextThread: ?*Thread = null,
+    prevTeamThread: ?*Thread = null,
     nextTeamThread: ?*Thread = null,
     team: *Team.Team,
     name: [32]u8 = [_]u8{0} ** 32,
@@ -102,6 +103,10 @@ pub fn NewThread(
     threadLock.release();
     _ = HAL.Arch.IRQEnableDisable(old);
     return &thread.value;
+}
+
+pub fn KillThread(threadID: usize) void {
+    _ = threadID;
 }
 
 pub fn Init() void {
