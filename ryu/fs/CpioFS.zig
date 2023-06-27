@@ -38,17 +38,22 @@ pub fn Read(inode: *FS.Inode, offset: isize, bufBegin: *void, bufSize: isize) ca
 
 pub fn Write(inode: *FS.Inode, offset: isize, bufBegin: *void, bufSize: isize) callconv(.C) isize {
     if ((inode.stat.mode & 0o0770000) != 0o0040000) {
+        if (bufSize == 0) {
+            return 0;
+        }
         if (inode.stat.size < @intCast(usize, offset + bufSize)) {
             if (@intCast(usize, inode.stat.reserved3) < @intCast(usize, offset + bufSize)) {
                 // Resize
                 const newSize: usize = if (inode.stat.reserved3 == 0) @intCast(usize, offset + bufSize) else if ((@intCast(usize, offset + bufSize) % 4096) != 0) ((@intCast(usize, offset + bufSize) / 4096) * 4096) + 4096 else @intCast(usize, offset + bufSize);
                 var newBuf = if (newSize < 4081) Memory.Pool.PagedPool.Alloc(newSize).? else Memory.Pool.PagedPool.AllocAnonPages(newSize).?;
-                const data: []u8 = @ptrCast([*]u8, @alignCast(1, inode.private))[0..@intCast(usize, inode.stat.size)];
-                @memcpy(newBuf[0..data.len], data);
-                if (data.len < 4081) {
-                    Memory.Pool.PagedPool.Free(data);
-                } else {
-                    Memory.Pool.PagedPool.FreeAnonPages(data);
+                if (@ptrToInt(inode.private) != 0) {
+                    const data: []u8 = @ptrCast([*]u8, @alignCast(1, inode.private))[0..@intCast(usize, inode.stat.size)];
+                    @memcpy(newBuf[0..data.len], data);
+                    if (data.len < 4081) {
+                        Memory.Pool.PagedPool.Free(data);
+                    } else {
+                        Memory.Pool.PagedPool.FreeAnonPages(data);
+                    }
                 }
                 inode.stat.reserved3 = @intCast(u64, newSize);
                 inode.private = @ptrCast(*allowzero void, @alignCast(@alignOf(*allowzero void), newBuf.ptr));
@@ -96,12 +101,15 @@ pub fn Create(inode: *FS.Inode, name: [*c]const u8, mode: usize) callconv(.C) is
     in.stat.gid = 1;
     in.stat.mode = @intCast(i32, mode);
     in.stat.reserved3 = 0; // reserved3 is used to store the capacity of the file's data (not the size!)
+    in.stat.size = 0;
     in.mountOwner = inode.mountOwner;
+    in.parent = inode;
     in.create = &Create;
     in.read = &Read;
     in.write = &Write;
     in.trunc = &Truncate;
     nextInodeID += 1;
+    FS.AddInodeToParent(in);
     FS.fileLock.release();
     return 0;
 }
@@ -125,33 +133,44 @@ pub fn Init(image: []u8) void {
     FS.RegisterFilesystem("cpioFS", &Mount, &UMount);
     _ = FS.Mount(FS.rootInode.?, null, "cpioFS");
     var i: usize = @ptrToInt(image.ptr);
-    while (@intToPtr(*CPIOHeader, i).magic == 0o070707) {
+    while (true) {
         const header: *CPIOHeader = @intToPtr(*CPIOHeader, i);
         const fileSize: usize = @intCast(usize, (@intCast(u32, header.fileSizeMS) << 16) | @intCast(u32, header.fileSizeLS));
         const path: []const u8 = @intToPtr([*]const u8, i + @sizeOf(CPIOHeader))[0..(header.nameSize - 1)];
-        const data: []const u8 = @intToPtr([*]const u8, i + @sizeOf(CPIOHeader) + header.nameSize)[0..fileSize];
-        var node = FS.rootInode.?;
+        if (std.mem.eql(u8, path, "TRAILER!!!")) {
+            break;
+        }
+        const data: []const u8 = @intToPtr([*]const u8, i + @sizeOf(CPIOHeader) + header.nameSize + (header.nameSize % 2))[0..fileSize];
+        var node: *FS.Inode = FS.rootInode.?;
         var iter = std.mem.split(u8, path, "/");
-        const pathCount = std.mem.count(u8, path, "/");
-        var index: usize = 0;
+        var pathCount: usize = 0;
+        while (iter.next() != null) {
+            pathCount += 1;
+        }
+        iter = std.mem.split(u8, path, "/");
+        var index: usize = 1;
         while (iter.next()) |name| {
-            if (index == pathCount - 1) {
+            if (index == pathCount) {
                 if (!std.mem.eql(u8, name, "...")) {
-                    _ = node.create.?(node, @ptrCast([*c]const u8, name.ptr), @intCast(usize, header.mode));
+                    var cName: [256]u8 = [_]u8{0} ** 256;
+                    @memcpy(cName[0..name.len], name);
+                    _ = node.create.?(node, @ptrCast([*c]const u8, &cName), @intCast(usize, header.mode));
                     const n = FS.GetInode(name, node).?;
-                    _ = n.write.?(n, 0, @ptrCast(*void, @constCast(@alignCast(@alignOf(*void), data.ptr))), @intCast(isize, data.len));
+                    _ = n.write.?(n, 0, @intToPtr(*void, @ptrToInt(data.ptr)), @intCast(isize, data.len));
                 }
             } else {
                 if (FS.GetInode(name, node)) |n| {
                     node = n;
                 } else {
-                    _ = node.create.?(node, @ptrCast([*c]const u8, name.ptr), 0o0040755);
+                    var cName: [256]u8 = [_]u8{0} ** 256;
+                    @memcpy(cName[0..name.len], name);
+                    _ = node.create.?(node, @ptrCast([*c]const u8, &cName), 0o0040755);
                     node = FS.GetInode(name, node).?;
                 }
             }
             index += 1;
         }
-        i += @sizeOf(CPIOHeader) + header.nameSize + fileSize;
+        i += @sizeOf(CPIOHeader) + header.nameSize + (header.nameSize % 2) + fileSize;
     }
     i = 0;
     while (i < image.len) : (i += 4096) {

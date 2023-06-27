@@ -9,7 +9,7 @@ pub var drvrTail: ?*devlib.RyuDriverInfo = null;
 
 pub fn LoadDriver(name: []const u8, relocObj: *void) void {
     HAL.Console.Put("Loading Driver: {s}...\n", .{name});
-    _ = ELF.LoadELF(relocObj, .Driver) catch |err| {
+    _ = ELF.LoadELF(relocObj, .Driver, null) catch |err| {
         HAL.Console.Put("Failed to Load Driver \"{s}\", Reason: {}\n", .{ name, err });
         return;
     };

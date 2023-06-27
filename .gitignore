@@ -5,12 +5,16 @@
 *.dylib
 *.dll
 *.o
+*.a
+userspace/out/
 Ryu
 zorroOS.iso
 *.bin
+*.cpio
 limine-zig/
 zig-cache/
 zig-out/
+root/bin/
 
 # Ignore common editor/system specific metadata
 .DS_Store

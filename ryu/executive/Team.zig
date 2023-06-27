@@ -2,6 +2,8 @@ const Thread = @import("root").Executive.Thread;
 const Area = @import("root").Executive.Area;
 const Memory = @import("root").Memory;
 const AATree = @import("root").AATree;
+const ELF = @import("root").ELF;
+const FS = @import("root").FS;
 const HAL = @import("root").HAL;
 const Spinlock = @import("root").Spinlock;
 
@@ -54,6 +56,25 @@ pub fn GetTeamByID(id: i64) ?*Team {
     }
 }
 
+pub fn LoadELFImage(path: []const u8, team: *Team) ?usize {
+    const old = HAL.Arch.IRQEnableDisable(false);
+    if (FS.GetInode(path, FS.rootInode.?)) |inode| {
+        FS.fileLock.acquire();
+        var buf: []u8 = Memory.Pool.PagedPool.Alloc(@intCast(usize, inode.stat.size)).?;
+        _ = inode.read.?(inode, 0, @intToPtr(*void, @ptrToInt(buf.ptr)), @intCast(isize, buf.len));
+        FS.fileLock.release();
+        const entry: ?usize = ELF.LoadELF(@ptrCast(*void, buf.ptr), .Normal, team.addressSpace) catch {
+            @panic("Failed to load ELF Image!");
+        };
+        Memory.Pool.PagedPool.Free(buf);
+        _ = HAL.Arch.IRQEnableDisable(old);
+        return entry;
+    }
+    _ = HAL.Arch.IRQEnableDisable(old);
+    return null;
+}
+
 pub fn Init() void {
-    _ = NewTeam(null, "Kernel Team");
+    var kteam = NewTeam(null, "Kernel Team");
+    _ = NewTeam(kteam, "zorroOS Init Service");
 }

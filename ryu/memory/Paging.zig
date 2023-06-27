@@ -70,11 +70,15 @@ pub fn MapPage(root: PageDirectory, vaddr: usize, flags: usize, paddr: usize) us
         if (i + 1 >= HAL.Arch.GetPTELevels()) {
             if (pte.r == 0) {
                 HAL.Arch.SetPTE(entries, index, HAL.PTEEntry{});
-                Memory.PFN.DereferencePage(@ptrToInt(entries) - 0xffff800000000000);
+                if (entry.r != 0) {
+                    Memory.PFN.DereferencePage(@ptrToInt(entries) - 0xffff800000000000);
+                }
                 return @ptrToInt(entries) + (index * @sizeOf(Memory.PFN.PFNEntry));
             } else {
                 HAL.Arch.SetPTE(entries, index, pte);
-                Memory.PFN.ReferencePage(@ptrToInt(entries) - 0xffff800000000000);
+                if (entry.r == 0) {
+                    Memory.PFN.ReferencePage(@ptrToInt(entries) - 0xffff800000000000);
+                }
                 return @ptrToInt(entries) + (index * @sizeOf(Memory.PFN.PFNEntry));
             }
         } else {

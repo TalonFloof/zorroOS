@@ -110,6 +110,17 @@ const ELFHeader = packed struct {
     }
 };
 
+const ELFProgramHeader = extern struct {
+    type: u32 align(1),
+    flags: u32 align(1),
+    offset: u64 align(1),
+    vaddr: u64 align(1),
+    paddr: u64 align(1),
+    fileSize: u64 align(1),
+    memSize: u64 align(1),
+    alignment: u64 align(1),
+};
+
 const ELFSectionHeader = extern struct {
     name: u32 align(1),
     type: u32 align(1),
@@ -170,7 +181,7 @@ const ELFLoadType = enum {
     Driver,
 };
 
-pub fn LoadELF(ptr: *void, loadType: ELFLoadType) ELFLoadError!?usize {
+pub fn LoadELF(ptr: *void, loadType: ELFLoadType, pd: ?Memory.Paging.PageDirectory) ELFLoadError!?usize {
     var header: *ELFHeader = @ptrCast(*ELFHeader, @alignCast(@alignOf(ELFHeader), ptr));
     if (header.magic != 0x464C457F) {
         return ELFLoadError.BadMagic;
@@ -183,7 +194,38 @@ pub fn LoadELF(ptr: *void, loadType: ELFLoadType) ELFLoadError!?usize {
     } else if (header.objType != .Executable and loadType == .Normal) {
         return ELFLoadError.NotExecutable;
     }
-    if (loadType == .Normal) {} else if (loadType == .Driver) {
+    if (loadType == .Normal) {
+        var i: usize = 0;
+        while (i < header.phtEntryCount) : (i += 1) {
+            var entry: *ELFProgramHeader = @intToPtr(*ELFProgramHeader, @ptrToInt(ptr) + header.phtPos + (i * @intCast(usize, header.phtEntrySize)));
+            if (entry.type == 1) {
+                const trueSize: usize = @intCast(usize, if (entry.memSize % 4096 > 0) (entry.memSize & (~@intCast(u64, 0xFFF))) + 4096 else entry.memSize);
+                var addr = @intCast(usize, entry.vaddr);
+                var off: usize = 0;
+                while (addr < @intCast(usize, entry.vaddr) + trueSize) : (addr += 4096) {
+                    var page = Memory.PFN.AllocatePage(.Active, true, 0).?;
+                    _ = Memory.Paging.MapPage(
+                        pd.?,
+                        addr,
+                        Memory.Paging.MapRead | Memory.Paging.MapWrite | Memory.Paging.MapExec,
+                        @ptrToInt(page.ptr),
+                    );
+                    @memcpy(@intToPtr([*]u8, @ptrToInt(page.ptr))[0..4096], @intToPtr([*]u8, @ptrToInt(ptr) + @intCast(usize, entry.offset))[off..(off + 4096)]);
+                    off += 4096;
+                }
+                addr = @intCast(usize, entry.vaddr);
+                while (addr < @intCast(usize, entry.vaddr) + trueSize) : (addr += 4096) {
+                    _ = Memory.Paging.MapPage(
+                        pd.?,
+                        addr,
+                        Memory.Paging.MapRead | (entry.flags & 2) | ((entry.flags & 1) << 2),
+                        @intCast(usize, Memory.Paging.GetPage(pd.?, addr).phys) << 12,
+                    );
+                }
+            }
+        }
+        return @intCast(usize, header.programEntryPos);
+    } else if (loadType == .Driver) {
         var i: usize = 0;
         while (i < header.shtEntryCount) : (i += 1) {
             var entry: *ELFSectionHeader = @intToPtr(*ELFSectionHeader, @ptrToInt(ptr) + header.shtPos + (i * @intCast(usize, header.shtEntrySize)));
