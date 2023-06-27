@@ -67,6 +67,16 @@ pub fn LoadELFImage(path: []const u8, team: *Team) ?usize {
             @panic("Failed to load ELF Image!");
         };
         Memory.Pool.PagedPool.Free(buf);
+        var i: usize = 0x1000;
+        while (i < 0x10000) : (i += 4096) {
+            var page = Memory.PFN.AllocatePage(.Active, true, 0).?;
+            _ = Memory.Paging.MapPage(
+                team.addressSpace,
+                i,
+                Memory.Paging.MapRead | Memory.Paging.MapWrite,
+                @ptrToInt(page.ptr),
+            );
+        }
         _ = HAL.Arch.IRQEnableDisable(old);
         return entry;
     }
