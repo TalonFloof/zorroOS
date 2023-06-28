@@ -9,7 +9,6 @@ pub const DevFS = @import("DevFS.zig");
 pub const CpioFS = @import("CpioFS.zig");
 
 pub var rootInode: ?*Inode = null;
-pub var fileLock: Spinlock = .unaquired;
 
 const FSType = struct {
     prev: ?*FSType,
@@ -35,7 +34,7 @@ pub fn AddInodeToParent(i: *Inode) void {
 }
 
 pub fn NewDirInode(name: []const u8) *Inode {
-    fileLock.acquire();
+    @ptrCast(*Spinlock, &rootInode.?.lock).acquire();
     var inode: *Inode = @ptrCast(*Inode, @alignCast(@alignOf(*Inode), Memory.Pool.PagedPool.Alloc(@sizeOf(Inode)).?.ptr));
     @memset(@intToPtr([*]u8, @ptrToInt(&inode.name))[0..256], 0);
     @memcpy(@intToPtr([*]u8, @ptrToInt(&inode.name)), name);
@@ -47,12 +46,12 @@ pub fn NewDirInode(name: []const u8) *Inode {
     inode.stat.nlinks = 1;
     inode.stat.mode = 0o0040755;
     AddInodeToParent(inode);
-    fileLock.release();
+    @ptrCast(*Spinlock, &rootInode.?.lock).release();
     return inode;
 }
 
 pub fn ReadDir(i: *Inode, off: usize) ?*Inode {
-    fileLock.acquire();
+    @ptrCast(*Spinlock, &i.lock).acquire();
     if (!i.hasReadEntries) {
         if (i.readdir) |readdir| {
             if (i.parent == null) {
@@ -67,12 +66,12 @@ pub fn ReadDir(i: *Inode, off: usize) ?*Inode {
     var ent: ?*Inode = i.children;
     while (ind < off) : (ind += 1) {
         if (ent == null) {
-            fileLock.release();
+            @ptrCast(*Spinlock, &i.lock).release();
             return null;
         }
         ent = ent.?.nextSibling;
     }
-    fileLock.release();
+    @ptrCast(*Spinlock, &i.lock).release();
     return ent;
 }
 
@@ -99,7 +98,6 @@ pub fn FindDir(i: *Inode, name: []const u8) ?*Inode {
 }
 
 pub fn GetInode(path: []const u8, base: *Inode) ?*Inode {
-    fileLock.acquire();
     var curNode: ?*Inode = base;
     var iter = std.mem.split(u8, path, "/");
     while (iter.next()) |name| {
@@ -108,13 +106,15 @@ pub fn GetInode(path: []const u8, base: *Inode) ?*Inode {
         } else if (name.len == 0 or std.mem.eql(u8, name, ".")) {
             continue;
         } else {
+            const lock = @ptrCast(*Spinlock, &curNode.?.lock);
+            lock.acquire();
             curNode = FindDir(curNode.?, name);
+            lock.release();
         }
         if (curNode == null) {
             break;
         }
     }
-    fileLock.release();
     return curNode;
 }
 

@@ -15,9 +15,9 @@ pub fn RegisterDevice(name: []const u8, inode: *FS.Inode) void {
     inode.stat.ID = nextDevID;
     @memset(inode.name[0..256], 0);
     @memcpy(inode.name[0..name.len], name);
-    FS.fileLock.acquire();
+    @ptrCast(*Spinlock, &devNode.lock).acquire();
     FS.AddInodeToParent(inode);
-    FS.fileLock.release();
+    @ptrCast(*Spinlock, &devNode.lock).release();
     nextDevID += 1;
 }
 

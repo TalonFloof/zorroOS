@@ -35,6 +35,7 @@ pub const Inode = extern struct {
     hasReadEntries: bool = false,
     mountOwner: ?*Filesystem = null,
     mountPoint: ?*Filesystem = null,
+    lock: u8 = 0,
 
     open: ?*const fn (*Inode, usize) callconv(.C) isize = null,
     close: ?*const fn (*Inode) callconv(.C) void = null,

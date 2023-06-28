@@ -2,6 +2,7 @@ const Memory = @import("root").Memory;
 const std = @import("std");
 const FS = @import("root").FS;
 const HAL = @import("root").HAL;
+const Spinlock = @import("root").Spinlock;
 
 const CPIOHeader = extern struct {
     magic: u16 align(1),
@@ -88,7 +89,6 @@ pub fn Truncate(inode: *FS.Inode, size: isize) callconv(.C) isize {
 }
 
 pub fn Create(inode: *FS.Inode, name: [*c]const u8, mode: usize) callconv(.C) isize {
-    FS.fileLock.acquire();
     const id = nextInodeID;
     const len: usize = std.mem.len(name);
     var in: *FS.Inode = @ptrCast(*FS.Inode, @alignCast(@alignOf(*FS.Inode), Memory.Pool.PagedPool.Alloc(@sizeOf(FS.Inode)).?.ptr));
@@ -108,9 +108,9 @@ pub fn Create(inode: *FS.Inode, name: [*c]const u8, mode: usize) callconv(.C) is
     in.read = &Read;
     in.write = &Write;
     in.trunc = &Truncate;
+    in.lock = 0;
     nextInodeID += 1;
     FS.AddInodeToParent(in);
-    FS.fileLock.release();
     return 0;
 }
 
@@ -154,9 +154,13 @@ pub fn Init(image: []u8) void {
                 if (!std.mem.eql(u8, name, "...")) {
                     var cName: [256]u8 = [_]u8{0} ** 256;
                     @memcpy(cName[0..name.len], name);
+                    @ptrCast(*Spinlock, &node.lock).acquire();
                     _ = node.create.?(node, @ptrCast([*c]const u8, &cName), @intCast(usize, header.mode));
+                    @ptrCast(*Spinlock, &node.lock).release();
                     const n = FS.GetInode(name, node).?;
+                    @ptrCast(*Spinlock, &n.lock).acquire();
                     _ = n.write.?(n, 0, @intToPtr(*void, @ptrToInt(data.ptr)), @intCast(isize, data.len));
+                    @ptrCast(*Spinlock, &n.lock).release();
                 }
             } else {
                 if (FS.GetInode(name, node)) |n| {
@@ -164,7 +168,9 @@ pub fn Init(image: []u8) void {
                 } else {
                     var cName: [256]u8 = [_]u8{0} ** 256;
                     @memcpy(cName[0..name.len], name);
+                    @ptrCast(*Spinlock, &node.lock).acquire();
                     _ = node.create.?(node, @ptrCast([*c]const u8, &cName), 0o0040755);
+                    @ptrCast(*Spinlock, &node.lock).release();
                     node = FS.GetInode(name, node).?;
                 }
             }

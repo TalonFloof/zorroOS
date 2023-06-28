@@ -74,15 +74,15 @@ pub fn AATree(comptime K: type, comptime V: type) type {
                         while (heir.?.link[1] != null) {
                             heir = heir.?.link[1];
                         }
-                        t.?.key = heir.key;
-                        t.?.value = heir.value;
+                        t.?.key = heir.?.key;
+                        t.?.value = heir.?.value;
                         t.?.link[0] = deleteInternal(t.?.link[0], t.?);
                     } else {
-                        const dir = if (t.?.link[0] == null) 1 else 0;
+                        const dir: usize = if (t.?.link[0] == null) 1 else 0;
                         t = t.?.link[dir];
                     }
                 } else {
-                    const dir = if (t.?.key < x.key) 1 else 0;
+                    const dir: usize = if (t.?.key < x.key) 1 else 0;
                     t.?.link[dir] = deleteInternal(t.?.link[dir], x);
                 }
             }

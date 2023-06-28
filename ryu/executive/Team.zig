@@ -7,12 +7,21 @@ const FS = @import("root").FS;
 const HAL = @import("root").HAL;
 const Spinlock = @import("root").Spinlock;
 
+pub const FileDescriptor = struct {
+    inode: *FS.Inode,
+    offset: i64,
+};
+
+pub const FDTree = AATree(i64, FileDescriptor);
+
 pub const Team = struct {
     teamID: i64,
     name: [32]u8 = [_]u8{0} ** 32,
     parent: ?*Team = null,
     children: ?*Team = null,
     siblingNext: ?*Team = null,
+    fds: FDTree = FDTree{},
+    nextFD: i64 = 1,
     mainThread: *allowzero Thread.Thread,
     addressSpace: Memory.Paging.PageDirectory,
 };
@@ -30,6 +39,8 @@ pub fn NewTeam(parent: ?*Team, name: []const u8) *Team {
     team.value.addressSpace = Memory.Paging.NewPageDirectory();
     @memcpy(@intToPtr([*]u8, @ptrToInt(&team.value.name)), name);
     team.value.parent = parent;
+    team.value.nextFD = 1;
+    team.value.fds = FDTree{};
     if (parent) |p| {
         team.value.siblingNext = p;
         p.children = &team.value;
@@ -59,10 +70,10 @@ pub fn GetTeamByID(id: i64) ?*Team {
 pub fn LoadELFImage(path: []const u8, team: *Team) ?usize {
     const old = HAL.Arch.IRQEnableDisable(false);
     if (FS.GetInode(path, FS.rootInode.?)) |inode| {
-        FS.fileLock.acquire();
+        @ptrCast(*Spinlock, &inode.lock).acquire();
         var buf: []u8 = Memory.Pool.PagedPool.Alloc(@intCast(usize, inode.stat.size)).?;
         _ = inode.read.?(inode, 0, @intToPtr(*void, @ptrToInt(buf.ptr)), @intCast(isize, buf.len));
-        FS.fileLock.release();
+        @ptrCast(*Spinlock, &inode.lock).release();
         const entry: ?usize = ELF.LoadELF(@ptrCast(*void, buf.ptr), .Normal, team.addressSpace) catch {
             @panic("Failed to load ELF Image!");
         };
