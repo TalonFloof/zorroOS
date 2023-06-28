@@ -20,17 +20,19 @@ const FilesystemFuncs = enum(u16) { // All of these are just normal UNIX calls, 
     Write = 5,
     LSeek = 6,
     Trunc = 7,
-    Stat = 8,
-    FStat = 9,
-    ChOwn = 10,
-    FChOwn = 11,
-    ChMod = 12,
-    FChMod = 13,
-    IOCtl = 14,
-    MMap = 15,
-    MUnMap = 16,
-    ChDir = 17,
-    Dup = 18, // functions like dup2
+    Create = 8,
+    Unlink = 9,
+    Stat = 10,
+    FStat = 11,
+    ChOwn = 12,
+    FChOwn = 13,
+    ChMod = 14,
+    FChMod = 15,
+    IOCtl = 16,
+    MMap = 17,
+    MUnMap = 18,
+    ChDir = 19,
+    Dup = 20, // functions like dup2
 };
 
 const ProcessFuncs = enum(u16) {
@@ -179,6 +181,174 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                         }
                     } else {
                         regs.SetReg(0, @bitCast(u64, @intCast(i64, -9)));
+                    }
+                },
+                .LSeek => { // off_t LSeek(FileDesc_t fd, off_t offset, int whence)
+                    const team = HAL.Arch.GetHCB().activeThread.?.team;
+                    if (team.fds.search(@bitCast(i64, regs.GetReg(1)))) |node| {
+                        if ((node.value.inode.stat.mode & 0o0770000) != 0o0040000) {
+                            const size: i64 = node.value.inode.stat.size;
+                            switch (regs.GetReg(3)) {
+                                1 => {
+                                    node.value.offset += @bitCast(i64, regs.GetReg(2));
+                                    if (node.value.offset > size) {
+                                        node.value.offset = size;
+                                    }
+                                    regs.SetReg(0, @bitCast(u64, node.value.offset));
+                                },
+                                2 => {
+                                    node.value.offset = size + @bitCast(i64, regs.GetReg(2));
+                                    if (node.value.offset > size) {
+                                        node.value.offset = size;
+                                    }
+                                    regs.SetReg(0, @bitCast(u64, node.value.offset));
+                                },
+                                3 => {
+                                    node.value.offset = @bitCast(i64, regs.GetReg(2));
+                                    if (node.value.offset > size) {
+                                        node.value.offset = size;
+                                    }
+                                    regs.SetReg(0, @bitCast(u64, node.value.offset));
+                                },
+                                else => {
+                                    regs.SetReg(0, @bitCast(u64, @intCast(i64, -21)));
+                                },
+                            }
+                        } else {
+                            regs.SetReg(0, @bitCast(u64, @intCast(i64, -21)));
+                        }
+                    }
+                },
+                .Trunc => {
+                    const team = HAL.Arch.GetHCB().activeThread.?.team;
+                    if (team.fds.search(@bitCast(i64, regs.GetReg(1)))) |node| {
+                        const inode: *FS.Inode = node.value.inode;
+                        if ((inode.stat.mode & 0o0770000) != 0o0040000) {
+                            if (inode.trunc) |trunc| {
+                                const old = HAL.Arch.IRQEnableDisable(false);
+                                @ptrCast(*Spinlock, &inode.lock).acquire();
+                                const res = trunc(inode, @bitCast(isize, @intCast(usize, regs.GetReg(2))));
+                                regs.SetReg(0, @bitCast(u64, @intCast(i64, res)));
+                                @ptrCast(*Spinlock, &inode.lock).release();
+                                _ = HAL.Arch.IRQEnableDisable(old);
+                            } else {
+                                regs.SetReg(0, @bitCast(u64, @intCast(i64, -38)));
+                            }
+                        } else {
+                            regs.SetReg(0, @bitCast(u64, @intCast(i64, -21)));
+                        }
+                    } else {
+                        regs.SetReg(0, @bitCast(u64, @intCast(i64, -9)));
+                    }
+                },
+                .Create => { // Status_t Create(const char* path, int mode)
+                    const path = @intToPtr([*]const u8, regs.GetReg(1))[0..std.mem.len(@intToPtr([*c]const u8, regs.GetReg(1)))];
+                    const lastSep: ?usize = std.mem.lastIndexOf(u8, path, "/");
+                    const name = if (lastSep != null) path[(lastSep.? + 1)..path.len] else path[0..path.len];
+                    var parent: ?*FS.Inode = FS.rootInode;
+                    if (lastSep != null) {
+                        parent = FS.GetInode(path[0..lastSep.?], parent.?);
+                    }
+                    if (parent == null) {
+                        regs.SetReg(0, @bitCast(u64, @intCast(i64, -2)));
+                        return;
+                    }
+                    if (parent.?.create) |create| {
+                        const old = HAL.Arch.IRQEnableDisable(false);
+                        @ptrCast(*Spinlock, &parent.?.lock).acquire();
+                        regs.SetReg(0, @bitCast(u64, @intCast(i64, create(parent.?, @ptrCast([*c]const u8, name.ptr), @intCast(usize, regs.GetReg(3))))));
+                        @ptrCast(*Spinlock, &parent.?.lock).release();
+                        _ = HAL.Arch.IRQEnableDisable(old);
+                    } else {
+                        regs.SetReg(0, @bitCast(u64, @intCast(i64, -38)));
+                    }
+                },
+                .Unlink => { // Status_t Unlink(const char* path)
+                    const path = @intToPtr([*]const u8, regs.GetReg(1))[0..std.mem.len(@intToPtr([*c]const u8, regs.GetReg(1)))];
+                    if (FS.GetInode(path, FS.rootInode.?)) |inode| {
+                        if (inode.unlink) |unlink| {
+                            const old = HAL.Arch.IRQEnableDisable(false);
+                            @ptrCast(*Spinlock, &inode.lock).acquire();
+                            const ret: isize = unlink(inode);
+                            regs.SetReg(0, @bitCast(u64, @intCast(i64, ret)));
+                            if (ret != 0) {
+                                @ptrCast(*Spinlock, &inode.lock).release();
+                            }
+                            _ = HAL.Arch.IRQEnableDisable(old);
+                        } else {
+                            regs.SetReg(0, @bitCast(u64, @intCast(i64, -38)));
+                        }
+                    } else {
+                        regs.SetReg(0, @bitCast(u64, @intCast(i64, -2)));
+                    }
+                },
+                .Stat => { // Status_t Stat(const char* path, stat_t* ptr)
+                    const path = @intToPtr([*]const u8, regs.GetReg(1))[0..std.mem.len(@intToPtr([*c]const u8, regs.GetReg(1)))];
+                    if (FS.GetInode(path, FS.rootInode.?)) |inode| {
+                        @intToPtr(*FS.Metadata, regs.GetReg(2)).* = inode.stat;
+                        regs.SetReg(0, 0);
+                    } else {
+                        regs.SetReg(0, @bitCast(u64, @intCast(i64, -2)));
+                    }
+                },
+                .FStat => { // Status_t FStat(FileDesc_t fd, stat_t* ptr)
+                    const team = HAL.Arch.GetHCB().activeThread.?.team;
+                    if (team.fds.search(@bitCast(i64, regs.GetReg(1)))) |node| {
+                        const inode: *FS.Inode = node.value.inode;
+                        @intToPtr(*FS.Metadata, regs.GetReg(2)).* = inode.stat;
+                        regs.SetReg(0, 0);
+                    } else {
+                        regs.SetReg(0, @bitCast(u64, @intCast(i64, -9)));
+                    }
+                },
+                .IOCtl => { // long IOCtl(FileDesc_t fd, unsigned int request, void* arg)
+                    const team = HAL.Arch.GetHCB().activeThread.?.team;
+                    if (team.fds.search(@bitCast(i64, regs.GetReg(1)))) |node| {
+                        const inode: *FS.Inode = node.value.inode;
+                        if (inode.ioctl) |ioctl| {
+                            const old = HAL.Arch.IRQEnableDisable(false);
+                            @ptrCast(*Spinlock, &inode.lock).acquire();
+                            regs.SetReg(0, @bitCast(u64, @intCast(i64, ioctl(inode, @intCast(usize, regs.GetReg(2)), @intToPtr(*allowzero void, regs.GetReg(3))))));
+                            @ptrCast(*Spinlock, &inode.lock).release();
+                            _ = HAL.Arch.IRQEnableDisable(old);
+                        } else {
+                            regs.SetReg(0, @bitCast(u64, @intCast(i64, -38)));
+                        }
+                    } else {
+                        regs.SetReg(0, @bitCast(u64, @intCast(i64, -9)));
+                    }
+                },
+                .MMap => { // void* MMap(void* addr, size_t length, int prot, int flags, int fd, off_t offset)
+                    const addr = @intToPtr(*allowzero void, regs.GetReg(1));
+                    const length = @intCast(usize, regs.GetReg(2));
+                    const prot = regs.GetReg(3);
+                    _ = prot;
+                    const flags = regs.GetReg(4);
+                    const fd = @bitCast(i64, regs.GetReg(5));
+                    const offset = @bitCast(isize, @intCast(usize, regs.GetReg(6)));
+                    if (flags & 0x8 != 0) { // Anonymous Mapping
+                        regs.SetReg(0, @bitCast(u64, @intCast(i64, -38)));
+                    } else {
+                        const team = HAL.Arch.GetHCB().activeThread.?.team;
+                        if (team.fds.search(fd)) |node| {
+                            const inode: *FS.Inode = node.value.inode;
+                            if (inode.map) |mmap| {
+                                const old = HAL.Arch.IRQEnableDisable(false);
+                                @ptrCast(*Spinlock, &inode.lock).acquire();
+                                regs.SetReg(0, @bitCast(u64, @intCast(i64, mmap(
+                                    inode,
+                                    offset,
+                                    addr,
+                                    length,
+                                ))));
+                                @ptrCast(*Spinlock, &inode.lock).release();
+                                _ = HAL.Arch.IRQEnableDisable(old);
+                            } else {
+                                regs.SetReg(0, @bitCast(u64, @intCast(i64, -38)));
+                            }
+                        } else {
+                            regs.SetReg(0, @bitCast(u64, @intCast(i64, -9)));
+                        }
                     }
                 },
                 else => {
