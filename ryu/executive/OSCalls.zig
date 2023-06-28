@@ -351,6 +351,22 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                         }
                     }
                 },
+                .MUnMap => {
+                    const addrSpace = HAL.Arch.GetHCB().activeThread.?.team.addressSpace;
+                    var addr = @intCast(usize, regs.GetReg(1));
+                    const length = @intCast(usize, regs.GetReg(2));
+                    const addrStart = @intCast(usize, regs.GetReg(1));
+                    const old = HAL.Arch.IRQEnableDisable(false);
+                    while (addr < addrStart + length) : (addr += 4096) {
+                        const pte: HAL.PTEEntry = Memory.Paging.GetPage(addrSpace, addr);
+                        if (pte.r == 1) {
+                            _ = Memory.Paging.MapPage(addrSpace, addr, 0, 0);
+                            Memory.PFN.DereferencePage(@intCast(usize, pte.phys) << 12);
+                        }
+                    }
+                    _ = HAL.Arch.IRQEnableDisable(old);
+                    regs.SetReg(0, 0);
+                },
                 else => {
                     regs.SetReg(0, @bitCast(u64, @intCast(i64, -4096)));
                 },
