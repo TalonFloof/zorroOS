@@ -98,7 +98,7 @@ pub fn FindDir(i: *Inode, name: []const u8) ?*Inode {
 }
 
 pub fn GetInode(path: []const u8, base: *Inode) ?*Inode {
-    var curNode: ?*Inode = base;
+    var curNode: ?*Inode = if (std.mem.startsWith(u8, path, "/")) rootInode else base;
     var iter = std.mem.split(u8, path, "/");
     while (iter.next()) |name| {
         if (std.mem.eql(u8, name, "..")) {

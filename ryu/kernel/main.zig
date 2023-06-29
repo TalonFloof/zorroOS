@@ -49,9 +49,9 @@ pub export fn RyuInit() noreturn {
             }
         }
     }
-    HAL.Splash.UpdateStatus("zorroOS Init Team");
-    var team = Executive.Team.GetTeamByID(2).?;
     HAL.Splash.UpdateStatus("Load /bin/init...");
+    var team = Executive.Team.GetTeamByID(2).?;
+    team.cwd = FS.rootInode;
     var entry = Executive.Team.LoadELFImage("/bin/init", team).?;
     _ = Executive.Thread.NewThread(team, @ptrCast([*]u8, @constCast("Main Thread"))[0..11], entry, 0x9ff8, 10);
     HAL.Splash.UpdateStatus("Kernel Setup Complete");

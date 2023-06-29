@@ -32,7 +32,8 @@ const FilesystemFuncs = enum(u16) { // All of these are just normal UNIX calls, 
     MMap = 17,
     MUnMap = 18,
     ChDir = 19,
-    Dup = 20, // functions like dup2
+    FChDir = 20,
+    Dup = 21, // functions like dup2
 };
 
 const ProcessFuncs = enum(u16) {
@@ -74,8 +75,8 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
             switch (@intToEnum(FilesystemFuncs, func)) {
                 .Open => { // FileDesc_t Open(*const char name, int mode)
                     const path = @intToPtr([*]const u8, regs.GetReg(1))[0..std.mem.len(@intToPtr([*c]const u8, regs.GetReg(1)))];
-                    if (FS.GetInode(path, FS.rootInode.?)) |inode| {
-                        const team = HAL.Arch.GetHCB().activeThread.?.team;
+                    const team = HAL.Arch.GetHCB().activeThread.?.team;
+                    if (FS.GetInode(path, team.cwd.?)) |inode| {
                         const old = HAL.Arch.IRQEnableDisable(false);
                         const node = @intToPtr(*Executive.Team.FileDescriptor, @ptrToInt(Memory.Pool.PagedPool.Alloc(@sizeOf(Executive.Team.FileDescriptor)).?.ptr));
                         node.inode = inode;
@@ -419,6 +420,22 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                     }
                     _ = HAL.Arch.IRQEnableDisable(old);
                     regs.SetReg(0, 0);
+                },
+                .ChDir => { // Status_t ChDir(const char* path)
+                    const team = HAL.Arch.GetHCB().activeThread.?.team;
+                    const path = @intToPtr([*]const u8, regs.GetReg(1))[0..std.mem.len(@intToPtr([*c]const u8, regs.GetReg(1)))];
+                    const old = HAL.Arch.IRQEnableDisable(false);
+                    if (FS.GetInode(path, FS.rootInode.?)) |inode| {
+                        if ((inode.stat.mode & 0o0770000) == 0o0040000) {
+                            team.cwd = inode;
+                            regs.SetReg(0, 0);
+                        } else {
+                            regs.SetReg(0, @bitCast(u64, @intCast(i64, -20)));
+                        }
+                    } else {
+                        regs.SetReg(0, @bitCast(u64, @intCast(i64, -2)));
+                    }
+                    _ = HAL.Arch.IRQEnableDisable(old);
                 },
                 else => {
                     regs.SetReg(0, @bitCast(u64, @intCast(i64, -4096)));

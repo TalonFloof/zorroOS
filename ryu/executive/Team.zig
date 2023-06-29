@@ -22,6 +22,7 @@ pub const Team = struct {
     siblingNext: ?*Team = null,
     fds: FDTree = FDTree{},
     nextFD: i64 = 1,
+    cwd: ?*FS.Inode = null,
     fdLock: Spinlock = .unaquired,
     mainThread: *allowzero Thread.Thread,
     addressSpace: Memory.Paging.PageDirectory,
@@ -30,7 +31,7 @@ pub const Team = struct {
 const TeamTreeType = AATree(i64, *Team);
 
 pub var teams: TeamTreeType = TeamTreeType{};
-var teamLock: Spinlock = .unaquired;
+pub var teamLock: Spinlock = .unaquired;
 pub var nextTeamID: i64 = 1;
 
 pub fn NewTeam(parent: ?*Team, name: []const u8) *Team {
@@ -43,6 +44,7 @@ pub fn NewTeam(parent: ?*Team, name: []const u8) *Team {
     team.nextFD = 1;
     team.fds = FDTree{};
     if (parent) |p| {
+        team.cwd = p.cwd;
         team.siblingNext = p;
         p.children = team;
     }
@@ -65,6 +67,33 @@ pub fn GetTeamByID(id: i64) ?*Team {
     } else {
         return null;
     }
+}
+
+pub fn AdoptTeam(team: *Team, dropTeam: bool) void { // Transfers a team's parent to the Kernel Team
+    const old = HAL.Arch.IRQEnableDisable(false);
+    teamLock.acquire();
+    var index: ?*Team = team.parent.?.children;
+    var prev: ?*Team = null;
+    while (index) |t| {
+        if (@ptrToInt(t) == @ptrToInt(team)) {
+            if (prev) |p| {
+                p.siblingNext = t.siblingNext;
+            } else {
+                team.parent.?.children = t.siblingNext;
+            }
+            if (!dropTeam) {
+                const kteam = teams.search(1).?;
+                t.parent = kteam;
+                t.siblingNext = kteam.children;
+                kteam.children = t;
+            }
+            break;
+        }
+        prev = t;
+        index = t.siblingNext;
+    }
+    teamLock.release();
+    _ = HAL.Arch.IRQEnableDisable(old);
 }
 
 pub fn LoadELFImage(path: []const u8, team: *Team) ?usize {

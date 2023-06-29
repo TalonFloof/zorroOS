@@ -11,7 +11,8 @@ pub const ThreadState = enum {
     Runnable,
     Running,
     Eeping, // :3
-    Waiting, // When awoken, a threads priority will increase
+    WaitingForEvent,
+    WaitingForThread,
 };
 
 pub const Thread = struct {
@@ -106,6 +107,16 @@ pub fn NewThread(
     }
     @memset(@intToPtr([*]u8, @ptrToInt(&thread.fcontext.data))[0..512], 0);
     thread.context.SetReg(128, ip);
+    if (@ptrToInt(team.mainThread) == 0) {
+        team.mainThread = thread;
+    } else {
+        thread.prevTeamThread = team.mainThread;
+        thread.nextTeamThread = team.mainThread.nextTeamThread;
+        if (team.mainThread.nextTeamThread) |next| {
+            next.prevTeamThread = thread;
+        }
+        team.mainThread.nextTeamThread = thread;
+    }
     threads.insert(thread.threadID, thread);
     queues[prior].lock.acquire();
     queues[prior].Add(thread);
@@ -119,10 +130,80 @@ pub fn KillThread(threadID: i64) void {
     const old = HAL.Arch.IRQEnableDisable(false);
     threadLock.acquire();
     if (threads.search(threadID)) |thread| {
-        _ = thread;
+        if (thread.state == .Runnable) {
+            const oldPriority = thread.priority;
+            queues[oldPriority].lock.acquire();
+            queues[15].lock.acquire();
+            thread.priority = 15;
+            thread.shouldKill = true;
+            queues[oldPriority].Remove(thread);
+            queues[oldPriority].lock.release();
+            queues[15].Add(thread);
+            queues[15].lock.release();
+        } else if (thread.state == .Stopped or thread.state == .Debugging) {
+            queues[15].lock.acquire();
+            thread.priority = 15;
+            thread.shouldKill = true;
+            queues[15].Add(thread);
+            queues[15].lock.release();
+        } else {
+            thread.shouldKill = true;
+            thread.priority = 15;
+        }
+        if (@ptrToInt(thread.team.mainThread) == @ptrToInt(thread)) {
+            // Set our team's threads to be killed
+            var t: ?*Thread = thread.nextTeamThread;
+            threadLock.release();
+            while (t) |teamThr| {
+                KillThread(teamThr.threadID);
+                t = teamThr.nextTeamThread;
+            }
+            // Set our child teams to be adopted by the kernel team
+            var teams: ?*Team.Team = thread.team.children;
+            while (teams) |team| {
+                Team.AdoptTeam(team, false);
+                teams = team.siblingNext;
+            }
+        }
     }
     threadLock.release();
     _ = HAL.Arch.IRQEnableDisable(old);
+}
+
+pub fn DestroyThread(thread: *Thread) bool {
+    const old = HAL.Arch.IRQEnableDisable(false);
+    threadLock.acquire();
+    if (@ptrToInt(thread.team.mainThread) == @ptrToInt(thread) and thread.nextTeamThread != null) {
+        threadLock.release();
+        _ = HAL.Arch.IRQEnableDisable(old);
+        return false;
+    }
+    // Destroy the thread
+    Memory.Pool.PagedPool.Free(thread.kstack);
+    if (thread.prevTeamThread) |prev| {
+        prev.nextTeamThread = thread.nextTeamThread;
+    }
+    if (thread.nextTeamThread) |next| {
+        next.prevTeamThread = thread.prevTeamThread;
+    }
+    const team = thread.team;
+    threads.delete(thread.threadID);
+    Memory.Pool.PagedPool.Free(@intToPtr([*]u8, @ptrToInt(thread))[0..@sizeOf(Thread)]);
+    if (@ptrToInt(thread.team.mainThread) == @ptrToInt(thread)) {
+        // Destroy the Team as well
+        threadLock.release();
+        Team.teamLock.acquire();
+        Memory.Paging.DestroyPageDirectory(team.addressSpace);
+        team.fds.destroy();
+        Team.AdoptTeam(team, true);
+        Team.teams.delete(team.teamID);
+        Memory.Pool.PagedPool.Free(@intToPtr([*]u8, @ptrToInt(team))[0..@sizeOf(Team.Team)]);
+        Team.teamLock.release();
+    } else {
+        threadLock.release();
+    }
+    _ = HAL.Arch.IRQEnableDisable(old);
+    return true;
 }
 
 pub fn Init() void {
@@ -175,7 +256,11 @@ pub fn Reschedule(demote: bool) noreturn {
     var thr: *Thread = GetNextThread();
     while (true) {
         if (thr.shouldKill) {
-            // TODO: Destroy the thread
+            if (!DestroyThread(thr)) {
+                queues[thr.priority].lock.acquire();
+                queues[thr.priority].Add(thr);
+                queues[thr.priority].lock.release();
+            }
         } else if (thr.state == .Runnable and (thr.hartID == -1 or thr.hartID == hcb.hartID)) {
             thr.state = .Running;
             break;
