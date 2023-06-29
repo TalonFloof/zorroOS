@@ -108,7 +108,7 @@ pub fn AATree(comptime K: type, comptime V: type) type {
             self.root = deleteInternal(self.root, x);
         }
 
-        pub fn search(self: *Self, key: K) ?*Node {
+        pub fn search(self: *Self, key: K) ?V {
             var x = self.root;
             while (x) |node| {
                 if (key < node.key) {
@@ -116,7 +116,7 @@ pub fn AATree(comptime K: type, comptime V: type) type {
                 } else if (key > node.key) {
                     x = node.link[1];
                 } else {
-                    return x;
+                    return node.value;
                 }
             }
             return null;

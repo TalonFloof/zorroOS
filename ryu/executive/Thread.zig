@@ -115,8 +115,14 @@ pub fn NewThread(
     return thread;
 }
 
-pub fn KillThread(threadID: usize) void {
-    _ = threadID;
+pub fn KillThread(threadID: i64) void {
+    const old = HAL.Arch.IRQEnableDisable(false);
+    threadLock.acquire();
+    if (threads.search(threadID)) |thread| {
+        _ = thread;
+    }
+    threadLock.release();
+    _ = HAL.Arch.IRQEnableDisable(old);
 }
 
 pub fn Init() void {

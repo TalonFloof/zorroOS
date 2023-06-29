@@ -104,15 +104,15 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                     team.fdLock.acquire();
                     if (team.fds.search(@bitCast(i64, regs.GetReg(1)))) |node| {
                         team.fdLock.release();
-                        if (node.value.inode.close) |close| {
-                            @ptrCast(*Spinlock, &node.value.inode.lock).acquire();
-                            close(node.value.inode);
-                            @ptrCast(*Spinlock, &node.value.inode.lock).release();
+                        if (node.inode.close) |close| {
+                            @ptrCast(*Spinlock, &node.inode.lock).acquire();
+                            close(node.inode);
+                            @ptrCast(*Spinlock, &node.inode.lock).release();
                         }
                         regs.SetReg(0, 0);
                         team.fdLock.acquire();
-                        Memory.Pool.PagedPool.Free(@intToPtr([*]u8, @ptrToInt(node.value))[0..@sizeOf(Executive.Team.FileDescriptor)]);
-                        team.fds.delete(node.key);
+                        Memory.Pool.PagedPool.Free(@intToPtr([*]u8, @ptrToInt(node))[0..@sizeOf(Executive.Team.FileDescriptor)]);
+                        team.fds.delete(@bitCast(i64, regs.GetReg(1)));
                         team.fdLock.release();
                     } else {
                         team.fdLock.release();
@@ -125,15 +125,14 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                     const old = HAL.Arch.IRQEnableDisable(false);
                     team.fdLock.acquire();
                     if (team.fds.search(@bitCast(i64, regs.GetReg(1)))) |node| {
-                        const value = node.value;
                         team.fdLock.release();
-                        const inode: *FS.Inode = value.inode;
+                        const inode: *FS.Inode = node.inode;
                         if ((inode.stat.mode & 0o0770000) != 0o0040000) {
                             if (inode.read) |read| {
                                 @ptrCast(*Spinlock, &inode.lock).acquire();
-                                const res = read(inode, @intCast(isize, value.offset), @intToPtr(*void, @intCast(usize, regs.GetReg(2))), @bitCast(isize, @intCast(usize, regs.GetReg(3))));
+                                const res = read(inode, @intCast(isize, node.offset), @intToPtr(*void, @intCast(usize, regs.GetReg(2))), @bitCast(isize, @intCast(usize, regs.GetReg(3))));
                                 if (res >= 0) {
-                                    value.offset += @intCast(i64, res);
+                                    node.offset += @intCast(i64, res);
                                 }
                                 regs.SetReg(0, @bitCast(u64, @intCast(i64, res)));
                                 @ptrCast(*Spinlock, &inode.lock).release();
@@ -154,9 +153,8 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                     const old = HAL.Arch.IRQEnableDisable(false);
                     team.fdLock.acquire();
                     if (team.fds.search(@bitCast(i64, regs.GetReg(1)))) |node| {
-                        const value = node.value;
                         team.fdLock.release();
-                        const inode: *FS.Inode = value.inode;
+                        const inode: *FS.Inode = node.inode;
                         if ((inode.stat.mode & 0o0770000) == 0o0040000) {
                             if (FS.ReadDir(inode, @intCast(usize, regs.GetReg(2)))) |entry| {
                                 const name = @ptrCast([*]const u8, &entry.name)[0..(std.mem.len(@ptrCast([*c]const u8, &entry.name)) + 1)];
@@ -182,15 +180,14 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                     const old = HAL.Arch.IRQEnableDisable(false);
                     team.fdLock.acquire();
                     if (team.fds.search(@bitCast(i64, regs.GetReg(1)))) |node| {
-                        const value = node.value;
                         team.fdLock.release();
-                        const inode: *FS.Inode = value.inode;
+                        const inode: *FS.Inode = node.inode;
                         if ((inode.stat.mode & 0o0770000) != 0o0040000) {
                             if (inode.write) |write| {
                                 @ptrCast(*Spinlock, &inode.lock).acquire();
-                                const res = write(inode, @intCast(isize, value.offset), @intToPtr(*void, @intCast(usize, regs.GetReg(2))), @bitCast(isize, @intCast(usize, regs.GetReg(3))));
+                                const res = write(inode, @intCast(isize, node.offset), @intToPtr(*void, @intCast(usize, regs.GetReg(2))), @bitCast(isize, @intCast(usize, regs.GetReg(3))));
                                 if (res >= 0) {
-                                    value.offset += @intCast(i64, res);
+                                    node.offset += @intCast(i64, res);
                                 }
                                 regs.SetReg(0, @bitCast(u64, @intCast(i64, res)));
                                 @ptrCast(*Spinlock, &inode.lock).release();
@@ -211,32 +208,31 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                     const old = HAL.Arch.IRQEnableDisable(false);
                     team.fdLock.acquire();
                     if (team.fds.search(@bitCast(i64, regs.GetReg(1)))) |node| {
-                        const value = node.value;
                         team.fdLock.release();
-                        const inode: *FS.Inode = value.inode;
+                        const inode: *FS.Inode = node.inode;
                         if ((inode.stat.mode & 0o0770000) != 0o0040000) {
                             const size: i64 = inode.stat.size;
                             switch (regs.GetReg(3)) {
                                 1 => {
-                                    value.offset += @bitCast(i64, regs.GetReg(2));
-                                    if (value.offset > size) {
-                                        value.offset = size;
+                                    node.offset += @bitCast(i64, regs.GetReg(2));
+                                    if (node.offset > size) {
+                                        node.offset = size;
                                     }
-                                    regs.SetReg(0, @bitCast(u64, value.offset));
+                                    regs.SetReg(0, @bitCast(u64, node.offset));
                                 },
                                 2 => {
-                                    value.offset = size + @bitCast(i64, regs.GetReg(2));
-                                    if (value.offset > size) {
-                                        value.offset = size;
+                                    node.offset = size + @bitCast(i64, regs.GetReg(2));
+                                    if (node.offset > size) {
+                                        node.offset = size;
                                     }
-                                    regs.SetReg(0, @bitCast(u64, value.offset));
+                                    regs.SetReg(0, @bitCast(u64, node.offset));
                                 },
                                 3 => {
-                                    value.offset = @bitCast(i64, regs.GetReg(2));
-                                    if (value.offset > size) {
-                                        value.offset = size;
+                                    node.offset = @bitCast(i64, regs.GetReg(2));
+                                    if (node.offset > size) {
+                                        node.offset = size;
                                     }
-                                    regs.SetReg(0, @bitCast(u64, value.offset));
+                                    regs.SetReg(0, @bitCast(u64, node.offset));
                                 },
                                 else => {
                                     regs.SetReg(0, @bitCast(u64, @intCast(i64, -21)));
@@ -256,9 +252,8 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                     const old = HAL.Arch.IRQEnableDisable(false);
                     team.fdLock.acquire();
                     if (team.fds.search(@bitCast(i64, regs.GetReg(1)))) |node| {
-                        const value = node.value;
                         team.fdLock.release();
-                        const inode: *FS.Inode = value.inode;
+                        const inode: *FS.Inode = node.inode;
                         if ((inode.stat.mode & 0o0770000) != 0o0040000) {
                             if (inode.trunc) |trunc| {
                                 @ptrCast(*Spinlock, &inode.lock).acquire();
@@ -340,7 +335,7 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                     const old = HAL.Arch.IRQEnableDisable(false);
                     team.fdLock.acquire();
                     if (team.fds.search(@bitCast(i64, regs.GetReg(1)))) |node| {
-                        const inode: *FS.Inode = node.value.inode;
+                        const inode: *FS.Inode = node.inode;
                         team.fdLock.release();
                         @intToPtr(*FS.Metadata, regs.GetReg(2)).* = inode.stat;
                         _ = HAL.Arch.IRQEnableDisable(old);
@@ -355,7 +350,7 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                     const old = HAL.Arch.IRQEnableDisable(false);
                     team.fdLock.acquire();
                     if (team.fds.search(@bitCast(i64, regs.GetReg(1)))) |node| {
-                        const inode: *FS.Inode = node.value.inode;
+                        const inode: *FS.Inode = node.inode;
                         team.fdLock.release();
                         _ = HAL.Arch.IRQEnableDisable(old);
                         if (inode.ioctl) |ioctl| {
@@ -368,6 +363,7 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                             regs.SetReg(0, @bitCast(u64, @intCast(i64, -38)));
                         }
                     } else {
+                        team.fdLock.release();
                         _ = HAL.Arch.IRQEnableDisable(old);
                         regs.SetReg(0, @bitCast(u64, @intCast(i64, -9)));
                     }
@@ -387,7 +383,7 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                         const team = HAL.Arch.GetHCB().activeThread.?.team;
                         team.fdLock.acquire();
                         if (team.fds.search(fd)) |node| {
-                            const inode: *FS.Inode = node.value.inode;
+                            const inode: *FS.Inode = node.inode;
                             team.fdLock.release();
                             if (inode.map) |mmap| {
                                 @ptrCast(*Spinlock, &inode.lock).acquire();

@@ -61,7 +61,7 @@ pub fn GetTeamByID(id: i64) ?*Team {
     teamLock.release();
     _ = HAL.Arch.IRQEnableDisable(old);
     if (val) |v| {
-        return v.value;
+        return v;
     } else {
         return null;
     }
