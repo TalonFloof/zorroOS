@@ -32,7 +32,7 @@ pub const Thread = struct {
     hartID: i32 = -1,
 };
 
-const ThreadTreeType = AATree(i64, Thread);
+const ThreadTreeType = AATree(i64, *Thread);
 
 pub var threads: ThreadTreeType = ThreadTreeType{};
 var threadLock: Spinlock = .unaquired;
@@ -86,34 +86,33 @@ pub fn NewThread(
 ) *Thread { // If SP is null then this is a kernel thread
     const old = HAL.Arch.IRQEnableDisable(false);
     threadLock.acquire();
-    var thread = @ptrCast(*ThreadTreeType.Node, @alignCast(@alignOf(ThreadTreeType.Node), Memory.Pool.PagedPool.Alloc(@sizeOf(ThreadTreeType.Node)).?.ptr));
-    @memset(@intToPtr([*]u8, @ptrToInt(&thread.value.name))[0..32], 0);
-    @memcpy(@intToPtr([*]u8, @ptrToInt(&thread.value.name)), name);
-    thread.value.team = team;
-    thread.value.hartID = -1;
-    thread.value.threadID = nextThreadID;
-    thread.key = nextThreadID;
+    var thread = @ptrCast(*Thread, @alignCast(@alignOf(Thread), Memory.Pool.PagedPool.Alloc(@sizeOf(Thread)).?.ptr));
+    @memset(@intToPtr([*]u8, @ptrToInt(&thread.name))[0..32], 0);
+    @memcpy(@intToPtr([*]u8, @ptrToInt(&thread.name)), name);
+    thread.team = team;
+    thread.hartID = -1;
+    thread.threadID = nextThreadID;
     nextThreadID += 1;
-    thread.value.state = .Runnable;
-    thread.value.priority = prior;
+    thread.state = .Runnable;
+    thread.priority = prior;
     var stack = Memory.Pool.PagedPool.AllocAnonPages(16384).?;
-    thread.value.kstack = stack;
+    thread.kstack = stack;
     if (sp == null) {
-        thread.value.context.SetMode(true);
-        thread.value.context.SetReg(129, @ptrToInt(stack.ptr) + stack.len);
+        thread.context.SetMode(true);
+        thread.context.SetReg(129, @ptrToInt(stack.ptr) + stack.len);
     } else {
-        thread.value.context.SetMode(false);
-        thread.value.context.SetReg(129, sp.?);
+        thread.context.SetMode(false);
+        thread.context.SetReg(129, sp.?);
     }
-    @memset(@intToPtr([*]u8, @ptrToInt(&thread.value.fcontext.data))[0..512], 0);
-    thread.value.context.SetReg(128, ip);
-    threads.insert(thread);
+    @memset(@intToPtr([*]u8, @ptrToInt(&thread.fcontext.data))[0..512], 0);
+    thread.context.SetReg(128, ip);
+    threads.insert(thread.threadID, thread);
     queues[prior].lock.acquire();
-    queues[prior].Add(&thread.value);
+    queues[prior].Add(thread);
     queues[prior].lock.release();
     threadLock.release();
     _ = HAL.Arch.IRQEnableDisable(old);
-    return &thread.value;
+    return thread;
 }
 
 pub fn KillThread(threadID: usize) void {
@@ -184,7 +183,7 @@ pub fn Reschedule(demote: bool) noreturn {
     hcb.activeThread = thr;
     hcb.activeKstack = @ptrToInt(thr.kstack.ptr) + thr.kstack.len;
     hcb.activeUstack = 0;
-    hcb.quantumsLeft = 10; // 10 ms
+    hcb.quantumsLeft = @intCast(u32, (20 * (16 - thr.priority) + 5 * thr.priority) >> 4);
     HAL.Arch.SwitchPT(@intToPtr(*void, @ptrToInt(thr.team.addressSpace.ptr) - 0xffff800000000000));
     thr.fcontext.Load();
     thr.context.Enter();

@@ -12,7 +12,7 @@ pub const FileDescriptor = struct {
     offset: i64,
 };
 
-pub const FDTree = AATree(i64, FileDescriptor);
+pub const FDTree = AATree(i64, *FileDescriptor);
 
 pub const Team = struct {
     teamID: i64,
@@ -22,11 +22,12 @@ pub const Team = struct {
     siblingNext: ?*Team = null,
     fds: FDTree = FDTree{},
     nextFD: i64 = 1,
+    fdLock: Spinlock = .unaquired,
     mainThread: *allowzero Thread.Thread,
     addressSpace: Memory.Paging.PageDirectory,
 };
 
-const TeamTreeType = AATree(i64, Team);
+const TeamTreeType = AATree(i64, *Team);
 
 pub var teams: TeamTreeType = TeamTreeType{};
 var teamLock: Spinlock = .unaquired;
@@ -35,23 +36,22 @@ pub var nextTeamID: i64 = 1;
 pub fn NewTeam(parent: ?*Team, name: []const u8) *Team {
     const old = HAL.Arch.IRQEnableDisable(false);
     teamLock.acquire();
-    var team = @ptrCast(*TeamTreeType.Node, @alignCast(@alignOf(TeamTreeType.Node), Memory.Pool.PagedPool.Alloc(@sizeOf(TeamTreeType.Node)).?.ptr));
-    team.value.addressSpace = Memory.Paging.NewPageDirectory();
-    @memcpy(@intToPtr([*]u8, @ptrToInt(&team.value.name)), name);
-    team.value.parent = parent;
-    team.value.nextFD = 1;
-    team.value.fds = FDTree{};
+    var team = @ptrCast(*Team, @alignCast(@alignOf(Team), Memory.Pool.PagedPool.Alloc(@sizeOf(Team)).?.ptr));
+    team.addressSpace = Memory.Paging.NewPageDirectory();
+    @memcpy(@intToPtr([*]u8, @ptrToInt(&team.name)), name);
+    team.parent = parent;
+    team.nextFD = 1;
+    team.fds = FDTree{};
     if (parent) |p| {
-        team.value.siblingNext = p;
-        p.children = &team.value;
+        team.siblingNext = p;
+        p.children = team;
     }
-    team.key = nextTeamID;
-    team.value.teamID = nextTeamID;
+    team.teamID = nextTeamID;
     nextTeamID += 1;
-    teams.insert(team);
+    teams.insert(team.teamID, team);
     teamLock.release();
     _ = HAL.Arch.IRQEnableDisable(old);
-    return &team.value;
+    return team;
 }
 
 pub fn GetTeamByID(id: i64) ?*Team {
@@ -61,7 +61,7 @@ pub fn GetTeamByID(id: i64) ?*Team {
     teamLock.release();
     _ = HAL.Arch.IRQEnableDisable(old);
     if (val) |v| {
-        return &v.value;
+        return v.value;
     } else {
         return null;
     }

@@ -107,9 +107,11 @@ pub fn GetInode(path: []const u8, base: *Inode) ?*Inode {
             continue;
         } else {
             const lock = @ptrCast(*Spinlock, &curNode.?.lock);
+            const old = HAL.Arch.IRQEnableDisable(false);
             lock.acquire();
             curNode = FindDir(curNode.?, name);
             lock.release();
+            _ = HAL.Arch.IRQEnableDisable(old);
         }
         if (curNode == null) {
             break;
