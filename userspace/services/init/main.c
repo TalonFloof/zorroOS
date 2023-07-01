@@ -1,23 +1,12 @@
 #include <Filesystem/Filesystem.h>
+#include <System/Team.h>
 #include <System/Syscall.h>
 
 int main() {
-    DirEntry entry;
-    int64_t fd = Open("/dev",O_RDONLY | O_DIRECTORY);
-    if(fd < 0) {
-        RyuLog("Failed to open /dev!\n");
-    }
-    RyuLog("Contents of /dev:\n");
-    for(int i=0;;i++) {
-        if(ReadDir(fd,i,(void*)&entry) == 0) {
-            break;
-        }
-        RyuLog("    ");
-        RyuLog((const char*)&entry.name);
-        RyuLog("\n");
-    }
-    if(Close(fd) != 0) {
-        RyuLog("Failed to close /dev!\n");
-    }
+    RyuLog("zorroOS (C) 2020-2023 TalonFox, Licensed Under the MIT License\n\n");
+    RyuLog("Starting standard boot...\n");
+    RyuLog("Starting Raven Compositor service...\n");
+    
     while(1) {}
+    return 0;
 }

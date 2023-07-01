@@ -3,6 +3,7 @@ const HAL = @import("root").HAL;
 const AATree = @import("root").AATree;
 const Spinlock = @import("root").Spinlock;
 const Memory = @import("root").Memory;
+const EventQueue = @import("root").Executive.EventQueue;
 const std = @import("std");
 
 pub const ThreadState = enum {
@@ -12,7 +13,6 @@ pub const ThreadState = enum {
     Running,
     Eeping, // :3
     WaitingForEvent,
-    WaitingForThread,
 };
 
 pub const Thread = struct {
@@ -25,6 +25,9 @@ pub const Thread = struct {
     team: *Team.Team,
     name: [32]u8 = [_]u8{0} ** 32,
     state: ThreadState = .Stopped,
+    waitType: i64 = -2, // >0 is waiting for specific child thread, 0 is waiting for any thread within our team, -1 is any thread within our team or our child teams
+    eventQueue: EventQueue = EventQueue{},
+    exitReason: usize = 0,
     shouldKill: bool = false,
     priority: usize = 8,
     context: HAL.Arch.Context = HAL.Arch.Context{},
@@ -93,6 +96,8 @@ pub fn NewThread(
     thread.team = team;
     thread.hartID = -1;
     thread.threadID = nextThreadID;
+    thread.exitReason = ~@intCast(usize, 0);
+    thread.waitType = -2;
     nextThreadID += 1;
     thread.state = .Runnable;
     thread.priority = prior;
@@ -188,6 +193,7 @@ pub fn DestroyThread(thread: *Thread) bool {
     }
     const team = thread.team;
     threads.delete(thread.threadID);
+    thread.eventQueue.Wakeup(thread.exitReason);
     Memory.Pool.PagedPool.Free(thread.kstack);
     Memory.Pool.PagedPool.Free(@intToPtr([*]u8, @ptrToInt(thread))[0..@sizeOf(Thread)]);
     if (@ptrToInt(thread.team.mainThread) == @ptrToInt(thread)) {
@@ -205,6 +211,15 @@ pub fn DestroyThread(thread: *Thread) bool {
     }
     _ = HAL.Arch.IRQEnableDisable(old);
     return true;
+}
+
+pub fn GetThreadByID(id: i64) ?*Thread {
+    const old = HAL.Arch.IRQEnableDisable(false);
+    threadLock.acquire();
+    const val = threads.search(id);
+    threadLock.release();
+    _ = HAL.Arch.IRQEnableDisable(old);
+    return val;
 }
 
 pub fn Init() void {

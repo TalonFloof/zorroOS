@@ -3,6 +3,8 @@
 #include "../System/Syscall.h"
 #include <stdint.h>
 #include <stddef.h>
+typedef intptr_t off_t;
+typedef int64_t off64_t;
 
 #define O_ACCMODE 0x0007
 #define O_EXEC 1
@@ -24,16 +26,25 @@
 #define O_CLOEXEC 0x4000
 #define O_PATH 0x8000
 
+#define SEEK_SET 1
+
 typedef struct {
     int64_t inodeID;
     unsigned char nameLen;
     char name[256];
 } DirEntry;
 
-int64_t Open(const char* path, int mode);
-SyscallCode Close(int64_t fd);
-size_t Read(int64_t fd, void* base, size_t size);
-size_t ReadDir(int64_t fd, intptr_t offset, void* base);
-size_t Write(int64_t fd, void* base, size_t size);
+typedef struct {
+    int64_t fd;
+    void (*Close)(void* file);
+    size_t (*Read)(void* file, void* addr, size_t size);
+    size_t (*ReadDir)(void* file, off_t offset, void* addr);
+    size_t (*Write)(void* file, void* addr, size_t size);
+    off_t (*LSeek)(void* file, off_t offset, int whence);
+    size_t (*Truncate)(void* file, size_t size);
+    int64_t (*IOCtl)(void* file, int req, void* val);
+} OpenedFile;
+
+int64_t Open(const char* path, int mode, OpenedFile* file);
 
 #endif

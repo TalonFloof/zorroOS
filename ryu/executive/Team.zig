@@ -62,11 +62,7 @@ pub fn GetTeamByID(id: i64) ?*Team {
     const val = teams.search(id);
     teamLock.release();
     _ = HAL.Arch.IRQEnableDisable(old);
-    if (val) |v| {
-        return v;
-    } else {
-        return null;
-    }
+    return val;
 }
 
 pub fn DestroyFileDescriptor(k: i64, v: **FileDescriptor) void {

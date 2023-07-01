@@ -34,28 +34,34 @@ const FilesystemFuncs = enum(u16) { // All of these are just normal UNIX calls, 
     ChDir = 19,
     FChDir = 20,
     Dup = 21, // functions like dup2
+    Mount = 22,
+    UMount = 23,
 };
 
 const ProcessFuncs = enum(u16) {
-    NewTeam = 1,
-    LoadExecImage = 2, // Basically exec except better since you can trigger it on either yourself or one of your child teams
-    CloneImage = 3, // Basically like fork but you also have to create a team first
-    NewThread = 4,
-    RenameThread = 5,
-    KillThread = 6,
-    KillTeam = 7,
-    Exit = 8,
-    WaitForThread = 9,
-    FindThreadID = 10,
-    GetTeamInfo = 11,
-    GetNextTeamInfo = 12,
-    GetThreadInfo = 13,
-    GetNextThreadInfo = 14,
-    Eep = 15,
+    Yield = 1,
+    Exit = 2,
+    NewTeam = 3,
+    GiveFD = 4,
+    LoadExecImage = 5, // Basically exec except better since you can trigger it on either yourself or one of your child teams (if the child team isn't already running an image)
+    CloneImage = 6, // Basically like fork but you also have to create a team first
+    NewThread = 7,
+    RenameThread = 8,
+    KillThread = 9,
+    KillTeam = 10,
+    WaitForThread = 11,
+    FindThreadID = 12,
+    GetTeamInfo = 13,
+    GetNextTeamInfo = 14,
+    GetThreadInfo = 15,
+    GetNextThreadInfo = 16,
+    Eep = 17,
 };
 
 const RyuFuncs = enum(u16) {
     KernelLog = 1,
+    GetUNIXTime = 2,
+    GetSchedulerTicks = 3,
 };
 
 const DirEntry = extern struct {
@@ -63,8 +69,6 @@ const DirEntry = extern struct {
     nameLen: u8,
     name: [1]u8,
 };
-
-const TEAM_CREATE_INHERIT_FILES: usize = 1;
 
 pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
     const cat: CallCategory = @intToEnum(CallCategory, @intCast(u16, (regs.GetReg(0) & 0xFFFF0000) >> 16));
@@ -444,11 +448,56 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
         },
         .Process => {
             switch (@intToEnum(ProcessFuncs, func)) {
-                .NewTeam => { // TeamID_t NewTeam(*const char name, TeamCreateFlags flags)
-
+                .Yield => { // void Yield()
+                    const old = HAL.Arch.IRQEnableDisable(false);
+                    _ = HAL.Arch.ThreadYield();
+                    _ = HAL.Arch.IRQEnableDisable(old);
+                    regs.SetReg(0, 0);
                 },
                 .Exit => { // !!noreturn Exit(int code)
-
+                    _ = HAL.Arch.IRQEnableDisable(false);
+                    const thread: *Executive.Thread.Thread = HAL.Arch.GetHCB().activeThread.?;
+                    thread.exitReason = regs.GetReg(1);
+                    Executive.Thread.KillThread(thread.threadID);
+                    HAL.Arch.GetHCB().quantumsLeft = 1;
+                    while (true) {
+                        _ = HAL.Arch.IRQEnableDisable(true);
+                        HAL.Arch.WaitForIRQ();
+                    }
+                },
+                .NewTeam => { // TeamID_t NewTeam(*const char name)
+                    const old = HAL.Arch.IRQEnableDisable(false);
+                    const team = HAL.Arch.GetHCB().activeThread.?.team;
+                    const name = @intToPtr([*]const u8, regs.GetReg(1))[0..std.mem.len(@intToPtr([*c]const u8, regs.GetReg(1)))];
+                    const newTeam = Executive.Team.NewTeam(team, name);
+                    regs.SetReg(0, @intCast(u64, newTeam.teamID));
+                    _ = HAL.Arch.IRQEnableDisable(old);
+                },
+                .LoadExecImage => { // Status_t LoadExecImage(TeamID_t teamID, const char** argv, const char** envp)
+                    const old = HAL.Arch.IRQEnableDisable(false);
+                    const team = HAL.Arch.GetHCB().activeThread.?.team;
+                    const destTeamID = @bitCast(i64, @intCast(u64, regs.GetReg(1)));
+                    const cArgs = @intToPtr([*:null]?[*:0]const u8, regs.GetReg(2));
+                    const args = cArgs[0..std.mem.len(cArgs)];
+                    if (team.teamID == destTeamID) {
+                        regs.SetReg(0, @bitCast(u64, @intCast(i64, -38)));
+                    } else {
+                        if (Executive.Team.GetTeamByID(destTeamID)) |destTeam| {
+                            if (@ptrToInt(destTeam.mainThread) == 0) {
+                                if (Executive.Team.LoadELFImage(args[0].?[0..std.mem.len(args[0].?)], destTeam)) |entry| {
+                                    _ = Executive.Thread.NewThread(destTeam, @ptrCast([*]u8, @constCast("Main Thread"))[0..11], entry, 0x9ff8, 10);
+                                    regs.SetReg(0, 0);
+                                } else {
+                                    regs.SetReg(0, @bitCast(u64, @intCast(i64, -2)));
+                                }
+                            } else {
+                                regs.SetReg(0, @bitCast(u64, @intCast(i64, -13)));
+                            }
+                        } else {
+                            regs.SetReg(0, @bitCast(u64, @intCast(i64, -3)));
+                        }
+                    }
+                    _ = HAL.Arch.IRQEnableDisable(old);
                 },
                 else => {
                     regs.SetReg(0, @bitCast(u64, @intCast(i64, -4096)));
@@ -461,6 +510,9 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                     var s: [*c]const u8 = @intToPtr([*c]const u8, regs.GetReg(1));
                     HAL.Console.Put("{s}", .{@ptrCast([*]const u8, s)[0..std.mem.len(s)]});
                     regs.SetReg(0, 0);
+                },
+                else => {
+                    regs.SetReg(0, @bitCast(u64, @intCast(i64, -4096)));
                 },
             }
         },

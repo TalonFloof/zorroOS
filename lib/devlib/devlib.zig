@@ -29,8 +29,8 @@ pub const RyuDispatch = extern struct {
     acquireSpinlock: *const fn (*volatile u8) callconv(.C) void,
     releaseSpinlock: *const fn (*volatile u8) callconv(.C) void,
     // Event
-    waitEvent: *const fn (*EventQueue) callconv(.C) void,
-    wakeupEvent: *const fn (*EventQueue) callconv(.C) void,
+    waitEvent: *const fn (*EventQueue) callconv(.C) usize,
+    wakeupEvent: *const fn (*EventQueue, usize) callconv(.C) void,
     // DevFS
     registerDevice: *const fn ([*c]const u8, *fs.Inode) callconv(.C) void,
     // Filesystem

@@ -80,7 +80,7 @@ pub fn PS2KbdIRQ() callconv(.C) void {
     kbdBuffer[kbdWrite] = data;
     kbdWrite = (kbdWrite + 1) % 64;
     if (kbdEventQueue.threadHead != null) {
-        DriverInfo.krnlDispatch.?.wakeupEvent(&kbdEventQueue);
+        DriverInfo.krnlDispatch.?.wakeupEvent(&kbdEventQueue, 0);
     }
 }
 
@@ -92,7 +92,7 @@ pub fn PS2MouseIRQ() callconv(.C) void {
         mouseBuffer[(mouseWrite + 2) % 64] = packetData[2];
         mouseWrite = (mouseWrite + 3) % 64;
         if (mouseEventQueue.threadHead != null) {
-            DriverInfo.krnlDispatch.?.wakeupEvent(&mouseEventQueue);
+            DriverInfo.krnlDispatch.?.wakeupEvent(&mouseEventQueue, 0);
         }
     }
     if (packetID == 0 and (packetData[packetID] & 0x8) == 0) {
@@ -121,7 +121,7 @@ pub fn PS2DevRead(inode: *devlib.fs.Inode, offset: isize, addr: *void, len: isiz
         }
         while (mouseWrite == mouseRead) {
             DriverInfo.krnlDispatch.?.releaseSpinlock(&inode.lock);
-            DriverInfo.krnlDispatch.?.waitEvent(&mouseEventQueue);
+            _ = DriverInfo.krnlDispatch.?.waitEvent(&mouseEventQueue);
             DriverInfo.krnlDispatch.?.acquireSpinlock(&inode.lock);
         }
         const buf = @intToPtr([*]u8, @ptrToInt(addr))[0..3];
@@ -137,7 +137,7 @@ pub fn PS2DevRead(inode: *devlib.fs.Inode, offset: isize, addr: *void, len: isiz
         }
         while (kbdWrite == kbdRead) {
             DriverInfo.krnlDispatch.?.releaseSpinlock(&inode.lock);
-            DriverInfo.krnlDispatch.?.waitEvent(&kbdEventQueue);
+            _ = DriverInfo.krnlDispatch.?.waitEvent(&kbdEventQueue);
             DriverInfo.krnlDispatch.?.acquireSpinlock(&inode.lock);
         }
         const buf = @intToPtr(*u8, @ptrToInt(addr));

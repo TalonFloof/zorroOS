@@ -118,12 +118,12 @@ fn DriverReleaseSpinlock(v: *volatile u8) callconv(.C) void {
     @ptrCast(*volatile Spinlock, v).release();
 }
 
-fn DriverWaitEvent(queue: *devlib.EventQueue) callconv(.C) void {
-    @ptrCast(*EventQueue, queue).Wait();
+fn DriverWaitEvent(queue: *devlib.EventQueue) callconv(.C) usize {
+    return @ptrCast(*EventQueue, queue).Wait();
 }
 
-fn DriverWakeupEvent(queue: *devlib.EventQueue) callconv(.C) void {
-    @ptrCast(*EventQueue, queue).Wakeup();
+fn DriverWakeupEvent(queue: *devlib.EventQueue, val: usize) callconv(.C) void {
+    @ptrCast(*EventQueue, queue).Wakeup(val);
 }
 
 fn DriverRegisterDevice(name: [*c]const u8, inode: *FS.Inode) callconv(.C) void {

@@ -3,8 +3,9 @@ const Thread = @import("root").Executive.Thread.Thread;
 const Memory = @import("root").Memory;
 
 pub const HCB = struct {
-    activeKstack: u64 = 0,
     activeUstack: u64 = 0,
+    activeKstack: u64 = 0,
+    activeIStack: u64 = 0,
     activeThread: ?*Thread = null,
     quantumsLeft: u32 = 0,
     hartID: i32 = 0,

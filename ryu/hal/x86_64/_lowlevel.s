@@ -140,11 +140,11 @@ extern RyuSyscallDispatch
 _RyuSyscallHandler:
     cli
     swapgs
-    mov [gs:8], rsp
-    mov rsp, [gs:0]
+    mov [gs:0], rsp
+    mov rsp, [gs:8]
     
     push qword 0x3b
-    push qword [gs:0x8]
+    push qword [gs:0]
     push r11
     push qword 0x43
     push rcx
@@ -159,7 +159,7 @@ _RyuSyscallHandler:
     
     cli
     swapgs
-    mov rsp, [gs:8]
+    mov rsp, [gs:0]
     swapgs
     o64 sysret
 
@@ -205,6 +205,9 @@ ThreadYield:
     pushaq
     mov rdi, 0xfd ; Reschedule Pseudo-IPI
     mov rsi, rsp
+    swapgs
+    mov rsp, [gs:16]
+    swapgs
     call IRQHandler
     ud2
     ud2

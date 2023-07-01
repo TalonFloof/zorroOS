@@ -7,7 +7,7 @@ pub const EventQueue = extern struct {
     listLock: Spinlock = .unaquired,
     threadHead: ?*Thread.Thread = null,
 
-    pub fn Wait(self: *EventQueue) void {
+    pub fn Wait(self: *EventQueue) usize {
         const old = HAL.Arch.IRQEnableDisable(false);
         self.listLock.acquire();
         const hcb = HAL.Arch.GetHCB();
@@ -15,11 +15,12 @@ pub const EventQueue = extern struct {
         self.threadHead = hcb.activeThread.?;
         hcb.activeThread.?.state = .WaitingForEvent;
         self.listLock.release();
-        HAL.Arch.ThreadYield();
+        const retVal: usize = HAL.Arch.ThreadYield();
         _ = HAL.Arch.IRQEnableDisable(old);
+        return retVal;
     }
 
-    pub fn Wakeup(self: *EventQueue) void {
+    pub fn Wakeup(self: *EventQueue, val: usize) void {
         const old = HAL.Arch.IRQEnableDisable(false);
         self.listLock.acquire();
         var entry: ?*Thread.Thread = self.threadHead;
@@ -27,6 +28,7 @@ pub const EventQueue = extern struct {
             if (thread.priority < 15) {
                 thread.priority += 1;
             }
+            thread.context.SetReg(0, @intCast(u64, val));
             thread.state = .Runnable;
             Thread.queues[thread.priority].lock.acquire();
             Thread.queues[thread.priority].Add(thread);
