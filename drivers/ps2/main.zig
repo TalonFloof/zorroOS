@@ -13,6 +13,16 @@ pub export var DriverInfo = devlib.RyuDriverInfo{
 var packetID: usize = 0;
 var packetData: [3]u8 = .{ 0, 0, 0 };
 
+var kbdBuffer: [64]u8 = [_]u8{0} ** 64;
+var kbdRead: usize = 0;
+var kbdWrite: usize = 0;
+var kbdEventQueue: devlib.EventQueue = devlib.EventQueue{};
+
+var mouseBuffer: [64]u8 = [_]u8{0} ** 64;
+var mouseRead: usize = 0;
+var mouseWrite: usize = 0;
+var mouseEventQueue: devlib.EventQueue = devlib.EventQueue{};
+
 fn PS2MouseWait(typ: usize) void {
     if (typ == 0) {
         while (true) {
@@ -66,23 +76,74 @@ fn PS2MouseWrite(write: u8, specialRead: bool) u8 {
 pub fn PS2KbdIRQ() callconv(.C) void {
     while (devlib.io.inb(0x64) & 1 == 0)
         return;
-    _ = devlib.io.inb(0x60);
+    const data = devlib.io.inb(0x60);
+    kbdBuffer[kbdWrite] = data;
+    kbdWrite = (kbdWrite + 1) % 64;
+    if (kbdEventQueue.threadHead != null) {
+        DriverInfo.krnlDispatch.?.wakeupEvent(&kbdEventQueue);
+    }
 }
 
 pub fn PS2MouseIRQ() callconv(.C) void {
     packetData[packetID] = devlib.io.inb(0x60);
     if (packetID == 2) {
-        var flags: u8 = packetData[0];
-        var relX: isize = @intCast(isize, packetData[1]) - @intCast(isize, (@intCast(u16, flags) << 4) & 0x100);
-        _ = relX;
-        var relY: isize = 0 - (@intCast(isize, packetData[2]) - @intCast(isize, (@intCast(u16, flags) << 3) & 0x100));
-        _ = relY;
-        //DriverInfo.krnlDispatch.?.updateMouse(relX, relY, 0, flags & 7);
+        mouseBuffer[mouseWrite] = packetData[0];
+        mouseBuffer[(mouseWrite + 1) % 64] = packetData[1];
+        mouseBuffer[(mouseWrite + 2) % 64] = packetData[2];
+        mouseWrite = (mouseWrite + 3) % 64;
+        if (mouseEventQueue.threadHead != null) {
+            DriverInfo.krnlDispatch.?.wakeupEvent(&mouseEventQueue);
+        }
     }
     if (packetID == 0 and (packetData[packetID] & 0x8) == 0) {
         packetID = 0;
     } else {
         packetID = (packetID + 1) % 3;
+    }
+}
+
+var PS2KbdInode: devlib.fs.Inode = devlib.fs.Inode{
+    .stat = devlib.fs.Metadata{ .ID = 0, .mode = 0o0020660 },
+    .read = &PS2DevRead,
+};
+
+var PS2MouseInode: devlib.fs.Inode = devlib.fs.Inode{
+    .stat = devlib.fs.Metadata{ .ID = 0, .mode = 0o0020660 },
+    .read = &PS2DevRead,
+};
+
+pub fn PS2DevRead(inode: *devlib.fs.Inode, offset: isize, addr: *void, len: isize) callconv(.C) isize {
+    _ = offset;
+    if (@ptrToInt(inode) == @ptrToInt(&PS2MouseInode)) {
+        // PS/2 Mouse
+        if (len != 3) {
+            return -16;
+        }
+        while (mouseWrite == mouseRead) {
+            DriverInfo.krnlDispatch.?.releaseSpinlock(&inode.lock);
+            DriverInfo.krnlDispatch.?.waitEvent(&mouseEventQueue);
+            DriverInfo.krnlDispatch.?.acquireSpinlock(&inode.lock);
+        }
+        const buf = @intToPtr([*]u8, @ptrToInt(addr))[0..3];
+        buf[0] = mouseBuffer[mouseRead];
+        buf[1] = mouseBuffer[(mouseRead + 1) % 64];
+        buf[2] = mouseBuffer[(mouseRead + 2) % 64];
+        mouseRead = (mouseRead + 3) % 64;
+        return 3;
+    } else {
+        // PS/2 Keyboard
+        if (len != 1) {
+            return -16;
+        }
+        while (kbdWrite == kbdRead) {
+            DriverInfo.krnlDispatch.?.releaseSpinlock(&inode.lock);
+            DriverInfo.krnlDispatch.?.waitEvent(&kbdEventQueue);
+            DriverInfo.krnlDispatch.?.acquireSpinlock(&inode.lock);
+        }
+        const buf = @intToPtr(*u8, @ptrToInt(addr));
+        buf.* = kbdBuffer[kbdRead];
+        kbdRead = (kbdRead + 1) % 64;
+        return 1;
     }
 }
 
@@ -137,6 +198,8 @@ pub fn LoadDriver() callconv(.C) devlib.Status {
         if (dispatch.attachDetatchIRQ(12, &PS2MouseIRQ) != 12) {
             dispatch.abort("Failed to attach IRQ12 for PS/2 Mouse!");
         }
+        dispatch.registerDevice("ps2kbd", &PS2KbdInode);
+        dispatch.registerDevice("ps2mouse", &PS2MouseInode);
         return .Okay;
     }
     return .Failure;

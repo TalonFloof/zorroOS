@@ -3,7 +3,7 @@ const HAL = @import("root").HAL;
 const Spinlock = @import("root").Spinlock;
 const Thread = @import("root").Executive.Thread;
 
-pub const EventQueue = struct {
+pub const EventQueue = extern struct {
     listLock: Spinlock = .unaquired,
     threadHead: ?*Thread.Thread = null,
 

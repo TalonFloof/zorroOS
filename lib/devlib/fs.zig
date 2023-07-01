@@ -1,6 +1,6 @@
 pub const Metadata = extern struct {
     deviceID: u64 = 0,
-    ID: i64 = -2, // if <0 then an error occured
+    ID: i64 = 0,
     mode: i32 = 0,
     nlinks: i32 = 0,
     uid: u32 = 1,

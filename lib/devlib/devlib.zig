@@ -1,5 +1,6 @@
 pub const io = @import("io.zig");
 pub const fs = @import("fs.zig");
+pub const EventQueue = @import("event.zig").EventQueue;
 const std = @import("std");
 
 pub const Status = enum(c_int) {
@@ -10,8 +11,8 @@ pub const Status = enum(c_int) {
 
 pub const RyuDispatch = extern struct {
     // Basic
-    put: *const fn ([*:0]const u8) callconv(.C) void,
-    abort: *const fn ([*:0]const u8) callconv(.C) noreturn,
+    put: *const fn ([*c]const u8) callconv(.C) void,
+    abort: *const fn ([*c]const u8) callconv(.C) noreturn,
     // Memory
     staticAlloc: *const fn (usize) callconv(.C) *void,
     staticAllocAnon: *const fn (usize) callconv(.C) *void,
@@ -24,7 +25,16 @@ pub const RyuDispatch = extern struct {
     // IRQ
     enableDisableIRQ: *const fn (bool) callconv(.C) bool,
     attachDetatchIRQ: *const fn (u16, ?*const fn () callconv(.C) void) callconv(.C) u16,
-    // Ramdisk
+    // Spinlock
+    acquireSpinlock: *const fn (*volatile u8) callconv(.C) void,
+    releaseSpinlock: *const fn (*volatile u8) callconv(.C) void,
+    // Event
+    waitEvent: *const fn (*EventQueue) callconv(.C) void,
+    wakeupEvent: *const fn (*EventQueue) callconv(.C) void,
+    // DevFS
+    registerDevice: *const fn ([*c]const u8, *fs.Inode) callconv(.C) void,
+    // Filesystem
+    registerFilesystem: *const fn ([*c]const u8, *const fn (*fs.Filesystem) callconv(.C) bool, *const fn (*fs.Filesystem) callconv(.C) void) callconv(.C) void,
 };
 
 pub const RyuDriverInfo = extern struct {

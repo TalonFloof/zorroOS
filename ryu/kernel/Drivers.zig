@@ -2,6 +2,9 @@ const devlib = @import("devlib");
 const HAL = @import("root").HAL;
 const ELF = @import("root").ELF;
 const Memory = @import("root").Memory;
+const Spinlock = @import("root").Spinlock;
+const EventQueue = @import("root").Executive.EventQueue;
+const FS = @import("root").FS;
 const std = @import("std");
 
 pub var drvrHead: ?*devlib.RyuDriverInfo = null;
@@ -41,13 +44,19 @@ pub export const KDriverDispatch = devlib.RyuDispatch{
     .pagedFreeAnon = &DriverPagedFreeAnon,
     .attachDetatchIRQ = &DriverAttachDetatchIRQ,
     .enableDisableIRQ = &HAL.Arch.IRQEnableDisable,
+    .acquireSpinlock = &DriverAcquireSpinlock,
+    .releaseSpinlock = &DriverReleaseSpinlock,
+    .waitEvent = &DriverWaitEvent,
+    .wakeupEvent = &DriverWakeupEvent,
+    .registerDevice = &DriverRegisterDevice,
+    .registerFilesystem = &DriverRegisterFilesystem,
 };
 
-fn DriverPut(s: [*:0]const u8) callconv(.C) void {
+fn DriverPut(s: [*c]const u8) callconv(.C) void {
     HAL.Console.Put("{s}", .{s[0..std.mem.len(s)]});
 }
 
-fn DriverAbort(s: [*:0]const u8) callconv(.C) noreturn {
+fn DriverAbort(s: [*c]const u8) callconv(.C) noreturn {
     HAL.Console.EnableDisable(true);
     HAL.Console.Put("DriverAbort: {s}\n", .{s[0..std.mem.len(s)]});
     HAL.Crash.Crash(.RyuDriverAbort, .{ 0, 0, 0, 0 });
@@ -99,4 +108,28 @@ fn DriverAttachDetatchIRQ(irq: u16, routine: ?*const fn () callconv(.C) void) ca
         HAL.Arch.irqISRs[irq] = routine;
         return irq;
     }
+}
+
+fn DriverAcquireSpinlock(v: *volatile u8) callconv(.C) void {
+    @ptrCast(*volatile Spinlock, v).acquire();
+}
+
+fn DriverReleaseSpinlock(v: *volatile u8) callconv(.C) void {
+    @ptrCast(*volatile Spinlock, v).release();
+}
+
+fn DriverWaitEvent(queue: *devlib.EventQueue) callconv(.C) void {
+    @ptrCast(*EventQueue, queue).Wait();
+}
+
+fn DriverWakeupEvent(queue: *devlib.EventQueue) callconv(.C) void {
+    @ptrCast(*EventQueue, queue).Wakeup();
+}
+
+fn DriverRegisterDevice(name: [*c]const u8, inode: *FS.Inode) callconv(.C) void {
+    FS.DevFS.RegisterDevice(name[0..std.mem.len(name)], inode);
+}
+
+fn DriverRegisterFilesystem(name: [*c]const u8, mount: *const fn (*FS.Filesystem) callconv(.C) bool, umount: *const fn (*FS.Filesystem) callconv(.C) void) callconv(.C) void {
+    FS.RegisterFilesystem(name[0..std.mem.len(name)], mount, umount);
 }
