@@ -187,3 +187,24 @@ ContextSetupFPU:
     fninit
     pop rax
     ret
+
+global ThreadYield
+ThreadYield:
+    ; rip = 0
+    push rcx ; rip = 8
+    mov rcx, rsp
+    add rsp, 8
+    push qword 0x30 ; rip = 16
+    push rcx ; rip = 24
+    pushfq ; rip = 32
+    push qword 0x28 ; rip = 40
+    mov rcx, qword [rsp+40]
+    push rcx ; rip = 48
+    mov rcx, qword [rsp+40] ; Get the original RCX value
+    push qword 0
+    pushaq
+    mov rdi, 0xfd ; Reschedule Pseudo-IPI
+    mov rsi, rsp
+    call IRQHandler
+    ud2
+    ud2

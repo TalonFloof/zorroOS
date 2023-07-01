@@ -122,18 +122,21 @@ pub fn AATree(comptime K: type, comptime V: type) type {
             return null;
         }
 
-        fn destroyInternal(T: ?*Node) void {
+        fn destroyInternal(T: *Node, f: *const fn (K, *V) void) void {
             if (T.link[0]) |prev| {
-                destroyInternal(prev);
+                destroyInternal(prev, f);
             }
             if (T.link[1]) |next| {
-                destroyInternal(next);
+                destroyInternal(next, f);
             }
+            f(T.key, &T.value);
             Memory.Pool.PagedPool.Free(@intToPtr([*]u8, @ptrToInt(T))[0..@sizeOf(Node)]);
         }
 
-        pub fn destroy(self: *Self) void {
-            destroyInternal(self.root);
+        pub fn destroy(self: *Self, f: *const fn (K, *V) void) void {
+            if (self.root) |root| {
+                destroyInternal(root, f);
+            }
         }
     };
 }

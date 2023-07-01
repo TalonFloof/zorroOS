@@ -43,6 +43,7 @@ pub export fn _hartstart() callconv(.Naked) noreturn {
 
 extern fn ContextEnter(context: *allowzero void) callconv(.C) noreturn;
 extern fn ContextSetupFPU() callconv(.C) void;
+pub extern fn ThreadYield() callconv(.C) noreturn;
 
 var initialUNIXTime: i64 = 0;
 

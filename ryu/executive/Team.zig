@@ -69,6 +69,11 @@ pub fn GetTeamByID(id: i64) ?*Team {
     }
 }
 
+pub fn DestroyFileDescriptor(k: i64, v: **FileDescriptor) void {
+    _ = k;
+    Memory.Pool.PagedPool.Free(@intToPtr([*]u8, @ptrToInt(v.*))[0..@sizeOf(FileDescriptor)]);
+}
+
 pub fn AdoptTeam(team: *Team, dropTeam: bool) void { // Transfers a team's parent to the Kernel Team
     const old = HAL.Arch.IRQEnableDisable(false);
     teamLock.acquire();

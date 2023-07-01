@@ -76,7 +76,7 @@ pub const Queue = struct {
     }
 };
 
-var queues: [16]Queue = [_]Queue{Queue{}} ** 16;
+pub var queues: [16]Queue = [_]Queue{Queue{}} ** 16;
 
 pub fn NewThread(
     team: *Team.Team,
@@ -188,13 +188,14 @@ pub fn DestroyThread(thread: *Thread) bool {
     }
     const team = thread.team;
     threads.delete(thread.threadID);
+    Memory.Pool.PagedPool.Free(thread.kstack);
     Memory.Pool.PagedPool.Free(@intToPtr([*]u8, @ptrToInt(thread))[0..@sizeOf(Thread)]);
     if (@ptrToInt(thread.team.mainThread) == @ptrToInt(thread)) {
         // Destroy the Team as well
         threadLock.release();
         Team.teamLock.acquire();
         Memory.Paging.DestroyPageDirectory(team.addressSpace);
-        team.fds.destroy();
+        team.fds.destroy(&Team.DestroyFileDescriptor);
         Team.AdoptTeam(team, true);
         Team.teams.delete(team.teamID);
         Memory.Pool.PagedPool.Free(@intToPtr([*]u8, @ptrToInt(team))[0..@sizeOf(Team.Team)]);
@@ -244,14 +245,16 @@ pub fn Reschedule(demote: bool) noreturn {
     const hcb = HAL.Arch.GetHCB();
     if (hcb.activeThread != null) {
         HAL.Arch.SwitchPT(@intToPtr(*void, @ptrToInt(Memory.Paging.initialPageDir.?.ptr) - 0xffff800000000000));
-        hcb.activeThread.?.state = .Runnable;
-        if (demote) {
-            if (hcb.activeThread.?.priority > 1)
-                hcb.activeThread.?.priority -= 1;
+        if (hcb.activeThread.?.state == .Running) {
+            hcb.activeThread.?.state = .Runnable;
+            if (demote) {
+                if (hcb.activeThread.?.priority > 1)
+                    hcb.activeThread.?.priority -= 1;
+            }
+            queues[hcb.activeThread.?.priority].lock.acquire();
+            queues[hcb.activeThread.?.priority].Add(hcb.activeThread.?);
+            queues[hcb.activeThread.?.priority].lock.release();
         }
-        queues[hcb.activeThread.?.priority].lock.acquire();
-        queues[hcb.activeThread.?.priority].Add(hcb.activeThread.?);
-        queues[hcb.activeThread.?.priority].lock.release();
     }
     var thr: *Thread = GetNextThread();
     while (true) {
