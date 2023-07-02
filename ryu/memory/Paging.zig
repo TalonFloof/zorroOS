@@ -40,7 +40,7 @@ fn derefPageTable(pt: *void, level: usize) void {
         } else {
             const pte = HAL.Arch.GetPTE(pt, i);
             if (pte.r != 0) {
-                derefPageTable(@intToPtr(*void, @intCast(usize, pte.phys) << 12), level + 1);
+                derefPageTable(@intToPtr(*void, (@intCast(usize, pte.phys) << 12) + 0xffff800000000000), level + 1);
             }
         }
     }
@@ -48,6 +48,7 @@ fn derefPageTable(pt: *void, level: usize) void {
 
 pub inline fn DestroyPageDirectory(root: PageDirectory) void {
     derefPageTable(@ptrCast(*void, root.ptr), 0);
+    Memory.PFN.ForceFreePage(@ptrToInt(root.ptr) - 0xffff800000000000);
 }
 
 pub fn MapPage(root: PageDirectory, vaddr: usize, flags: usize, paddr: usize) usize {

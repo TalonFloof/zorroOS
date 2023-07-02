@@ -1,5 +1,7 @@
+#include "../System/Thread.h"
+
 extern int main();
 
 void __entry() {
-    main();
+    Exit(main());
 }

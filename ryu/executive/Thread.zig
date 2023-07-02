@@ -32,6 +32,7 @@ pub const Thread = struct {
     priority: usize = 8,
     context: HAL.Arch.Context = HAL.Arch.Context{},
     fcontext: HAL.Arch.FloatContext = HAL.Arch.FloatContext{},
+    activeUstack: usize = 0,
     kstack: []u8,
     hartID: i32 = -1,
 };
@@ -184,7 +185,6 @@ pub fn DestroyThread(thread: *Thread) bool {
         return false;
     }
     // Destroy the thread
-    Memory.Pool.PagedPool.Free(thread.kstack);
     if (thread.prevTeamThread) |prev| {
         prev.nextTeamThread = thread.nextTeamThread;
     }
@@ -194,15 +194,15 @@ pub fn DestroyThread(thread: *Thread) bool {
     const team = thread.team;
     threads.delete(thread.threadID);
     thread.eventQueue.Wakeup(thread.exitReason);
-    Memory.Pool.PagedPool.Free(thread.kstack);
+    Memory.Pool.PagedPool.FreeAnonPages(thread.kstack);
     Memory.Pool.PagedPool.Free(@intToPtr([*]u8, @ptrToInt(thread))[0..@sizeOf(Thread)]);
-    if (@ptrToInt(thread.team.mainThread) == @ptrToInt(thread)) {
+    if (@ptrToInt(team.mainThread) == @ptrToInt(thread)) {
         // Destroy the Team as well
         threadLock.release();
+        Team.AdoptTeam(team, true);
         Team.teamLock.acquire();
         Memory.Paging.DestroyPageDirectory(team.addressSpace);
         team.fds.destroy(&Team.DestroyFileDescriptor);
-        Team.AdoptTeam(team, true);
         Team.teams.delete(team.teamID);
         Memory.Pool.PagedPool.Free(@intToPtr([*]u8, @ptrToInt(team))[0..@sizeOf(Team.Team)]);
         Team.teamLock.release();
@@ -290,8 +290,8 @@ pub fn Reschedule(demote: bool) noreturn {
         thr = GetNextThread();
     }
     hcb.activeThread = thr;
-    hcb.activeKstack = @ptrToInt(thr.kstack.ptr) + thr.kstack.len;
-    hcb.activeUstack = 0;
+    hcb.activeKstack = @ptrToInt(thr.kstack.ptr) + (thr.kstack.len - 8);
+    hcb.activeUstack = thr.activeUstack;
     hcb.quantumsLeft = @intCast(u32, (20 * (16 - thr.priority) + 5 * thr.priority) >> 4);
     HAL.Arch.SwitchPT(@intToPtr(*void, @ptrToInt(thr.team.addressSpace.ptr) - 0xffff800000000000));
     thr.fcontext.Load();

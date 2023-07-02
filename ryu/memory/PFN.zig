@@ -106,7 +106,7 @@ pub fn DereferencePage(page: usize) void {
             pfnDatabase[index].swappable = 0;
             if (pfnDatabase[index].pte != 0 and oldState == .PageTable) {
                 const entry: usize = pfnDatabase[index].pte;
-                const pt = entry & (~@intCast(usize, 0xFFF));
+                const pt = entry & (~@intCast(usize, 0xFFF)) - 0xffff800000000000;
                 if (pfnDatabase[pt >> 12].state != .PageTable) {
                     HAL.Crash.Crash(.RyuPFNCorruption, .{ pt, @enumToInt(pfnDatabase[pt >> 12].state), @enumToInt(PFNType.PageTable), 0 });
                 }

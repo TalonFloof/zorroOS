@@ -93,6 +93,7 @@ pub export fn HartStart(stack: u64) callconv(.C) noreturn {
     wrmsr(0xC0000102, hart.hartData);
     wrmsr(0x277, 0x0107040600070406); // Enable write combining when PAT, PCD, and PWT is set
     GetHCB().archData.tss.rsp[0] = stack;
+    GetHCB().activeIstack = stack;
     gdt.initialize();
     apic.setup();
     idt.fastInit();

@@ -459,11 +459,7 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                     const thread: *Executive.Thread.Thread = HAL.Arch.GetHCB().activeThread.?;
                     thread.exitReason = regs.GetReg(1);
                     Executive.Thread.KillThread(thread.threadID);
-                    HAL.Arch.GetHCB().quantumsLeft = 1;
-                    while (true) {
-                        _ = HAL.Arch.IRQEnableDisable(true);
-                        HAL.Arch.WaitForIRQ();
-                    }
+                    _ = HAL.Arch.ThreadYield();
                 },
                 .NewTeam => { // TeamID_t NewTeam(*const char name)
                     const old = HAL.Arch.IRQEnableDisable(false);

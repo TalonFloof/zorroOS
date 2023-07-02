@@ -59,7 +59,7 @@ extern IRQHandler
 	global int%1
 	int%1:
 		cli
-        o64 push 0
+        push qword 0
         pushaq
         mov rdi, %1
         mov rsi, rsp
@@ -73,7 +73,7 @@ extern IRQHandler
 	global int%1
 	int%1:
         cli
-        o64 push 0
+        push qword 0
         pushaq
         mov rdi, %1
         mov rsi, rsp
@@ -150,7 +150,6 @@ _RyuSyscallHandler:
     push rcx
     push qword 0
     swapgs
-    cld
     pushaq
     mov rdi, rsp
     xor rbp, rbp
@@ -190,24 +189,24 @@ ContextSetupFPU:
 
 global ThreadYield
 ThreadYield:
-    ; rip = 0
-    push rcx ; rip = 8
-    mov rcx, rsp
-    add rsp, 8
-    push qword 0x30 ; rip = 16
-    push rcx ; rip = 24
-    pushfq ; rip = 32
-    push qword 0x28 ; rip = 40
-    mov rcx, qword [rsp+40]
-    push rcx ; rip = 48
-    mov rcx, qword [rsp+40] ; Get the original RCX value
+    cli
+    mov rax, rsp
+    push qword 0x30
+    push rax
+    pushfq
+    push qword 0x28
+    push leaveYield
     push qword 0
+    xor rax, rax
     pushaq
     mov rdi, 0xfd ; Reschedule Pseudo-IPI
     mov rsi, rsp
     swapgs
-    mov rsp, [gs:16]
+    mov rsp, qword [gs:16]
     swapgs
+    xor rbp, rbp
     call IRQHandler
     ud2
     ud2
+leaveYield:
+    ret

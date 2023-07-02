@@ -49,6 +49,7 @@ pub export fn IRQHandler(entry: u8, con: *HAL.Arch.Context) callconv(.C) void {
             apic.write(0xb0, 0);
         }
         const hcb = HAL.Arch.GetHCB();
+        hcb.activeThread.?.activeUstack = hcb.activeUstack;
         hcb.activeThread.?.context = con.*;
         hcb.activeThread.?.fcontext.Save();
         Thread.Reschedule(entry == 0x20);
