@@ -7,6 +7,7 @@ const HAL = @import("root").HAL;
 const std = @import("std");
 pub const DevFS = @import("DevFS.zig");
 pub const CpioFS = @import("CpioFS.zig");
+pub const MesgFS = @import("MesgFS.zig");
 
 pub var rootInode: ?*Inode = null;
 
@@ -179,4 +180,5 @@ pub fn Init() void {
     rootInode.?.prevSibling = null;
     _ = NewDirInode("dev");
     DevFS.Init();
+    MesgFS.Init();
 }

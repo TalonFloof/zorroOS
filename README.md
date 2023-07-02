@@ -8,7 +8,7 @@
 
 Building zorroOS is simple.    
 First, ensure that you have the following depenedencies:
-- `zig` (DO NOT USE 0.10.1 OR OLDER)
+- `zig` Version: 0.11.0 if its been released, otherwise master (Please open an issue if the specificied version isn't building zorroOS correctly)
 - `nasm`
 - `xorriso`
 - `git`

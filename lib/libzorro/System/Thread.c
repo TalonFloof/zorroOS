@@ -1,10 +1,10 @@
 #include "Thread.h"
 #include "Syscall.h"
 
-void Yield() {
-    Syscall(0x20001,0,0,0,0,0,0);
+void Exit(int code) {
+    Syscall(0x20001,code,0,0,0,0,0);
 }
 
-void Exit(int code) {
-    Syscall(0x20002,code,0,0,0,0,0);
+ThreadID NewThread(const char* name, void* ip, void* sp) {
+    return Syscall(0x20006,(uintptr_t)name,(uintptr_t)ip,(uintptr_t)sp,0,0,0);
 }

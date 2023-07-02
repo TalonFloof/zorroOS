@@ -39,23 +39,22 @@ const FilesystemFuncs = enum(u16) { // All of these are just normal UNIX calls, 
 };
 
 const ProcessFuncs = enum(u16) {
-    Yield = 1,
-    Exit = 2,
-    NewTeam = 3,
-    GiveFD = 4,
-    LoadExecImage = 5, // Basically exec except better since you can trigger it on either yourself or one of your child teams (if the child team isn't already running an image)
-    CloneImage = 6, // Basically like fork but you also have to create a team first
-    NewThread = 7,
-    RenameThread = 8,
-    KillThread = 9,
-    KillTeam = 10,
-    WaitForThread = 11,
-    FindThreadID = 12,
-    GetTeamInfo = 13,
-    GetNextTeamInfo = 14,
-    GetThreadInfo = 15,
-    GetNextThreadInfo = 16,
-    Eep = 17,
+    Exit = 1,
+    NewTeam = 2,
+    GiveFD = 3,
+    LoadExecImage = 4, // Basically exec except better since you can trigger it on either yourself or one of your child teams (if the child team isn't already running an image)
+    CloneImage = 5, // Basically like fork but you also have to create a team first
+    NewThread = 6,
+    RenameThread = 7,
+    KillThread = 8,
+    KillTeam = 9,
+    WaitForThread = 10,
+    FindThreadID = 11,
+    GetTeamInfo = 12,
+    GetNextTeamInfo = 13,
+    GetThreadInfo = 14,
+    GetNextThreadInfo = 15,
+    Eep = 16,
 };
 
 const RyuFuncs = enum(u16) {
@@ -375,14 +374,37 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                 },
                 .MMap => { // void* MMap(void* addr, size_t length, int prot, int flags, int fd, off_t offset)
                     const addr = @as(*allowzero void, @ptrFromInt(regs.GetReg(1)));
-                    const length = @as(usize, @intCast(regs.GetReg(2)));
-                    const prot = regs.GetReg(3);
-                    _ = prot;
+                    const length: usize = @intCast(regs.GetReg(2));
+                    const prot: usize = @intCast(regs.GetReg(3));
                     const flags = regs.GetReg(4);
                     const fd = @as(i64, @bitCast(regs.GetReg(5)));
                     const offset = @as(isize, @bitCast(@as(usize, @intCast(regs.GetReg(6)))));
                     if (flags & 0x8 != 0) { // Anonymous Mapping
-                        regs.SetReg(0, @as(u64, @bitCast(@as(i64, @intCast(-38)))));
+                        const old = HAL.Arch.IRQEnableDisable(false);
+                        var addrSpace = HAL.Arch.GetHCB().activeThread.?.team.addressSpace;
+                        var a: usize = @intFromPtr(addr);
+                        if (a == 0) {
+                            const space = Memory.Paging.FindFreeSpace(addrSpace, 0x1000, length);
+                            if (space) |ad| {
+                                a = ad;
+                            } else {
+                                _ = HAL.Arch.IRQEnableDisable(old);
+                                regs.SetReg(0, @as(u64, @bitCast(@as(i64, -12))));
+                                return;
+                            }
+                        }
+                        const addrEnd: usize = a + length;
+                        while (a < addrEnd) : (a += 4096) {
+                            var page: usize = @intFromPtr(Memory.PFN.AllocatePage(.Active, true, 0).?.ptr) - 0xffff800000000000;
+                            _ = Memory.Paging.MapPage(
+                                addrSpace,
+                                a,
+                                Memory.Paging.MapRead | Memory.Paging.MapWrite | (prot & 4),
+                                page,
+                            );
+                        }
+                        regs.SetReg(0, @as(u64, addrEnd - length));
+                        _ = HAL.Arch.IRQEnableDisable(old);
                     } else {
                         const old = HAL.Arch.IRQEnableDisable(false);
                         const team = HAL.Arch.GetHCB().activeThread.?.team;
@@ -448,12 +470,6 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
         },
         .Process => {
             switch (@as(ProcessFuncs, @enumFromInt(func))) {
-                .Yield => { // void Yield()
-                    const old = HAL.Arch.IRQEnableDisable(false);
-                    _ = HAL.Arch.ThreadYield();
-                    _ = HAL.Arch.IRQEnableDisable(old);
-                    regs.SetReg(0, 0);
-                },
                 .Exit => { // !!noreturn Exit(int code)
                     _ = HAL.Arch.IRQEnableDisable(false);
                     const thread: *Executive.Thread.Thread = HAL.Arch.GetHCB().activeThread.?;
@@ -493,6 +509,14 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                             regs.SetReg(0, @as(u64, @bitCast(@as(i64, @intCast(-3)))));
                         }
                     }
+                    _ = HAL.Arch.IRQEnableDisable(old);
+                },
+                .NewThread => { // ThreadID_t NewThread(const char* name, uintptr_t ip, uintptr_t sp)
+                    const old = HAL.Arch.IRQEnableDisable(false);
+                    const team = HAL.Arch.GetHCB().activeThread.?.team;
+                    const name = @as([*]u8, @ptrFromInt(regs.GetReg(1)))[0..std.mem.len(@as([*c]u8, @ptrFromInt(regs.GetReg(1))))];
+                    const newThread = Executive.Thread.NewThread(team, name, @as(usize, @intCast(regs.GetReg(2))), @as(usize, @intCast(regs.GetReg(3))), 10);
+                    regs.SetReg(0, @as(u64, @intCast(newThread.threadID)));
                     _ = HAL.Arch.IRQEnableDisable(old);
                 },
                 else => {
