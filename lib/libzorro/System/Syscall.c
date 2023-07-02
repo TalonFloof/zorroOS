@@ -1,4 +1,5 @@
 #include "Syscall.h"
+#include "../Filesystem/Filesystem.h"
 
 SyscallCode Syscall(uintptr_t call, uintptr_t a0,uintptr_t a1,uintptr_t a2,uintptr_t a3,uintptr_t a4,uintptr_t a5) {
 #ifdef _LIBZORRO_TARGET_X86_64
@@ -15,6 +16,10 @@ SyscallCode Syscall(uintptr_t call, uintptr_t a0,uintptr_t a1,uintptr_t a2,uintp
 // #error "Current Architecture is unsupported"
     return 0;
 #endif
+}
+
+void* MMap(void* addr, size_t length, int prot, int flags, int64_t fd, off_t offset) {
+    return (void*)Syscall(0x10011,(uintptr_t)addr,length,prot,flags,fd,offset);
 }
 
 SyscallCode RyuLog(const char* s) {
