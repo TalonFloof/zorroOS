@@ -61,12 +61,12 @@ pub fn PreformStartup(stackTop: usize) void {
     var kfend: usize = 0;
     if (kfile_request.response) |response| {
         KernelSettings.ParseCommandline(response.kernel_file.cmdline[0..std.mem.len(response.kernel_file.cmdline)]);
-        kfstart = @ptrToInt(response.kernel_file.address) - 0xffff800000000000;
+        kfstart = @intFromPtr(response.kernel_file.address) - 0xffff800000000000;
         kfend = if ((response.kernel_file.size % 4096) != 0) (kfstart + ((response.kernel_file.size / 4096 + 1) * 4096)) else (kfstart + response.kernel_file.size);
     }
     framebuffer.init();
     // Detect if NX is supported (just in case we need to warn the user ;3)
-    if (cpuid(0x80000001).edx & (@intCast(u32, 1) << 20) == 0) {
+    if (cpuid(0x80000001).edx & (@as(u32, @intCast(1)) << 20) == 0) {
         HAL.Console.Put("WARNING!!!! Your CPU does not support the NX (No Execute) bit extension!\n", .{});
         HAL.Console.Put("            This allows for programs to exploit buffer overflows to run malicious code.\n", .{});
         HAL.Console.Put("            Your machine's security is at risk!\n", .{});
@@ -150,18 +150,18 @@ pub fn SendIPI(hartID: i32, typ: IPIType) void {
     }
     if (apic.lapic_ptr == 0xffffffff) { // X2APIC
         if (hartID >= 0) {
-            apic.write(0x310, @intCast(u64, hartID));
+            apic.write(0x310, @as(u64, @intCast(hartID)));
         }
     } else {
         if (hartID >= 0) {
-            apic.write(0x310, (@intCast(u64, hartID) & 0xFF) << 24);
+            apic.write(0x310, (@as(u64, @intCast(hartID)) & 0xFF) << 24);
         }
     }
     apic.write(0x300, ipi);
 }
 
 pub fn GetHCB() *HCB {
-    return @intToPtr(*HCB, rdmsr(0xC0000102));
+    return @as(*HCB, @ptrFromInt(rdmsr(0xC0000102)));
 }
 
 pub const Context = packed struct {
@@ -247,7 +247,7 @@ pub const Context = packed struct {
     }
 
     pub inline fn Enter(self: *Context) noreturn {
-        ContextEnter(@intToPtr(*allowzero void, @ptrToInt(self)));
+        ContextEnter(@as(*allowzero void, @ptrFromInt(@intFromPtr(self))));
     }
 };
 
@@ -257,13 +257,13 @@ pub const FloatContext = struct {
     pub fn Save(self: *FloatContext) void {
         asm volatile ("fxsave64 (%rax)"
             :
-            : [state] "{rax}" (@ptrToInt(&(self.data))),
+            : [state] "{rax}" (@intFromPtr(&(self.data))),
         );
     }
     pub fn Load(self: *FloatContext) void {
         asm volatile ("fxrstor64 (%rax)"
             :
-            : [state] "{rax}" (@ptrToInt(&(self.data))),
+            : [state] "{rax}" (@intFromPtr(&(self.data))),
         );
     }
 };
@@ -282,7 +282,7 @@ const NativePTEEntry = packed struct {
 };
 
 pub fn GetPTE(root: *void, index: usize) HAL.PTEEntry {
-    var entries: []align(1) NativePTEEntry = @ptrCast([*]align(1) NativePTEEntry, @alignCast(1, root))[0..512];
+    var entries: []align(1) NativePTEEntry = @as([*]align(1) NativePTEEntry, @ptrCast(@alignCast(root)))[0..512];
     var entry: HAL.PTEEntry = HAL.PTEEntry{};
     entry.r = entries[index].valid;
     entry.w = entries[index].write;
@@ -295,12 +295,12 @@ pub fn GetPTE(root: *void, index: usize) HAL.PTEEntry {
     entry.nonCached = entries[index].cacheDisable;
     entry.writeThrough = entries[index].writeThrough;
     entry.writeCombine = entries[index].pat;
-    entry.phys = @intCast(u52, entries[index].phys);
+    entry.phys = @as(u52, @intCast(entries[index].phys));
     return entry;
 }
 
 pub fn SetPTE(root: *void, index: usize, entry: HAL.PTEEntry) void {
-    var entries: []align(1) NativePTEEntry = @ptrCast([*]align(1) NativePTEEntry, @alignCast(1, root))[0..512];
+    var entries: []align(1) NativePTEEntry = @as([*]align(1) NativePTEEntry, @ptrCast(@alignCast(root)))[0..512];
     entries[index].valid = entry.r;
     entries[index].write = entry.w;
     if (!noNX) {
@@ -310,7 +310,7 @@ pub fn SetPTE(root: *void, index: usize, entry: HAL.PTEEntry) void {
     entries[index].cacheDisable = entry.nonCached | entry.writeCombine;
     entries[index].writeThrough = entry.writeThrough | entry.writeCombine;
     entries[index].pat = entry.writeCombine;
-    entries[index].phys = @intCast(u51, entry.phys & 0xfffffffff);
+    entries[index].phys = @as(u51, @intCast(entry.phys & 0xfffffffff));
 }
 
 pub inline fn GetPTELevels() usize {
@@ -320,7 +320,7 @@ pub inline fn GetPTELevels() usize {
 pub inline fn SwitchPT(root: *void) void {
     asm volatile ("mov %rax, %%cr3"
         :
-        : [pt] "{rax}" (@ptrToInt(root)),
+        : [pt] "{rax}" (@intFromPtr(root)),
     );
 }
 
@@ -348,12 +348,12 @@ pub fn rdmsr(index: u32) u64 {
           [hi] "={rdx}" (high),
         : [ind] "{rcx}" (index),
     );
-    return (@intCast(u64, high) << 32) | @intCast(u64, low);
+    return (@as(u64, @intCast(high)) << 32) | @as(u64, @intCast(low));
 }
 
 pub fn wrmsr(index: u32, val: u64) void {
-    var low: u32 = @intCast(u32, val & 0xFFFFFFFF);
-    var high: u32 = @intCast(u32, val >> 32);
+    var low: u32 = @as(u32, @intCast(val & 0xFFFFFFFF));
+    var high: u32 = @as(u32, @intCast(val >> 32));
     asm volatile ("wrmsr"
         :
         : [lo] "{rax}" (low),

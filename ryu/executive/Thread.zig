@@ -69,10 +69,10 @@ pub const Queue = struct {
         if (t.prevThread) |prev| {
             prev.nextThread = t.nextThread;
         }
-        if (@ptrToInt(self.head) == @ptrToInt(t)) {
+        if (@intFromPtr(self.head) == @intFromPtr(t)) {
             self.head = t.nextThread;
         }
-        if (@ptrToInt(self.tail) == @ptrToInt(t)) {
+        if (@intFromPtr(self.tail) == @intFromPtr(t)) {
             self.tail = t.prevThread;
         }
         t.nextThread = null;
@@ -91,13 +91,13 @@ pub fn NewThread(
 ) *Thread { // If SP is null then this is a kernel thread
     const old = HAL.Arch.IRQEnableDisable(false);
     threadLock.acquire();
-    var thread = @ptrCast(*Thread, @alignCast(@alignOf(Thread), Memory.Pool.PagedPool.Alloc(@sizeOf(Thread)).?.ptr));
-    @memset(@intToPtr([*]u8, @ptrToInt(&thread.name))[0..32], 0);
-    @memcpy(@intToPtr([*]u8, @ptrToInt(&thread.name)), name);
+    var thread = @as(*Thread, @ptrCast(@alignCast(Memory.Pool.PagedPool.Alloc(@sizeOf(Thread)).?.ptr)));
+    @memset(@as([*]u8, @ptrFromInt(@intFromPtr(&thread.name)))[0..32], 0);
+    @memcpy(@as([*]u8, @ptrFromInt(@intFromPtr(&thread.name))), name);
     thread.team = team;
     thread.hartID = -1;
     thread.threadID = nextThreadID;
-    thread.exitReason = ~@intCast(usize, 0);
+    thread.exitReason = ~@as(usize, @intCast(0));
     thread.waitType = -2;
     nextThreadID += 1;
     thread.state = .Runnable;
@@ -106,14 +106,14 @@ pub fn NewThread(
     thread.kstack = stack;
     if (sp == null) {
         thread.context.SetMode(true);
-        thread.context.SetReg(129, @ptrToInt(stack.ptr) + stack.len);
+        thread.context.SetReg(129, @intFromPtr(stack.ptr) + stack.len);
     } else {
         thread.context.SetMode(false);
         thread.context.SetReg(129, sp.?);
     }
-    @memset(@intToPtr([*]u8, @ptrToInt(&thread.fcontext.data))[0..512], 0);
+    @memset(@as([*]u8, @ptrFromInt(@intFromPtr(&thread.fcontext.data)))[0..512], 0);
     thread.context.SetReg(128, ip);
-    if (@ptrToInt(team.mainThread) == 0) {
+    if (@intFromPtr(team.mainThread) == 0) {
         team.mainThread = thread;
     } else {
         thread.prevTeamThread = team.mainThread;
@@ -156,7 +156,7 @@ pub fn KillThread(threadID: i64) void {
             thread.shouldKill = true;
             thread.priority = 15;
         }
-        if (@ptrToInt(thread.team.mainThread) == @ptrToInt(thread)) {
+        if (@intFromPtr(thread.team.mainThread) == @intFromPtr(thread)) {
             // Set our team's threads to be killed
             var t: ?*Thread = thread.nextTeamThread;
             threadLock.release();
@@ -179,7 +179,7 @@ pub fn KillThread(threadID: i64) void {
 pub fn DestroyThread(thread: *Thread) bool {
     const old = HAL.Arch.IRQEnableDisable(false);
     threadLock.acquire();
-    if (@ptrToInt(thread.team.mainThread) == @ptrToInt(thread) and thread.nextTeamThread != null) {
+    if (@intFromPtr(thread.team.mainThread) == @intFromPtr(thread) and thread.nextTeamThread != null) {
         threadLock.release();
         _ = HAL.Arch.IRQEnableDisable(old);
         return false;
@@ -195,8 +195,8 @@ pub fn DestroyThread(thread: *Thread) bool {
     threads.delete(thread.threadID);
     thread.eventQueue.Wakeup(thread.exitReason);
     Memory.Pool.PagedPool.FreeAnonPages(thread.kstack);
-    Memory.Pool.PagedPool.Free(@intToPtr([*]u8, @ptrToInt(thread))[0..@sizeOf(Thread)]);
-    if (@ptrToInt(team.mainThread) == @ptrToInt(thread)) {
+    Memory.Pool.PagedPool.Free(@as([*]u8, @ptrFromInt(@intFromPtr(thread)))[0..@sizeOf(Thread)]);
+    if (@intFromPtr(team.mainThread) == @intFromPtr(thread)) {
         // Destroy the Team as well
         threadLock.release();
         Team.AdoptTeam(team, true);
@@ -204,7 +204,7 @@ pub fn DestroyThread(thread: *Thread) bool {
         Memory.Paging.DestroyPageDirectory(team.addressSpace);
         team.fds.destroy(&Team.DestroyFileDescriptor);
         Team.teams.delete(team.teamID);
-        Memory.Pool.PagedPool.Free(@intToPtr([*]u8, @ptrToInt(team))[0..@sizeOf(Team.Team)]);
+        Memory.Pool.PagedPool.Free(@as([*]u8, @ptrFromInt(@intFromPtr(team)))[0..@sizeOf(Team.Team)]);
         Team.teamLock.release();
     } else {
         threadLock.release();
@@ -230,7 +230,7 @@ pub fn Init() void {
         const name = std.fmt.bufPrint(buf[0..32], "Hart #{} Idle Thread", .{i}) catch {
             @panic("Unable to parse string!");
         };
-        var thread = NewThread(kteam, name, @ptrToInt(&IdleThread), null, 0);
+        var thread = NewThread(kteam, name, @intFromPtr(&IdleThread), null, 0);
         thread.hartID = i;
     }
 }
@@ -259,7 +259,7 @@ pub fn GetNextThread() *Thread {
 pub fn Reschedule(demote: bool) noreturn {
     const hcb = HAL.Arch.GetHCB();
     if (hcb.activeThread != null) {
-        HAL.Arch.SwitchPT(@intToPtr(*void, @ptrToInt(Memory.Paging.initialPageDir.?.ptr) - 0xffff800000000000));
+        HAL.Arch.SwitchPT(@as(*void, @ptrFromInt(@intFromPtr(Memory.Paging.initialPageDir.?.ptr) - 0xffff800000000000)));
         if (hcb.activeThread.?.state == .Running) {
             hcb.activeThread.?.state = .Runnable;
             if (demote) {
@@ -290,10 +290,10 @@ pub fn Reschedule(demote: bool) noreturn {
         thr = GetNextThread();
     }
     hcb.activeThread = thr;
-    hcb.activeKstack = @ptrToInt(thr.kstack.ptr) + (thr.kstack.len - 8);
+    hcb.activeKstack = @intFromPtr(thr.kstack.ptr) + (thr.kstack.len - 8);
     hcb.activeUstack = thr.activeUstack;
-    hcb.quantumsLeft = @intCast(u32, (20 * (16 - thr.priority) + 5 * thr.priority) >> 4);
-    HAL.Arch.SwitchPT(@intToPtr(*void, @ptrToInt(thr.team.addressSpace.ptr) - 0xffff800000000000));
+    hcb.quantumsLeft = @as(u32, @intCast((20 * (16 - thr.priority) + 5 * thr.priority) >> 4));
+    HAL.Arch.SwitchPT(@as(*void, @ptrFromInt(@intFromPtr(thr.team.addressSpace.ptr) - 0xffff800000000000)));
     thr.fcontext.Load();
     thr.context.Enter();
 }
@@ -305,12 +305,12 @@ fn IdleThread() callconv(.C) void {
             Memory.PFN.pfnSpinlock.acquire();
             if (Memory.PFN.pfnFreeHead != null) {
                 var page = Memory.PFN.pfnFreeHead.?;
-                var index: usize = (@ptrToInt(page) - @ptrToInt(Memory.PFN.pfnDatabase.ptr)) / @sizeOf(Memory.PFN.PFNEntry);
+                var index: usize = (@intFromPtr(page) - @intFromPtr(Memory.PFN.pfnDatabase.ptr)) / @sizeOf(Memory.PFN.PFNEntry);
                 if (page.state != .Free) {
                     HAL.Crash.Crash(.RyuPFNCorruption, .{
                         (index << 12) + 0xffff800000000000,
-                        @enumToInt(@as(Memory.PFN.PFNType, page.state)),
-                        @enumToInt(Memory.PFN.PFNType.Free),
+                        @intFromEnum(@as(Memory.PFN.PFNType, page.state)),
+                        @intFromEnum(Memory.PFN.PFNType.Free),
                         0,
                     });
                 }
@@ -319,7 +319,7 @@ fn IdleThread() callconv(.C) void {
                 page.state = .Zeroed;
                 page.swappable = 0;
                 page.refs = 0;
-                @memset(@intToPtr([*]u8, (index << 12) + 0xffff800000000000)[0..4096], 0);
+                @memset(@as([*]u8, @ptrFromInt((index << 12) + 0xffff800000000000))[0..4096], 0);
                 Memory.PFN.pfnZeroedHead = page;
             }
             Memory.PFN.pfnSpinlock.release();

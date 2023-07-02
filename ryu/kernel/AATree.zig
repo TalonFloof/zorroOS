@@ -53,7 +53,7 @@ pub fn AATree(comptime K: type, comptime V: type) type {
         fn insertInternal(t: ?*Node, x: K, y: V) ?*Node {
             var T = t;
             if (T == null) {
-                T = @intToPtr(*Node, @ptrToInt(Memory.Pool.PagedPool.Alloc(@sizeOf(Node)).?.ptr));
+                T = @as(*Node, @ptrFromInt(@intFromPtr(Memory.Pool.PagedPool.Alloc(@sizeOf(Node)).?.ptr)));
                 T.?.key = x;
                 T.?.value = y;
             } else {
@@ -85,7 +85,7 @@ pub fn AATree(comptime K: type, comptime V: type) type {
                 if (item != null and item.?.key == x) {
                     item.?.key = heir.?.key;
                     item.?.value = heir.?.value;
-                    Memory.Pool.PagedPool.Free(@intToPtr([*]u8, @ptrToInt(heir))[0..@sizeOf(Node)]);
+                    Memory.Pool.PagedPool.Free(@as([*]u8, @ptrFromInt(@intFromPtr(heir)))[0..@sizeOf(Node)]);
                     t = t.?.link[1];
                 }
             } else {
@@ -130,7 +130,7 @@ pub fn AATree(comptime K: type, comptime V: type) type {
                 destroyInternal(next, f);
             }
             f(T.key, &T.value);
-            Memory.Pool.PagedPool.Free(@intToPtr([*]u8, @ptrToInt(T))[0..@sizeOf(Node)]);
+            Memory.Pool.PagedPool.Free(@as([*]u8, @ptrFromInt(@intFromPtr(T)))[0..@sizeOf(Node)]);
         }
 
         pub fn destroy(self: *Self, f: *const fn (K, *V) void) void {

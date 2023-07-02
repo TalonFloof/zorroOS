@@ -88,21 +88,21 @@ pub var HPETAddr: ?*HPETTable = null;
 
 pub fn initialize() void {
     if (rsdp_request.response) |rsdp_response| {
-        if (@ptrToInt(rsdp_response.address) == 0) {
+        if (@intFromPtr(rsdp_response.address) == 0) {
             HAL.Crash.Crash(.RyuNoACPI, .{ 0, 0, 0, 0 });
         }
-        const rsdp: *RSDP = @ptrCast(*RSDP, rsdp_response.address);
-        const rsdt = @intToPtr(*Header, @intCast(usize, rsdp.RSDT) + 0xffff800000000000);
-        HAL.Console.Put("ACPI: RSDP 0x{x:0>16} (v{d:0>2} {s: <6})\n", .{ @ptrToInt(rsdp_response.address), rsdp.revision, rsdp.OEMID });
-        const acpiEntries: []align(1) u32 = @intToPtr([*]align(1) u32, @ptrToInt(rsdt) + @sizeOf(Header))[0..((rsdt.length - @sizeOf(Header)) / 4)];
-        HAL.Console.Put("ACPI: {s: <4} 0x{x:0>16} (v{d:0>2} {s: <6} {s: <8})\n", .{ @ptrCast([*]u8, &rsdt.signature)[0..4], @ptrToInt(rsdt), rsdt.revision, rsdt.OEM_ID, rsdt.OEM_table_ID });
+        const rsdp: *RSDP = @as(*RSDP, @ptrCast(rsdp_response.address));
+        const rsdt = @as(*Header, @ptrFromInt(@as(usize, @intCast(rsdp.RSDT)) + 0xffff800000000000));
+        HAL.Console.Put("ACPI: RSDP 0x{x:0>16} (v{d:0>2} {s: <6})\n", .{ @intFromPtr(rsdp_response.address), rsdp.revision, rsdp.OEMID });
+        const acpiEntries: []align(1) u32 = @as([*]align(1) u32, @ptrFromInt(@intFromPtr(rsdt) + @sizeOf(Header)))[0..((rsdt.length - @sizeOf(Header)) / 4)];
+        HAL.Console.Put("ACPI: {s: <4} 0x{x:0>16} (v{d:0>2} {s: <6} {s: <8})\n", .{ @as([*]u8, @ptrCast(&rsdt.signature))[0..4], @intFromPtr(rsdt), rsdt.revision, rsdt.OEM_ID, rsdt.OEM_table_ID });
         for (acpiEntries) |ptr| {
-            const entry: *Header = @intToPtr(*Header, @intCast(usize, ptr) + 0xffff800000000000);
-            HAL.Console.Put("ACPI: {s: <4} 0x{x:0>16} (v{d:0>2} {s: <6} {s: <8})\n", .{ @ptrCast([*]u8, &entry.signature)[0..4], @ptrToInt(entry), entry.revision, entry.OEM_ID, entry.OEM_table_ID });
+            const entry: *Header = @as(*Header, @ptrFromInt(@as(usize, @intCast(ptr)) + 0xffff800000000000));
+            HAL.Console.Put("ACPI: {s: <4} 0x{x:0>16} (v{d:0>2} {s: <6} {s: <8})\n", .{ @as([*]u8, @ptrCast(&entry.signature))[0..4], @intFromPtr(entry), entry.revision, entry.OEM_ID, entry.OEM_table_ID });
             if (entry.signature == 0x43495041) {
-                MADTAddr = @ptrCast(*MADTTable, entry);
+                MADTAddr = @as(*MADTTable, @ptrCast(entry));
             } else if (entry.signature == 0x54455048) {
-                HPETAddr = @ptrCast(*HPETTable, entry);
+                HPETAddr = @as(*HPETTable, @ptrCast(entry));
             }
         }
     } else {
@@ -110,16 +110,16 @@ pub fn initialize() void {
     }
     if (MADTAddr) |madt| {
         var entry = &madt.firstEntry;
-        while (@ptrToInt(entry) < @ptrToInt(madt) + madt.acpiHeader.length) : (entry = @intToPtr(*MADTRecordHeader, @ptrToInt(entry) + entry.recordLength)) {
+        while (@intFromPtr(entry) < @intFromPtr(madt) + madt.acpiHeader.length) : (entry = @as(*MADTRecordHeader, @ptrFromInt(@intFromPtr(entry) + entry.recordLength))) {
             if (entry.recordType == 1) { // I/O APIC Record
-                var data = @ptrCast(*MADTIOApicRecord, &entry.recordData);
+                var data = @as(*MADTIOApicRecord, @ptrCast(&entry.recordData));
                 if (data.gsiBase == 0) {
-                    apic.ioapic_regSelect = @intToPtr(*allowzero u32, @intCast(usize, data.addr));
-                    apic.ioapic_ioWindow = @intToPtr(*allowzero u32, @intCast(usize, data.addr) + 0x10);
+                    apic.ioapic_regSelect = @as(*allowzero u32, @ptrFromInt(@as(usize, @intCast(data.addr))));
+                    apic.ioapic_ioWindow = @as(*allowzero u32, @ptrFromInt(@as(usize, @intCast(data.addr)) + 0x10));
                 }
             } else if (entry.recordType == 2) { // I/O APIC IRQ Redirect
-                var data = @ptrCast(*MADTIRQRedirectRecord, &entry.recordData);
-                apic.ioapic_redirect[data.gsi] = @intCast(u8, data.irqSource);
+                var data = @as(*MADTIRQRedirectRecord, @ptrCast(&entry.recordData));
+                apic.ioapic_redirect[data.gsi] = @as(u8, @intCast(data.irqSource));
                 if (data.irqSource != data.gsi) {
                     apic.ioapic_redirect[data.irqSource] = 0xff;
                 }
@@ -131,7 +131,7 @@ pub fn initialize() void {
                 }
             }
         }
-        if (@ptrToInt(apic.ioapic_regSelect) == 0) {
+        if (@intFromPtr(apic.ioapic_regSelect) == 0) {
             @panic("No I/O APIC was specified in the MADT!");
         }
     } else {

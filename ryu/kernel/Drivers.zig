@@ -63,35 +63,35 @@ fn DriverAbort(s: [*c]const u8) callconv(.C) noreturn {
 }
 
 fn DriverStaticAlloc(n: usize) callconv(.C) *void {
-    return @ptrCast(*void, Memory.Pool.StaticPool.Alloc(n).?.ptr);
+    return @as(*void, @ptrCast(Memory.Pool.StaticPool.Alloc(n).?.ptr));
 }
 
 fn DriverStaticAllocAnon(n: usize) callconv(.C) *void {
-    return @ptrCast(*void, Memory.Pool.StaticPool.AllocAnonPages(n).?.ptr);
+    return @as(*void, @ptrCast(Memory.Pool.StaticPool.AllocAnonPages(n).?.ptr));
 }
 
 fn DriverStaticFree(p: *void, n: usize) callconv(.C) void {
-    Memory.Pool.StaticPool.Free(@ptrCast([*]u8, @alignCast(1, p))[0..n]);
+    Memory.Pool.StaticPool.Free(@as([*]u8, @ptrCast(@alignCast(p)))[0..n]);
 }
 
 fn DriverStaticFreeAnon(p: *void, n: usize) callconv(.C) void {
-    Memory.Pool.StaticPool.FreeAnonPages(@ptrCast([*]u8, @alignCast(1, p))[0..n]);
+    Memory.Pool.StaticPool.FreeAnonPages(@as([*]u8, @ptrCast(@alignCast(p)))[0..n]);
 }
 
 fn DriverPagedAlloc(n: usize) callconv(.C) *void {
-    return @ptrCast(*void, Memory.Pool.PagedPool.Alloc(n).?.ptr);
+    return @as(*void, @ptrCast(Memory.Pool.PagedPool.Alloc(n).?.ptr));
 }
 
 fn DriverPagedAllocAnon(n: usize) callconv(.C) *void {
-    return @ptrCast(*void, Memory.Pool.PagedPool.AllocAnonPages(n).?.ptr);
+    return @as(*void, @ptrCast(Memory.Pool.PagedPool.AllocAnonPages(n).?.ptr));
 }
 
 fn DriverPagedFree(p: *void, n: usize) callconv(.C) void {
-    Memory.Pool.PagedPool.Free(@ptrCast([*]u8, @alignCast(1, p))[0..n]);
+    Memory.Pool.PagedPool.Free(@as([*]u8, @ptrCast(@alignCast(p)))[0..n]);
 }
 
 fn DriverPagedFreeAnon(p: *void, n: usize) callconv(.C) void {
-    Memory.Pool.PagedPool.FreeAnonPages(@ptrCast([*]u8, @alignCast(1, p))[0..n]);
+    Memory.Pool.PagedPool.FreeAnonPages(@as([*]u8, @ptrCast(@alignCast(p)))[0..n]);
 }
 
 fn DriverAttachDetatchIRQ(irq: u16, routine: ?*const fn () callconv(.C) void) callconv(.C) u16 {
@@ -100,7 +100,7 @@ fn DriverAttachDetatchIRQ(irq: u16, routine: ?*const fn () callconv(.C) void) ca
         while (i < HAL.Arch.irqISRs.len) : (i += 1) {
             if (HAL.Arch.irqISRs[i] == null) {
                 HAL.Arch.irqISRs[i] = routine;
-                return @intCast(u16, i & 0xFFFF);
+                return @as(u16, @intCast(i & 0xFFFF));
             }
         }
         return 0xffff;
@@ -111,19 +111,19 @@ fn DriverAttachDetatchIRQ(irq: u16, routine: ?*const fn () callconv(.C) void) ca
 }
 
 fn DriverAcquireSpinlock(v: *volatile u8) callconv(.C) void {
-    @ptrCast(*volatile Spinlock, v).acquire();
+    @as(*volatile Spinlock, @ptrCast(v)).acquire();
 }
 
 fn DriverReleaseSpinlock(v: *volatile u8) callconv(.C) void {
-    @ptrCast(*volatile Spinlock, v).release();
+    @as(*volatile Spinlock, @ptrCast(v)).release();
 }
 
 fn DriverWaitEvent(queue: *devlib.EventQueue) callconv(.C) usize {
-    return @ptrCast(*EventQueue, queue).Wait();
+    return @as(*EventQueue, @ptrCast(queue)).Wait();
 }
 
 fn DriverWakeupEvent(queue: *devlib.EventQueue, val: usize) callconv(.C) void {
-    @ptrCast(*EventQueue, queue).Wakeup(val);
+    @as(*EventQueue, @ptrCast(queue)).Wakeup(val);
 }
 
 fn DriverRegisterDevice(name: [*c]const u8, inode: *FS.Inode) callconv(.C) void {

@@ -37,9 +37,9 @@ pub var nextTeamID: i64 = 1;
 pub fn NewTeam(parent: ?*Team, name: []const u8) *Team {
     const old = HAL.Arch.IRQEnableDisable(false);
     teamLock.acquire();
-    var team = @ptrCast(*Team, @alignCast(@alignOf(Team), Memory.Pool.PagedPool.Alloc(@sizeOf(Team)).?.ptr));
+    var team = @as(*Team, @ptrCast(@alignCast(Memory.Pool.PagedPool.Alloc(@sizeOf(Team)).?.ptr)));
     team.addressSpace = Memory.Paging.NewPageDirectory();
-    @memcpy(@intToPtr([*]u8, @ptrToInt(&team.name)), name);
+    @memcpy(@as([*]u8, @ptrFromInt(@intFromPtr(&team.name))), name);
     team.parent = parent;
     team.nextFD = 1;
     team.fds = FDTree{};
@@ -67,7 +67,7 @@ pub fn GetTeamByID(id: i64) ?*Team {
 
 pub fn DestroyFileDescriptor(k: i64, v: **FileDescriptor) void {
     _ = k;
-    Memory.Pool.PagedPool.Free(@intToPtr([*]u8, @ptrToInt(v.*))[0..@sizeOf(FileDescriptor)]);
+    Memory.Pool.PagedPool.Free(@as([*]u8, @ptrFromInt(@intFromPtr(v.*)))[0..@sizeOf(FileDescriptor)]);
 }
 
 pub fn AdoptTeam(team: *Team, dropTeam: bool) void { // Transfers a team's parent to the Kernel Team
@@ -76,7 +76,7 @@ pub fn AdoptTeam(team: *Team, dropTeam: bool) void { // Transfers a team's paren
     var index: ?*Team = team.parent.?.children;
     var prev: ?*Team = null;
     while (index) |t| {
-        if (@ptrToInt(t) == @ptrToInt(team)) {
+        if (@intFromPtr(t) == @intFromPtr(team)) {
             if (prev) |p| {
                 p.siblingNext = t.siblingNext;
             } else {
@@ -100,11 +100,11 @@ pub fn AdoptTeam(team: *Team, dropTeam: bool) void { // Transfers a team's paren
 pub fn LoadELFImage(path: []const u8, team: *Team) ?usize {
     const old = HAL.Arch.IRQEnableDisable(false);
     if (FS.GetInode(path, FS.rootInode.?)) |inode| {
-        @ptrCast(*Spinlock, &inode.lock).acquire();
-        var buf: []u8 = Memory.Pool.PagedPool.Alloc(@intCast(usize, inode.stat.size)).?;
-        _ = inode.read.?(inode, 0, @intToPtr(*void, @ptrToInt(buf.ptr)), @intCast(isize, buf.len));
-        @ptrCast(*Spinlock, &inode.lock).release();
-        const entry: ?usize = ELF.LoadELF(@ptrCast(*void, buf.ptr), .Normal, team.addressSpace) catch {
+        @as(*Spinlock, @ptrCast(&inode.lock)).acquire();
+        var buf: []u8 = Memory.Pool.PagedPool.Alloc(@as(usize, @intCast(inode.stat.size))).?;
+        _ = inode.read.?(inode, 0, @as(*void, @ptrFromInt(@intFromPtr(buf.ptr))), @as(isize, @intCast(buf.len)));
+        @as(*Spinlock, @ptrCast(&inode.lock)).release();
+        const entry: ?usize = ELF.LoadELF(@as(*void, @ptrCast(buf.ptr)), .Normal, team.addressSpace) catch {
             @panic("Failed to load ELF Image!");
         };
         Memory.Pool.PagedPool.Free(buf);
@@ -115,7 +115,7 @@ pub fn LoadELFImage(path: []const u8, team: *Team) ?usize {
                 team.addressSpace,
                 i,
                 Memory.Paging.MapRead | Memory.Paging.MapWrite,
-                @ptrToInt(page.ptr) - 0xffff800000000000,
+                @intFromPtr(page.ptr) - 0xffff800000000000,
             );
         }
         _ = HAL.Arch.IRQEnableDisable(old);

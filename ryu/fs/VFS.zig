@@ -34,10 +34,10 @@ pub fn AddInodeToParent(i: *Inode) void {
 }
 
 pub fn NewDirInode(name: []const u8) *Inode {
-    @ptrCast(*Spinlock, &rootInode.?.lock).acquire();
-    var inode: *Inode = @ptrCast(*Inode, @alignCast(@alignOf(*Inode), Memory.Pool.PagedPool.Alloc(@sizeOf(Inode)).?.ptr));
-    @memset(@intToPtr([*]u8, @ptrToInt(&inode.name))[0..256], 0);
-    @memcpy(@intToPtr([*]u8, @ptrToInt(&inode.name)), name);
+    @as(*Spinlock, @ptrCast(&rootInode.?.lock)).acquire();
+    var inode: *Inode = @as(*Inode, @ptrCast(@alignCast(Memory.Pool.PagedPool.Alloc(@sizeOf(Inode)).?.ptr)));
+    @memset(@as([*]u8, @ptrFromInt(@intFromPtr(&inode.name)))[0..256], 0);
+    @memcpy(@as([*]u8, @ptrFromInt(@intFromPtr(&inode.name))), name);
     inode.parent = rootInode;
     inode.children = null;
     inode.stat.ID = 2;
@@ -46,12 +46,12 @@ pub fn NewDirInode(name: []const u8) *Inode {
     inode.stat.nlinks = 1;
     inode.stat.mode = 0o0040755;
     AddInodeToParent(inode);
-    @ptrCast(*Spinlock, &rootInode.?.lock).release();
+    @as(*Spinlock, @ptrCast(&rootInode.?.lock)).release();
     return inode;
 }
 
 pub fn ReadDir(i: *Inode, off: usize) ?*Inode {
-    @ptrCast(*Spinlock, &i.lock).acquire();
+    @as(*Spinlock, @ptrCast(&i.lock)).acquire();
     if (!i.hasReadEntries) {
         if (i.readdir) |readdir| {
             if (i.parent == null) {
@@ -66,12 +66,12 @@ pub fn ReadDir(i: *Inode, off: usize) ?*Inode {
     var ent: ?*Inode = i.children;
     while (ind < off) : (ind += 1) {
         if (ent == null) {
-            @ptrCast(*Spinlock, &i.lock).release();
+            @as(*Spinlock, @ptrCast(&i.lock)).release();
             return null;
         }
         ent = ent.?.nextSibling;
     }
-    @ptrCast(*Spinlock, &i.lock).release();
+    @as(*Spinlock, @ptrCast(&i.lock)).release();
     return ent;
 }
 
@@ -88,7 +88,7 @@ pub fn FindDir(i: *Inode, name: []const u8) ?*Inode {
     }
     var ent: ?*Inode = i.children;
     while (ent) |e| {
-        const str: [*c]const u8 = @ptrCast([*c]const u8, &e.name);
+        const str: [*c]const u8 = @as([*c]const u8, @ptrCast(&e.name));
         if (std.mem.eql(u8, name, str[0..std.mem.len(str)])) {
             break;
         }
@@ -106,7 +106,7 @@ pub fn GetInode(path: []const u8, base: *Inode) ?*Inode {
         } else if (name.len == 0 or std.mem.eql(u8, name, ".")) {
             continue;
         } else {
-            const lock = @ptrCast(*Spinlock, &curNode.?.lock);
+            const lock = @as(*Spinlock, @ptrCast(&curNode.?.lock));
             const old = HAL.Arch.IRQEnableDisable(false);
             lock.acquire();
             curNode = FindDir(curNode.?, name);
@@ -134,7 +134,7 @@ pub fn Mount(inode: *Inode, dev: ?*Inode, fs: []const u8) bool {
         fsLock.release();
         return false;
     }
-    var newFS: *Filesystem = @ptrCast(*Filesystem, @alignCast(@alignOf(*Filesystem), Memory.Pool.PagedPool.Alloc(@sizeOf(Filesystem)).?.ptr));
+    var newFS: *Filesystem = @as(*Filesystem, @ptrCast(@alignCast(Memory.Pool.PagedPool.Alloc(@sizeOf(Filesystem)).?.ptr)));
     newFS.dev = dev;
     newFS.root = inode;
     newFS.mount = index.?.mount;
@@ -142,16 +142,16 @@ pub fn Mount(inode: *Inode, dev: ?*Inode, fs: []const u8) bool {
     fsLock.release();
     var result = newFS.mount(newFS);
     if (!result) {
-        Memory.Pool.PagedPool.Free(@intToPtr([*]u8, @ptrToInt(newFS))[0..@sizeOf(Filesystem)]);
+        Memory.Pool.PagedPool.Free(@as([*]u8, @ptrFromInt(@intFromPtr(newFS)))[0..@sizeOf(Filesystem)]);
     } else {
-        HAL.Console.Put("Successfully mounted filesystem {s} to inode named \"{s}\"\n", .{ fs, newFS.root.name[0..std.mem.len(@ptrCast([*c]const u8, &newFS.root.name))] });
+        HAL.Console.Put("Successfully mounted filesystem {s} to inode named \"{s}\"\n", .{ fs, newFS.root.name[0..std.mem.len(@as([*c]const u8, @ptrCast(&newFS.root.name)))] });
     }
     return result;
 }
 
 pub fn RegisterFilesystem(name: []const u8, mount: *const fn (*Filesystem) callconv(.C) bool, umount: *const fn (*Filesystem) callconv(.C) void) void {
     fsLock.acquire();
-    var newFSType: *FSType = @ptrCast(*FSType, @alignCast(@alignOf(*FSType), Memory.Pool.PagedPool.Alloc(@sizeOf(FSType)).?.ptr));
+    var newFSType: *FSType = @as(*FSType, @ptrCast(@alignCast(Memory.Pool.PagedPool.Alloc(@sizeOf(FSType)).?.ptr)));
     newFSType.name = name;
     newFSType.mount = mount;
     newFSType.umount = umount;
@@ -168,7 +168,7 @@ pub fn RegisterFilesystem(name: []const u8, mount: *const fn (*Filesystem) callc
 }
 
 pub fn Init() void {
-    rootInode = @ptrCast(*Inode, @alignCast(@alignOf(*Inode), Memory.Pool.PagedPool.Alloc(@sizeOf(Inode)).?.ptr));
+    rootInode = @as(*Inode, @ptrCast(@alignCast(Memory.Pool.PagedPool.Alloc(@sizeOf(Inode)).?.ptr)));
     rootInode.?.stat.ID = 1;
     rootInode.?.stat.uid = 1;
     rootInode.?.stat.gid = 1;

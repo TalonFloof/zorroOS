@@ -15,9 +15,9 @@ pub fn RegisterDevice(name: []const u8, inode: *FS.Inode) void {
     inode.stat.ID = nextDevID;
     @memset(inode.name[0..256], 0);
     @memcpy(inode.name[0..name.len], name);
-    @ptrCast(*Spinlock, &devNode.lock).acquire();
+    @as(*Spinlock, @ptrCast(&devNode.lock)).acquire();
     FS.AddInodeToParent(inode);
-    @ptrCast(*Spinlock, &devNode.lock).release();
+    @as(*Spinlock, @ptrCast(&devNode.lock)).release();
     nextDevID += 1;
 }
 
@@ -26,7 +26,7 @@ pub fn RegisterDevice(name: []const u8, inode: *FS.Inode) void {
 pub fn ReadZero(inode: *FS.Inode, offset: isize, bufBegin: *void, bufSize: isize) callconv(.C) isize {
     _ = offset;
     _ = inode;
-    @memset(@ptrCast([*]u8, @alignCast(@alignOf([*]u8), bufBegin))[0..@intCast(usize, bufSize)], 0);
+    @memset(@as([*]u8, @ptrCast(@alignCast(bufBegin)))[0..@as(usize, @intCast(bufSize))], 0);
     return bufSize;
 }
 

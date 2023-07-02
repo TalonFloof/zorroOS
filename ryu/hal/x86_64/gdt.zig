@@ -38,9 +38,9 @@ pub const TSS = extern struct {
 pub fn initialize() void {
     var gdtr = GDTRegister{
         .limit = (16 * 8) - 1,
-        .base = @ptrCast(*const u64, &gdtEntries),
+        .base = @as(*const u64, @ptrCast(&gdtEntries)),
     };
-    var tss: usize = @ptrToInt(&HAL.Arch.GetHCB().archData.tss);
+    var tss: usize = @intFromPtr(&HAL.Arch.GetHCB().archData.tss);
     gdtEntries[9] = 0x0000E90000000067 | ((tss & 0xFFFFFF) << 16) | (((tss & 0xFF000000) >> 24) << 56);
     gdtEntries[10] = tss >> 32;
     asm volatile (

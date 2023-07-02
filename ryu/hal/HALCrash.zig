@@ -42,7 +42,7 @@ pub fn Crash(code: CrashCode, args: [4]usize) noreturn {
     if (builtin.mode == .Debug) {
         HAL.Console.Put("System Failure: hart={d}; code={x:0>8} {s}\n({x:0>16},{x:0>16},{x:0>16},{x:0>16})\n\n", .{
             HAL.Arch.GetHCB().hartID,
-            @enumToInt(code),
+            @intFromEnum(code),
             @tagName(code),
             args[0],
             args[1],
@@ -72,7 +72,7 @@ pub fn Crash(code: CrashCode, args: [4]usize) noreturn {
     } else {
         HAL.Console.DrawScaledBitmap(
             -128,
-            @intCast(isize, HAL.Console.info.height) - 384,
+            @as(isize, @intCast(HAL.Console.info.height)) - 384,
             128,
             128,
             512,
@@ -110,7 +110,7 @@ pub fn Crash(code: CrashCode, args: [4]usize) noreturn {
     if (builtin.mode != .Debug) {
         HAL.Console.Put("System Failure: hart={d}; code={x:0>8}\n({x:0>16},{x:0>16},{x:0>16},{x:0>16})\n\n", .{
             HAL.Arch.GetHCB().hartID,
-            @enumToInt(code),
+            @intFromEnum(code),
             args[0],
             args[1],
             args[2],

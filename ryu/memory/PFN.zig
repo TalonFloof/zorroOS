@@ -26,7 +26,7 @@ pub const PFNEntry = struct {
 };
 
 pub fn Initialize(begin: usize, entryCount: usize, ranges: *[32]Memory.PhysicalRange) void {
-    pfnDatabase = @intToPtr([*]PFNEntry, begin)[0..entryCount];
+    pfnDatabase = @as([*]PFNEntry, @ptrFromInt(begin))[0..entryCount];
     for (0..pfnDatabase.len) |i| {
         pfnDatabase[i].next = null;
         pfnDatabase[i].refs = 0;
@@ -48,9 +48,9 @@ pub fn AllocatePage(tag: PFNType, swappable: bool, pte: usize) ?[]u8 {
     const old = HAL.Arch.IRQEnableDisable(false);
     pfnSpinlock.acquire();
     if (pfnZeroedHead) |entry| {
-        const phys: usize = ((@ptrToInt(entry) - @ptrToInt(pfnDatabase.ptr)) / @sizeOf(PFNEntry)) << 12;
+        const phys: usize = ((@intFromPtr(entry) - @intFromPtr(pfnDatabase.ptr)) / @sizeOf(PFNEntry)) << 12;
         if (entry.state != .Zeroed) {
-            HAL.Crash.Crash(.RyuPFNCorruption, .{ phys, @enumToInt(@as(PFNType, entry.state)), @enumToInt(PFNType.Zeroed), 0 });
+            HAL.Crash.Crash(.RyuPFNCorruption, .{ phys, @intFromEnum(@as(PFNType, entry.state)), @intFromEnum(PFNType.Zeroed), 0 });
         }
         pfnZeroedHead = entry.next;
         entry.next = null;
@@ -58,14 +58,14 @@ pub fn AllocatePage(tag: PFNType, swappable: bool, pte: usize) ?[]u8 {
         entry.state = tag;
         entry.swappable = if (swappable) 1 else 0;
         entry.pte = pte;
-        var ret = @intToPtr([*]u8, phys + 0xFFFF800000000000)[0..4096];
+        var ret = @as([*]u8, @ptrFromInt(phys + 0xFFFF800000000000))[0..4096];
         pfnSpinlock.release();
         _ = HAL.Arch.IRQEnableDisable(old);
         return ret;
     } else if (pfnFreeHead) |entry| {
-        const phys: usize = ((@ptrToInt(entry) - @ptrToInt(pfnDatabase.ptr)) / @sizeOf(PFNEntry)) << 12;
+        const phys: usize = ((@intFromPtr(entry) - @intFromPtr(pfnDatabase.ptr)) / @sizeOf(PFNEntry)) << 12;
         if (entry.state != .Free) {
-            HAL.Crash.Crash(.RyuPFNCorruption, .{ phys, @enumToInt(@as(PFNType, entry.state)), @enumToInt(PFNType.Free), 0 });
+            HAL.Crash.Crash(.RyuPFNCorruption, .{ phys, @intFromEnum(@as(PFNType, entry.state)), @intFromEnum(PFNType.Free), 0 });
         }
         pfnFreeHead = entry.next;
         entry.next = null;
@@ -73,7 +73,7 @@ pub fn AllocatePage(tag: PFNType, swappable: bool, pte: usize) ?[]u8 {
         entry.state = tag;
         entry.swappable = if (swappable) 1 else 0;
         entry.pte = pte;
-        var ret = @intToPtr([*]u8, phys + 0xFFFF800000000000)[0..4096];
+        var ret = @as([*]u8, @ptrFromInt(phys + 0xFFFF800000000000))[0..4096];
         @memset(ret, 0); // Freed Pages haven't been zeroed yet so we'll manually do it.
         pfnSpinlock.release();
         _ = HAL.Arch.IRQEnableDisable(old);
@@ -106,11 +106,11 @@ pub fn DereferencePage(page: usize) void {
             pfnDatabase[index].swappable = 0;
             if (pfnDatabase[index].pte != 0 and oldState == .PageTable) {
                 const entry: usize = pfnDatabase[index].pte;
-                const pt = entry & (~@intCast(usize, 0xFFF)) - 0xffff800000000000;
+                const pt = entry & (~@as(usize, @intCast(0xFFF))) - 0xffff800000000000;
                 if (pfnDatabase[pt >> 12].state != .PageTable) {
-                    HAL.Crash.Crash(.RyuPFNCorruption, .{ pt, @enumToInt(pfnDatabase[pt >> 12].state), @enumToInt(PFNType.PageTable), 0 });
+                    HAL.Crash.Crash(.RyuPFNCorruption, .{ pt, @intFromEnum(pfnDatabase[pt >> 12].state), @intFromEnum(PFNType.PageTable), 0 });
                 }
-                @intToPtr(*usize, entry).* = 0;
+                @as(*usize, @ptrFromInt(entry)).* = 0;
                 pfnFreeHead = &pfnDatabase[index];
                 pfnSpinlock.release();
                 DereferencePage(pt);

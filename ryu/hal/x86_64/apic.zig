@@ -3,8 +3,8 @@ const std = @import("std");
 const acpi = @import("acpi.zig");
 
 pub var lapic_ptr: usize = 0;
-pub var ioapic_regSelect: *allowzero volatile u32 = @intToPtr(*allowzero volatile u32, 0);
-pub var ioapic_ioWindow: *allowzero volatile u32 = @intToPtr(*allowzero volatile u32, 0);
+pub var ioapic_regSelect: *allowzero volatile u32 = @as(*allowzero volatile u32, @ptrFromInt(0));
+pub var ioapic_ioWindow: *allowzero volatile u32 = @as(*allowzero volatile u32, @ptrFromInt(0));
 
 const x2apic_register_base: usize = 0x800;
 
@@ -13,7 +13,7 @@ pub var ioapic_activelow: [24]bool = [_]bool{false} ** 24;
 pub var ioapic_leveltrig: [24]bool = [_]bool{false} ** 24;
 
 inline fn x2apicSupport() bool {
-    return (HAL.Arch.cpuid(0x1).ecx & (@intCast(u32, 1) << 21)) != 0;
+    return (HAL.Arch.cpuid(0x1).ecx & (@as(u32, @intCast(1)) << 21)) != 0;
 }
 
 pub fn setup() void {
@@ -39,13 +39,13 @@ pub fn setup() void {
     write(0x3e0, 0x3); // Set the timer to use divider 16
     // Prepare the HPET timer to wait for 10 ms
     var addr: usize = acpi.HPETAddr.?.address;
-    const hpetAddr: [*]align(1) volatile u64 = @intToPtr([*]align(1) volatile u64, addr);
+    const hpetAddr: [*]align(1) volatile u64 = @as([*]align(1) volatile u64, @ptrFromInt(addr));
     var clock = hpetAddr[0] >> 32;
     hpetAddr[2] = 0;
-    hpetAddr[32] = (hpetAddr[32] | (1 << 6)) & (~@intCast(u64, 0b100));
+    hpetAddr[32] = (hpetAddr[32] | (1 << 6)) & (~@as(u64, @intCast(0b100)));
     hpetAddr[30] = 0;
     hpetAddr[2] = 1;
-    const hz = @intCast(u64, 1000000000000000) / clock;
+    const hz = @as(u64, @intCast(1000000000000000)) / clock;
     var interval = (10 * (1000000000000 / clock));
     const val = (((hz << 16) / (interval)));
     if (HAL.Arch.GetHCB().hartID == 0) {
@@ -58,7 +58,7 @@ pub fn setup() void {
         std.atomic.spinLoopHint();
     }
     write(0x320, 0x10000); // Stop the Local APIC Timer
-    var ticks: u32 = 0xffffffff - @intCast(u32, read(0x390)); // We now have the number of ticks that elapses in 10 ms (with divider 16 of course)
+    var ticks: u32 = 0xffffffff - @as(u32, @intCast(read(0x390))); // We now have the number of ticks that elapses in 10 ms (with divider 16 of course)
     // Set the Local APIC timer to Periodic Mode, Divider 16, and to trigger every millisecond.
     write(0x3e0, 0x3);
     write(0x380, ticks / 10);
@@ -68,8 +68,8 @@ pub fn setup() void {
     // Now we'll setup the IO APIC
     for (0..24) |i| {
         if (ioapic_redirect[i] != 0 and ioapic_redirect[i] != 0xff and ioapic_redirect[i] != 8) {
-            const val1: u64 = if (ioapic_leveltrig[i]) @intCast(u64, 1) << 15 else 0;
-            const val2: u64 = if (ioapic_activelow[i]) @intCast(u64, 1) << 13 else 0;
+            const val1: u64 = if (ioapic_leveltrig[i]) @as(u64, @intCast(1)) << 15 else 0;
+            const val2: u64 = if (ioapic_activelow[i]) @as(u64, @intCast(1)) << 13 else 0;
             writeIo64(0x10 + (2 * i), (ioapic_redirect[i] + 0x20) | val1 | val2);
         }
     }
@@ -77,37 +77,37 @@ pub fn setup() void {
 
 pub fn read(reg: usize) u64 {
     if (lapic_ptr == 0xffffffff) { // X2APIC
-        return HAL.Arch.rdmsr(@intCast(u32, x2apic_register_base + (reg / 16)));
+        return HAL.Arch.rdmsr(@as(u32, @intCast(x2apic_register_base + (reg / 16))));
     } else {
-        return @intCast(u64, @intToPtr(*volatile u32, lapic_ptr + reg).*);
+        return @as(u64, @intCast(@as(*volatile u32, @ptrFromInt(lapic_ptr + reg)).*));
     }
 }
 
 pub fn write(reg: usize, val: u64) void {
     if (lapic_ptr == 0xffffffff) { // X2APIC
-        HAL.Arch.wrmsr(@intCast(u32, x2apic_register_base + (reg / 16)), val);
+        HAL.Arch.wrmsr(@as(u32, @intCast(x2apic_register_base + (reg / 16))), val);
     } else {
-        @intToPtr(*volatile u32, lapic_ptr + reg).* = @intCast(u32, val & 0xFFFFFFFF);
+        @as(*volatile u32, @ptrFromInt(lapic_ptr + reg)).* = @as(u32, @intCast(val & 0xFFFFFFFF));
     }
 }
 
 pub fn readIo32(reg: usize) u32 {
-    ioapic_regSelect.* = @intCast(u32, reg);
+    ioapic_regSelect.* = @as(u32, @intCast(reg));
     return ioapic_ioWindow.*;
 }
 
 pub fn writeIo32(reg: usize, val: u32) void {
-    ioapic_regSelect.* = @intCast(u32, reg);
+    ioapic_regSelect.* = @as(u32, @intCast(reg));
     ioapic_ioWindow.* = val;
 }
 
 pub fn readIo64(reg: usize) u64 {
-    const low: u64 = @intCast(u64, readIo32(reg));
-    const high: u64 = @intCast(u64, readIo32(reg + 1)) << 32;
+    const low: u64 = @as(u64, @intCast(readIo32(reg)));
+    const high: u64 = @as(u64, @intCast(readIo32(reg + 1))) << 32;
     return high | low;
 }
 
 pub fn writeIo64(reg: usize, val: u64) void {
-    writeIo32(reg, @intCast(u32, val & 0xFFFFFFFF));
-    writeIo32(reg + 1, @intCast(u32, (val >> 32) & 0xFFFFFFFF));
+    writeIo32(reg, @as(u32, @intCast(val & 0xFFFFFFFF)));
+    writeIo32(reg + 1, @as(u32, @intCast((val >> 32) & 0xFFFFFFFF)));
 }

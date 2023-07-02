@@ -182,7 +182,7 @@ const ELFLoadType = enum {
 };
 
 pub fn LoadELF(ptr: *void, loadType: ELFLoadType, pd: ?Memory.Paging.PageDirectory) ELFLoadError!?usize {
-    var header: *ELFHeader = @ptrCast(*ELFHeader, @alignCast(@alignOf(ELFHeader), ptr));
+    var header: *ELFHeader = @as(*ELFHeader, @ptrCast(@alignCast(ptr)));
     if (header.magic != 0x464C457F) {
         return ELFLoadError.BadMagic;
     }
@@ -197,56 +197,56 @@ pub fn LoadELF(ptr: *void, loadType: ELFLoadType, pd: ?Memory.Paging.PageDirecto
     if (loadType == .Normal) {
         var i: usize = 0;
         while (i < header.phtEntryCount) : (i += 1) {
-            var entry: *ELFProgramHeader = @intToPtr(*ELFProgramHeader, @ptrToInt(ptr) + header.phtPos + (i * @intCast(usize, header.phtEntrySize)));
+            var entry: *ELFProgramHeader = @as(*ELFProgramHeader, @ptrFromInt(@intFromPtr(ptr) + header.phtPos + (i * @as(usize, @intCast(header.phtEntrySize)))));
             if (entry.type == 1) {
-                const trueSize: usize = @intCast(usize, if (entry.memSize % 4096 > 0) (entry.memSize & (~@intCast(u64, 0xFFF))) + 4096 else entry.memSize);
-                var addr = @intCast(usize, entry.vaddr);
+                const trueSize: usize = @as(usize, @intCast(if (entry.memSize % 4096 > 0) (entry.memSize & (~@as(u64, @intCast(0xFFF)))) + 4096 else entry.memSize));
+                var addr = @as(usize, @intCast(entry.vaddr));
                 var off: usize = 0;
-                while (addr < @intCast(usize, entry.vaddr) + trueSize) : (addr += 4096) {
+                while (addr < @as(usize, @intCast(entry.vaddr)) + trueSize) : (addr += 4096) {
                     var page = Memory.PFN.AllocatePage(.Active, true, 0).?;
                     _ = Memory.Paging.MapPage(
                         pd.?,
                         addr,
                         Memory.Paging.MapRead | (entry.flags & 2) | ((entry.flags & 1) << 2),
-                        @ptrToInt(page.ptr) - 0xffff800000000000,
+                        @intFromPtr(page.ptr) - 0xffff800000000000,
                     );
-                    @memcpy(@intToPtr([*]u8, @ptrToInt(page.ptr))[0..4096], @intToPtr([*]u8, @ptrToInt(ptr) + @intCast(usize, entry.offset))[off..(off + 4096)]);
+                    @memcpy(@as([*]u8, @ptrFromInt(@intFromPtr(page.ptr)))[0..4096], @as([*]u8, @ptrFromInt(@intFromPtr(ptr) + @as(usize, @intCast(entry.offset))))[off..(off + 4096)]);
                     off += 4096;
                 }
             }
         }
-        return @intCast(usize, header.programEntryPos);
+        return @as(usize, @intCast(header.programEntryPos));
     } else if (loadType == .Driver) {
         var i: usize = 0;
         while (i < header.shtEntryCount) : (i += 1) {
-            var entry: *ELFSectionHeader = @intToPtr(*ELFSectionHeader, @ptrToInt(ptr) + header.shtPos + (i * @intCast(usize, header.shtEntrySize)));
+            var entry: *ELFSectionHeader = @as(*ELFSectionHeader, @ptrFromInt(@intFromPtr(ptr) + header.shtPos + (i * @as(usize, @intCast(header.shtEntrySize)))));
             if (entry.type == 8) {
                 var size = if (entry.size & 0xFFF != 0) (entry.size & 0xFFFFFFFFFFFFF000) + 4096 else entry.size;
-                entry.addr = @ptrToInt(Memory.Pool.PagedPool.AllocAnonPages(size).?.ptr);
+                entry.addr = @intFromPtr(Memory.Pool.PagedPool.AllocAnonPages(size).?.ptr);
             } else {
-                entry.addr = @ptrToInt(ptr) + entry.offset;
+                entry.addr = @intFromPtr(ptr) + entry.offset;
             }
         }
         var drvrInfo: ?*devlib.RyuDriverInfo = null;
         i = 0;
         while (i < header.shtEntryCount) : (i += 1) {
-            var entry: *ELFSectionHeader = @intToPtr(*ELFSectionHeader, @ptrToInt(ptr) + header.shtPos + (i * @intCast(usize, header.shtEntrySize)));
+            var entry: *ELFSectionHeader = @as(*ELFSectionHeader, @ptrFromInt(@intFromPtr(ptr) + header.shtPos + (i * @as(usize, @intCast(header.shtEntrySize)))));
             if (entry.type != 2) {
                 continue;
             }
-            var strTableHeader = @intToPtr(*ELFSectionHeader, @ptrToInt(ptr) + header.shtPos + (@intCast(usize, header.shtEntrySize) * entry.link));
+            var strTableHeader = @as(*ELFSectionHeader, @ptrFromInt(@intFromPtr(ptr) + header.shtPos + (@as(usize, @intCast(header.shtEntrySize)) * entry.link)));
             var sym: usize = 0;
             while (sym < (entry.size / @sizeOf(ELFSymbol))) : (sym += 1) {
-                var symEntry = @intToPtr(*ELFSymbol, entry.addr + (sym * @sizeOf(ELFSymbol)));
+                var symEntry = @as(*ELFSymbol, @ptrFromInt(entry.addr + (sym * @sizeOf(ELFSymbol))));
                 if (symEntry.shndx > 0 and symEntry.shndx < 0xFF00) {
-                    var e = @intToPtr(*ELFSectionHeader, @ptrToInt(ptr) + header.shtPos + (symEntry.shndx * header.shtEntrySize));
+                    var e = @as(*ELFSectionHeader, @ptrFromInt(@intFromPtr(ptr) + header.shtPos + (symEntry.shndx * header.shtEntrySize)));
                     symEntry.value += e.addr;
                 }
                 if (symEntry.name != 0) {
-                    var symbolCName = @intToPtr([*:0]u8, strTableHeader.addr + symEntry.name);
+                    var symbolCName = @as([*:0]u8, @ptrFromInt(strTableHeader.addr + symEntry.name));
                     var symbolName: []u8 = symbolCName[0..std.mem.len(symbolCName)];
                     if (std.mem.eql(u8, symbolName, "DriverInfo")) {
-                        drvrInfo = @intToPtr(*devlib.RyuDriverInfo, symEntry.value);
+                        drvrInfo = @as(*devlib.RyuDriverInfo, @ptrFromInt(symEntry.value));
                     }
                 }
             }
@@ -260,35 +260,35 @@ pub fn LoadELF(ptr: *void, loadType: ELFLoadType, pd: ?Memory.Paging.PageDirecto
                 drvr.prev = Drivers.drvrTail;
                 Drivers.drvrTail = drvr;
             }
-            drvr.baseAddr = @ptrToInt(ptr);
+            drvr.baseAddr = @intFromPtr(ptr);
         } else {
             return ELFLoadError.NoDriverInfo;
         }
         i = 0;
         while (i < header.shtEntryCount) : (i += 1) {
-            var entry: *ELFSectionHeader = @intToPtr(*ELFSectionHeader, @ptrToInt(ptr) + header.shtPos + (i * @intCast(usize, header.shtEntrySize)));
+            var entry: *ELFSectionHeader = @as(*ELFSectionHeader, @ptrFromInt(@intFromPtr(ptr) + header.shtPos + (i * @as(usize, @intCast(header.shtEntrySize)))));
             if (entry.type != 4) {
                 continue;
             }
-            var relTable = @intToPtr([*]ELFRela, entry.addr)[0..(entry.size / @sizeOf(ELFRela))];
-            var targetSection: *ELFSectionHeader = @intToPtr(*ELFSectionHeader, @ptrToInt(ptr) + header.shtPos + (entry.info * @intCast(usize, header.shtEntrySize)));
-            var symbolSection: *ELFSectionHeader = @intToPtr(*ELFSectionHeader, @ptrToInt(ptr) + header.shtPos + (entry.link * @intCast(usize, header.shtEntrySize)));
-            var symTable = @intToPtr([*]ELFSymbol, symbolSection.addr)[0 .. symbolSection.size / @sizeOf(ELFSymbol)];
+            var relTable = @as([*]ELFRela, @ptrFromInt(entry.addr))[0..(entry.size / @sizeOf(ELFRela))];
+            var targetSection: *ELFSectionHeader = @as(*ELFSectionHeader, @ptrFromInt(@intFromPtr(ptr) + header.shtPos + (entry.info * @as(usize, @intCast(header.shtEntrySize)))));
+            var symbolSection: *ELFSectionHeader = @as(*ELFSectionHeader, @ptrFromInt(@intFromPtr(ptr) + header.shtPos + (entry.link * @as(usize, @intCast(header.shtEntrySize)))));
+            var symTable = @as([*]ELFSymbol, @ptrFromInt(symbolSection.addr))[0 .. symbolSection.size / @sizeOf(ELFSymbol)];
             for (0..relTable.len) |rela| {
                 var target: usize = relTable[rela].offset +% targetSection.addr;
                 var sym: usize = relTable[rela].info >> 32;
-                switch (@intToEnum(ELFRelocType, @intCast(u32, relTable[rela].info & 0xFFFFFFFF))) {
+                switch (@as(ELFRelocType, @enumFromInt(@as(u32, @intCast(relTable[rela].info & 0xFFFFFFFF))))) {
                     .X86_64_64 => {
-                        @intToPtr(*align(1) u64, target).* = @bitCast(u64, relTable[rela].addend) +% symTable[sym].value;
+                        @as(*align(1) u64, @ptrFromInt(target)).* = @as(u64, @bitCast(relTable[rela].addend)) +% symTable[sym].value;
                     },
                     .X86_64_32 => {
-                        @intToPtr(*align(1) u32, target).* = @intCast(u32, (@bitCast(u64, relTable[rela].addend) +% symTable[sym].value) & 0xFFFFFFFF);
+                        @as(*align(1) u32, @ptrFromInt(target)).* = @as(u32, @intCast((@as(u64, @bitCast(relTable[rela].addend)) +% symTable[sym].value) & 0xFFFFFFFF));
                     },
                     .X86_64_PC32, .X86_64_PLT32 => {
-                        @intToPtr(*align(1) u32, target).* = @intCast(u32, (@bitCast(u64, relTable[rela].addend) +% symTable[sym].value -% target) & 0xFFFFFFFF);
+                        @as(*align(1) u32, @ptrFromInt(target)).* = @as(u32, @intCast((@as(u64, @bitCast(relTable[rela].addend)) +% symTable[sym].value -% target) & 0xFFFFFFFF));
                     },
                     .X86_64_32S => {
-                        @intToPtr(*align(1) i32, target).* = @bitCast(i32, @intCast(u32, (@bitCast(u64, relTable[rela].addend) +% symTable[sym].value) & 0xFFFFFFFF));
+                        @as(*align(1) i32, @ptrFromInt(target)).* = @as(i32, @bitCast(@as(u32, @intCast((@as(u64, @bitCast(relTable[rela].addend)) +% symTable[sym].value) & 0xFFFFFFFF))));
                     },
                     else => {
                         return ELFLoadError.UnrecognizedRelocation;

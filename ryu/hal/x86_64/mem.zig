@@ -22,5 +22,5 @@ pub fn init(kfStart: usize, kfEnd: usize) void {
     var initial: usize = asm volatile ("mov %%cr3, %[ret]"
         : [ret] "={rax}" (-> usize),
     ) + 0xffff800000000000;
-    Memory.Initialize(&ranges, @intToPtr([*]usize, initial)[0..512]);
+    Memory.Initialize(&ranges, @as([*]usize, @ptrFromInt(initial))[0..512]);
 }

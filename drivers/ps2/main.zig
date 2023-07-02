@@ -114,7 +114,7 @@ var PS2MouseInode: devlib.fs.Inode = devlib.fs.Inode{
 
 pub fn PS2DevRead(inode: *devlib.fs.Inode, offset: isize, addr: *void, len: isize) callconv(.C) isize {
     _ = offset;
-    if (@ptrToInt(inode) == @ptrToInt(&PS2MouseInode)) {
+    if (@intFromPtr(inode) == @intFromPtr(&PS2MouseInode)) {
         // PS/2 Mouse
         if (len != 3) {
             return -16;
@@ -124,7 +124,7 @@ pub fn PS2DevRead(inode: *devlib.fs.Inode, offset: isize, addr: *void, len: isiz
             _ = DriverInfo.krnlDispatch.?.waitEvent(&mouseEventQueue);
             DriverInfo.krnlDispatch.?.acquireSpinlock(&inode.lock);
         }
-        const buf = @intToPtr([*]u8, @ptrToInt(addr))[0..3];
+        const buf = @as([*]u8, @ptrFromInt(@intFromPtr(addr)))[0..3];
         buf[0] = mouseBuffer[mouseRead];
         buf[1] = mouseBuffer[(mouseRead + 1) % 64];
         buf[2] = mouseBuffer[(mouseRead + 2) % 64];
@@ -140,7 +140,7 @@ pub fn PS2DevRead(inode: *devlib.fs.Inode, offset: isize, addr: *void, len: isiz
             _ = DriverInfo.krnlDispatch.?.waitEvent(&kbdEventQueue);
             DriverInfo.krnlDispatch.?.acquireSpinlock(&inode.lock);
         }
-        const buf = @intToPtr(*u8, @ptrToInt(addr));
+        const buf = @as(*u8, @ptrFromInt(@intFromPtr(addr)));
         buf.* = kbdBuffer[kbdRead];
         kbdRead = (kbdRead + 1) % 64;
         return 1;

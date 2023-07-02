@@ -28,7 +28,7 @@ pub const EventQueue = extern struct {
             if (thread.priority < 15) {
                 thread.priority += 1;
             }
-            thread.context.SetReg(0, @intCast(u64, val));
+            thread.context.SetReg(0, @as(u64, @intCast(val)));
             thread.state = .Runnable;
             Thread.queues[thread.priority].lock.acquire();
             Thread.queues[thread.priority].Add(thread);

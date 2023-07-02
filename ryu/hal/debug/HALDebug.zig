@@ -41,7 +41,7 @@ pub fn EnterDebugger() noreturn {
             var ind: i64 = 1;
             while (ind < Team.nextTeamID) : (ind += 1) {
                 if (Team.teams.search(ind)) |team| {
-                    HAL.Console.Put("{}: {x:0>16} {s}\n", .{ ind, @ptrToInt(team), team.name });
+                    HAL.Console.Put("{}: {x:0>16} {s}\n", .{ ind, @intFromPtr(team), team.name });
                 }
             }
         } else if (std.mem.eql(u8, txt, "threads")) {
@@ -50,7 +50,7 @@ pub fn EnterDebugger() noreturn {
                 if (Thread.threads.search(ind)) |thread| {
                     HAL.Console.Put("{}: {x:0>16} {s} {s} IP: {x:0>16} SP: {x:0>16} Team #{} Priority: {} Quantum: ~{} ms\n", .{
                         ind,
-                        @ptrToInt(thread),
+                        @intFromPtr(thread),
                         thread.name,
                         @tagName(thread.state),
                         thread.context.GetReg(128),

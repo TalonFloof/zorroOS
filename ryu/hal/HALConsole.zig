@@ -6,7 +6,7 @@ const Memory = @import("root").Memory;
 const Splash = @import("root").HAL.Splash;
 
 pub const FBInfo = struct {
-    ptr: *allowzero void = @intToPtr(*allowzero void, 0),
+    ptr: *allowzero void = @as(*allowzero void, @ptrFromInt(0)),
     width: usize = 0,
     height: usize = 0,
     pitch: usize = 0,
@@ -29,17 +29,17 @@ fn fbDrawBitmap(x: isize, y: isize, w: usize, h: usize, bitmap: []u8, color: usi
         var j: usize = 0;
         while (j < (w / 8)) : (j += 1) {
             var b: u8 = bitmap[(i * (w / 8)) + j];
-            var c: isize = @intCast(isize, j * 8);
+            var c: isize = @as(isize, @intCast(j * 8));
             while (b != 0) {
                 if (flip) {
                     if ((b & 0x1) != 0) {
-                        info.set(info, x + c, y + @intCast(isize, i), 1, 1, color);
+                        info.set(info, x + c, y + @as(isize, @intCast(i)), 1, 1, color);
                     }
                     c += 1;
                     b >>= 1;
                 } else {
                     if ((b & 0x80) != 0) {
-                        info.set(info, x + c, y + @intCast(isize, i), 1, 1, color);
+                        info.set(info, x + c, y + @as(isize, @intCast(i)), 1, 1, color);
                     }
                     c += 1;
                     b <<= 1;
@@ -60,8 +60,8 @@ pub fn DrawScaledBitmap(x: isize, y: isize, w: usize, h: usize, scW: usize, scH:
             var finalY: usize = (i * y_ratio) >> 16;
             var index = (finalY * w) + finalX;
             var dat = bitmap[index / 8];
-            if ((dat >> @intCast(u3, 7 - (index % 8))) & 1 != 0) {
-                info.set(info, @intCast(isize, j) + x, @intCast(isize, i) + y, 1, 1, color);
+            if ((dat >> @as(u3, @intCast(7 - (index % 8)))) & 1 != 0) {
+                info.set(info, @as(isize, @intCast(j)) + x, @as(isize, @intCast(i)) + y, 1, 1, color);
             }
         }
     }
@@ -90,10 +90,10 @@ fn newline() void {
     }
     if (largeFont) {
         if (showCursor) {
-            info.set(info, 0, @intCast(isize, cursorY * 20), info.width, 20, bgColor);
+            info.set(info, 0, @as(isize, @intCast(cursorY * 20)), info.width, 20, bgColor);
         }
     } else {
-        info.set(info, 0, @intCast(isize, cursorY * 12), info.width, 12, bgColor);
+        info.set(info, 0, @as(isize, @intCast(cursorY * 12)), info.width, 12, bgColor);
     }
 }
 
@@ -102,9 +102,9 @@ fn conWriteString(_: @TypeOf(.{}), string: []const u8) error{}!usize {
         const c = string[i];
         if (showCursor) {
             if (largeFont) {
-                info.set(info, @intCast(isize, cursorX * 9), @intCast(isize, cursorY * 20), 9, 20, bgColor);
+                info.set(info, @as(isize, @intCast(cursorX * 9)), @as(isize, @intCast(cursorY * 20)), 9, 20, bgColor);
             } else {
-                info.set(info, @intCast(isize, cursorX * 6), @intCast(isize, cursorY * 12), 6, 12, bgColor);
+                info.set(info, @as(isize, @intCast(cursorX * 6)), @as(isize, @intCast(cursorY * 12)), 6, 12, bgColor);
             }
         }
         if (c == 8) {
@@ -124,16 +124,16 @@ fn conWriteString(_: @TypeOf(.{}), string: []const u8) error{}!usize {
             if (c >= 0x20 and c <= 0x7e) {
                 if (largeFont) {
                     fbDrawBitmap(
-                        @intCast(isize, cursorX * 9),
-                        @intCast(isize, cursorY * 20),
+                        @as(isize, @intCast(cursorX * 9)),
+                        @as(isize, @intCast(cursorY * 20)),
                         16,
                         20,
-                        @constCast(LargeFont[((@intCast(usize, c) - 0x20) * (20 * 2))..LargeFont.len]),
+                        @constCast(LargeFont[((@as(usize, @intCast(c)) - 0x20) * (20 * 2))..LargeFont.len]),
                         0xcdd6f4,
                         false,
                     );
                 } else {
-                    fbDrawBitmap(@intCast(isize, cursorX * 6), @intCast(isize, cursorY * 12), 8, 12, @constCast(HaikuFont[((@intCast(usize, c) - 0x20) * 12)..HaikuFont.len]), 0xcdd6f4, true);
+                    fbDrawBitmap(@as(isize, @intCast(cursorX * 6)), @as(isize, @intCast(cursorY * 12)), 8, 12, @constCast(HaikuFont[((@as(usize, @intCast(c)) - 0x20) * 12)..HaikuFont.len]), 0xcdd6f4, true);
                 }
             }
             cursorX += 1;
@@ -149,9 +149,9 @@ fn conWriteString(_: @TypeOf(.{}), string: []const u8) error{}!usize {
         }
         if (showCursor) {
             if (largeFont) {
-                info.set(info, @intCast(isize, cursorX * 9), @intCast(isize, cursorY * 20), 9, 20, 0xCDD6F4);
+                info.set(info, @as(isize, @intCast(cursorX * 9)), @as(isize, @intCast(cursorY * 20)), 9, 20, 0xCDD6F4);
             } else {
-                info.set(info, @intCast(isize, cursorX * 6), @intCast(isize, cursorY * 12), 6, 12, 0xCDD6F4);
+                info.set(info, @as(isize, @intCast(cursorX * 6)), @as(isize, @intCast(cursorY * 12)), 6, 12, 0xCDD6F4);
             }
         }
     }
@@ -178,9 +178,9 @@ pub fn EnableDisable(en: bool) void {
         }
         if (showCursor) {
             if (largeFont) {
-                info.set(info, @intCast(isize, cursorX * 9), @intCast(isize, cursorY * 20), 9, 20, 0xCDD6F4);
+                info.set(info, @as(isize, @intCast(cursorX * 9)), @as(isize, @intCast(cursorY * 20)), 9, 20, 0xCDD6F4);
             } else {
-                info.set(info, @intCast(isize, cursorX * 6), @intCast(isize, cursorY * 12), 6, 12, 0xCDD6F4);
+                info.set(info, @as(isize, @intCast(cursorX * 6)), @as(isize, @intCast(cursorY * 12)), 6, 12, 0xCDD6F4);
             }
         }
     }

@@ -27,7 +27,7 @@ pub const Filesystem = extern struct {
 pub const Inode = extern struct {
     name: [256]u8 = [_]u8{0} ** 256,
     stat: Metadata = Metadata{ .ID = 0 },
-    private: *allowzero void = @intToPtr(*allowzero void, 0),
+    private: *allowzero void = @as(*allowzero void, @ptrFromInt(0)),
     parent: ?*Inode = null,
     children: ?*Inode = null,
     prevSibling: ?*Inode = null,

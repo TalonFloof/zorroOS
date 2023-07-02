@@ -56,14 +56,14 @@ pub const RyuDriverInfo = extern struct {
 pub fn FindDriver(info: *RyuDriverInfo, name: []const u8) ?*void {
     var index = info.next;
     while (index) |drvr| {
-        if (std.mem.eql(u8, @ptrCast([*]u8, drvr.drvName)[0..std.mem.len(drvr.drvName)], name)) {
+        if (std.mem.eql(u8, @as([*]u8, @ptrCast(drvr.drvName))[0..std.mem.len(drvr.drvName)], name)) {
             return drvr.exportedDispatch;
         }
         index = drvr.next;
     }
     index = info.prev;
     while (index) |drvr| {
-        if (std.mem.eql(u8, @ptrCast([*]u8, drvr.drvName)[0..std.mem.len(drvr.drvName)], name)) {
+        if (std.mem.eql(u8, @as([*]u8, @ptrCast(drvr.drvName))[0..std.mem.len(drvr.drvName)], name)) {
             return drvr.exportedDispatch;
         }
         index = drvr.prev;

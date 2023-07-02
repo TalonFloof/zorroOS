@@ -53,7 +53,7 @@ pub export fn RyuInit() noreturn {
     var team = Executive.Team.GetTeamByID(2).?;
     team.cwd = FS.rootInode;
     var entry = Executive.Team.LoadELFImage("/bin/init", team).?;
-    _ = Executive.Thread.NewThread(team, @ptrCast([*]u8, @constCast("Main Thread"))[0..11], entry, 0x9ff8, 10);
+    _ = Executive.Thread.NewThread(team, @as([*]u8, @ptrCast(@constCast("Main Thread")))[0..11], entry, 0x9ff8, 10);
     HAL.Splash.UpdateStatus("Kernel Setup Complete");
     Executive.Thread.startScheduler = true;
     Executive.Thread.Reschedule(false);
@@ -63,6 +63,6 @@ pub inline fn LoadModule(name: []const u8, data: []u8) void {
     if (std.mem.eql(u8, name, "Ramdisk")) {
         ramdksImage = data;
     } else {
-        Drivers.LoadDriver(name, @ptrCast(*void, data.ptr));
+        Drivers.LoadDriver(name, @as(*void, @ptrCast(data.ptr)));
     }
 }

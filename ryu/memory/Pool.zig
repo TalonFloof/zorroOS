@@ -23,14 +23,14 @@ pub const Bucket = struct {
     }
 
     fn GetBit(self: *Bucket, index: usize) bool {
-        return ((self.bitmap[index / 8] >> @intCast(u3, index % 8)) & 1) != 0;
+        return ((self.bitmap[index / 8] >> @as(u3, @intCast(index % 8))) & 1) != 0;
     }
 
     fn SetBit(self: *Bucket, index: usize, value: bool) void {
         if (value) {
-            self.bitmap[index / 8] |= @intCast(u8, 1) << @intCast(u3, index % 8);
+            self.bitmap[index / 8] |= @as(u8, @intCast(1)) << @as(u3, @intCast(index % 8));
         } else {
-            self.bitmap[index / 8] &= ~(@intCast(u8, 1) << @intCast(u3, index % 8));
+            self.bitmap[index / 8] &= ~(@as(u8, @intCast(1)) << @as(u3, @intCast(index % 8)));
         }
     }
 
@@ -38,10 +38,10 @@ pub const Bucket = struct {
         var i: usize = 0;
         const entries: usize = if ((size % 16) != 0) ((size / 16) + 1) else (size / 16);
         while (i < 32512 - (entries - 1)) : (i += 1) {
-            if (@ptrCast(*align(1) u32, &self.bitmap[i / 8]).* == 0xffffffff) {
+            if (@as(*align(1) u32, @ptrCast(&self.bitmap[i / 8])).* == 0xffffffff) {
                 i += 31 - (i % 32);
                 continue;
-            } else if (@ptrCast(*align(1) u16, &self.bitmap[i / 8]).* == 0xffff) {
+            } else if (@as(*align(1) u16, @ptrCast(&self.bitmap[i / 8])).* == 0xffff) {
                 i += 15 - (i % 16);
                 continue;
             } else if (self.bitmap[i / 8] == 0xff) {
@@ -62,8 +62,8 @@ pub const Bucket = struct {
                     self.SetBit(j, true);
                 }
                 self.usedEntries += entries;
-                var addr = (@ptrToInt(self) + 4096) + (i * 16);
-                return @intToPtr([*]u8, addr)[0..size];
+                var addr = (@intFromPtr(self) + 4096) + (i * 16);
+                return @as([*]u8, @ptrFromInt(addr))[0..size];
             }
         }
         return null;
@@ -73,7 +73,7 @@ pub const Bucket = struct {
         const size: usize = mem.len;
         const entries: usize = if ((size % 16) != 0) ((size / 16) + 1) else (size / 16);
         self.usedEntries -= entries;
-        const start = (@ptrToInt(mem.ptr) - @ptrToInt(self)) / 16;
+        const start = (@intFromPtr(mem.ptr) - @intFromPtr(self)) / 16;
         var i: usize = start;
         while (i < start + entries) : (i += 1) {
             self.SetBit(i, false);
@@ -135,7 +135,7 @@ pub const Pool = struct {
         self.lockHartID = HAL.Arch.GetHCB().hartID;
         var newBucket = self.AllocAnonPages(512 * 1024);
         std.debug.assert(newBucket != null);
-        var bucketHeader = @ptrCast(*Bucket, newBucket.?.ptr);
+        var bucketHeader = @as(*Bucket, @ptrCast(newBucket.?.ptr));
         self.anonymousPages -= (512 * 1024) / 4096;
         self.buckets += 1;
         self.totalBlocks += 32512;
@@ -156,7 +156,7 @@ pub const Pool = struct {
         if (self.lockHartID != HAL.Arch.GetHCB().hartID) {
             self.lock.acquire();
         }
-        const trueSize = if ((size % 4096) != 0) (size & ~@intCast(usize, 0xFFF)) + 4096 else size;
+        const trueSize = if ((size % 4096) != 0) (size & ~@as(usize, @intCast(0xFFF))) + 4096 else size;
         if (Memory.Paging.FindFreeSpace(Memory.Paging.initialPageDir.?, self.searchStart, trueSize)) |addr| {
             self.searchStart = addr + trueSize;
             var i = addr;
@@ -166,7 +166,7 @@ pub const Pool = struct {
                     Memory.Paging.initialPageDir.?,
                     i,
                     Memory.Paging.MapRead | Memory.Paging.MapWrite | Memory.Paging.MapSupervisor,
-                    @ptrToInt(page.?.ptr) - 0xffff800000000000,
+                    @intFromPtr(page.?.ptr) - 0xffff800000000000,
                 );
             }
             self.anonymousPages += trueSize / 4096;
@@ -176,7 +176,7 @@ pub const Pool = struct {
                 self.lockHartID = -1;
             }
             _ = HAL.Arch.IRQEnableDisable(old);
-            return @intToPtr([*]u8, addr)[0..trueSize];
+            return @as([*]u8, @ptrFromInt(addr))[0..trueSize];
         } else {
             if (self.lockHartID != HAL.Arch.GetHCB().hartID) {
                 self.lock.release();
@@ -199,7 +199,7 @@ pub const Pool = struct {
         var index = self.partialBucketHead;
         var bucket: ?*Bucket = null;
         while (index != null) : (index = index.?.next) {
-            if (@ptrToInt(data.ptr) >= @ptrToInt(index) and (@ptrToInt(data.ptr) + data.len) <= (@ptrToInt(index) + (512 * 1024))) {
+            if (@intFromPtr(data.ptr) >= @intFromPtr(index) and (@intFromPtr(data.ptr) + data.len) <= (@intFromPtr(index) + (512 * 1024))) {
                 bucket = index;
                 break;
             }
@@ -207,7 +207,7 @@ pub const Pool = struct {
         if (bucket == null) {
             index = self.fullBucketHead;
             while (index != null) : (index = index.?.next) {
-                if (@ptrToInt(index) >= @ptrToInt(data.ptr) and @ptrToInt(index) + data.len <= (@ptrToInt(data.ptr) + (512 * 1024))) {
+                if (@intFromPtr(index) >= @intFromPtr(data.ptr) and @intFromPtr(index) + data.len <= (@intFromPtr(data.ptr) + (512 * 1024))) {
                     bucket = index;
                     break;
                 }
@@ -249,7 +249,7 @@ pub const Pool = struct {
                 self.buckets -= 1;
                 self.anonymousPages += (512 * 1024) / 4096;
                 self.lockHartID = HAL.Arch.GetHCB().hartID;
-                self.FreeAnonPages(@ptrCast([*]u8, bucket)[0..(512 * 1024)]);
+                self.FreeAnonPages(@as([*]u8, @ptrCast(bucket))[0..(512 * 1024)]);
             }
         } else {
             @panic("Unable to free pool memory!");
@@ -263,8 +263,8 @@ pub const Pool = struct {
         if (self.lockHartID != HAL.Arch.GetHCB().hartID) {
             self.lock.acquire();
         }
-        const addr = @ptrToInt(data.ptr);
-        const size = if ((data.len % 4096) != 0) (data.len & ~@intCast(usize, 0xFFF)) + 4096 else data.len;
+        const addr = @intFromPtr(data.ptr);
+        const size = if ((data.len % 4096) != 0) (data.len & ~@as(usize, @intCast(0xFFF))) + 4096 else data.len;
         if (self.searchStart > addr) {
             self.searchStart = addr;
         }
@@ -272,7 +272,7 @@ pub const Pool = struct {
         while (i < addr + size) : (i += 4096) {
             var entry = Memory.Paging.GetPage(Memory.Paging.initialPageDir.?, i);
             if (entry.r == 1) {
-                Memory.PFN.DereferencePage(@intCast(usize, entry.phys) << 12);
+                Memory.PFN.DereferencePage(@as(usize, @intCast(entry.phys)) << 12);
             }
             _ = Memory.Paging.MapPage(Memory.Paging.initialPageDir.?, i, 0, 0);
         }

@@ -41,11 +41,11 @@ pub fn fastInit() void {
 
 pub fn setDescriptor(vector: usize, i: *void, flags: u8) void {
     const descriptor = &IDT[vector];
-    descriptor.isrLow = @truncate(u16, @ptrToInt(i) & 0xFFFF);
+    descriptor.isrLow = @as(u16, @truncate(@intFromPtr(i) & 0xFFFF));
     descriptor.kernelCS = 0x28;
     descriptor.attributes = flags;
-    descriptor.isrMid = @truncate(u16, (@ptrToInt(i) >> 16) & 0xFFFFFFFF);
-    descriptor.isrHigh = @truncate(u32, @ptrToInt(i) >> 32);
+    descriptor.isrMid = @as(u16, @truncate((@intFromPtr(i) >> 16) & 0xFFFFFFFF));
+    descriptor.isrHigh = @as(u32, @truncate(@intFromPtr(i) >> 32));
     descriptor.ist = 0;
     descriptor.zero = 0;
     isr.stub();

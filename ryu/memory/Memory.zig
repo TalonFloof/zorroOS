@@ -17,7 +17,7 @@ pub fn Initialize(ranges: *[32]PhysicalRange, initialPD: ?Paging.PageDirectory) 
         }
     }
     const entries = highestAddress / 4096;
-    const neededSize: usize = ((entries * @sizeOf(PFN.PFNEntry)) & (~@intCast(usize, 0xFFF))) + (if (((entries * @sizeOf(PFN.PFNEntry)) % 4096) > 0) 4096 - ((entries * @sizeOf(PFN.PFNEntry)) % 4096) else 0);
+    const neededSize: usize = ((entries * @sizeOf(PFN.PFNEntry)) & (~@as(usize, @intCast(0xFFF)))) + (if (((entries * @sizeOf(PFN.PFNEntry)) % 4096) > 0) 4096 - ((entries * @sizeOf(PFN.PFNEntry)) % 4096) else 0);
     var startAddr: usize = 0;
     for (ranges, 0..) |r, i| {
         if ((r.end - r.start) > neededSize) {

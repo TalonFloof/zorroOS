@@ -15,8 +15,8 @@ pub var initialPageDir: ?PageDirectory = null;
 
 pub fn NewPageDirectory() PageDirectory {
     const page = Memory.PFN.AllocatePage(.PageTable, false, 0).?;
-    Memory.PFN.ReferencePage(@ptrToInt(page.ptr) - 0xffff800000000000);
-    var pageDir = @ptrCast([*]usize, @alignCast(@alignOf(usize), page.ptr))[0..512];
+    Memory.PFN.ReferencePage(@intFromPtr(page.ptr) - 0xffff800000000000);
+    var pageDir = @as([*]usize, @ptrCast(@alignCast(page.ptr)))[0..512];
     var i: usize = 256;
     while (i < 512) : (i += 1) {
         pageDir[i] = initialPageDir.?[i];
@@ -32,62 +32,62 @@ fn derefPageTable(pt: *void, level: usize) void {
         } else if (level + 1 >= HAL.Arch.GetPTELevels()) {
             const pte = HAL.Arch.GetPTE(pt, i);
             if (pte.r != 0) {
-                const addr = @intCast(usize, pte.phys) << 12;
+                const addr = @as(usize, @intCast(pte.phys)) << 12;
                 Memory.PFN.DereferencePage(addr);
                 HAL.Arch.SetPTE(pt, 0, HAL.PTEEntry{});
-                Memory.PFN.DereferencePage(@ptrToInt(pt) - 0xffff800000000000);
+                Memory.PFN.DereferencePage(@intFromPtr(pt) - 0xffff800000000000);
             }
         } else {
             const pte = HAL.Arch.GetPTE(pt, i);
             if (pte.r != 0) {
-                derefPageTable(@intToPtr(*void, (@intCast(usize, pte.phys) << 12) + 0xffff800000000000), level + 1);
+                derefPageTable(@as(*void, @ptrFromInt((@as(usize, @intCast(pte.phys)) << 12) + 0xffff800000000000)), level + 1);
             }
         }
     }
 }
 
 pub inline fn DestroyPageDirectory(root: PageDirectory) void {
-    derefPageTable(@ptrCast(*void, root.ptr), 0);
-    Memory.PFN.ForceFreePage(@ptrToInt(root.ptr) - 0xffff800000000000);
+    derefPageTable(@as(*void, @ptrCast(root.ptr)), 0);
+    Memory.PFN.ForceFreePage(@intFromPtr(root.ptr) - 0xffff800000000000);
 }
 
 pub fn MapPage(root: PageDirectory, vaddr: usize, flags: usize, paddr: usize) usize {
     const pte = HAL.PTEEntry{
-        .r = @intCast(u1, flags & MapRead),
-        .w = @intCast(u1, (flags >> 1) & 1),
-        .x = @intCast(u1, (flags >> 2) & 1),
-        .userSupervisor = @intCast(u1, (flags >> 3) & 1),
-        .nonCached = @intCast(u1, (flags >> 4) & 1),
-        .writeThrough = @intCast(u1, (flags >> 5) & 1),
-        .writeCombine = @intCast(u1, (flags >> 6) & 1),
+        .r = @as(u1, @intCast(flags & MapRead)),
+        .w = @as(u1, @intCast((flags >> 1) & 1)),
+        .x = @as(u1, @intCast((flags >> 2) & 1)),
+        .userSupervisor = @as(u1, @intCast((flags >> 3) & 1)),
+        .nonCached = @as(u1, @intCast((flags >> 4) & 1)),
+        .writeThrough = @as(u1, @intCast((flags >> 5) & 1)),
+        .writeCombine = @as(u1, @intCast((flags >> 6) & 1)),
         .reserved = 0,
-        .phys = @intCast(u52, paddr >> 12),
+        .phys = @as(u52, @intCast(paddr >> 12)),
     };
     var i: usize = 0;
-    var entries: *void = @ptrCast(*void, root.ptr);
+    var entries: *void = @as(*void, @ptrCast(root.ptr));
     while (i < HAL.Arch.GetPTELevels()) : (i += 1) {
-        const index: u64 = (vaddr >> (39 - @intCast(u6, i * 9))) & 0x1ff;
+        const index: u64 = (vaddr >> (39 - @as(u6, @intCast(i * 9)))) & 0x1ff;
         var entry = HAL.Arch.GetPTE(entries, index);
         if (i + 1 >= HAL.Arch.GetPTELevels()) {
             if (pte.r == 0) {
                 HAL.Arch.SetPTE(entries, index, HAL.PTEEntry{});
                 HAL.Arch.InvalidatePage(vaddr);
                 if (entry.r != 0) {
-                    Memory.PFN.DereferencePage(@ptrToInt(entries) - 0xffff800000000000);
+                    Memory.PFN.DereferencePage(@intFromPtr(entries) - 0xffff800000000000);
                 }
-                return @ptrToInt(entries) + (index * @sizeOf(Memory.PFN.PFNEntry));
+                return @intFromPtr(entries) + (index * @sizeOf(Memory.PFN.PFNEntry));
             } else {
                 HAL.Arch.SetPTE(entries, index, pte);
                 HAL.Arch.InvalidatePage(vaddr);
                 if (entry.r == 0) {
-                    Memory.PFN.ReferencePage(@ptrToInt(entries) - 0xffff800000000000);
+                    Memory.PFN.ReferencePage(@intFromPtr(entries) - 0xffff800000000000);
                 }
-                return @ptrToInt(entries) + (index * @sizeOf(Memory.PFN.PFNEntry));
+                return @intFromPtr(entries) + (index * @sizeOf(Memory.PFN.PFNEntry));
             }
         } else {
             if (entry.r == 0) {
                 // Allocate Page
-                var page = Memory.PFN.AllocatePage(.PageTable, vaddr < 0x800000000000, @ptrToInt(entries) + (index * @sizeOf(usize))).?;
+                var page = Memory.PFN.AllocatePage(.PageTable, vaddr < 0x800000000000, @intFromPtr(entries) + (index * @sizeOf(usize))).?;
                 entry.r = 1;
                 entry.w = 1;
                 entry.x = 1;
@@ -95,12 +95,12 @@ pub fn MapPage(root: PageDirectory, vaddr: usize, flags: usize, paddr: usize) us
                 entry.nonCached = 0;
                 entry.writeThrough = 0;
                 entry.writeCombine = 0;
-                entry.phys = @intCast(u52, (@ptrToInt(page.ptr) - 0xffff800000000000) >> 12);
+                entry.phys = @as(u52, @intCast((@intFromPtr(page.ptr) - 0xffff800000000000) >> 12));
                 HAL.Arch.SetPTE(entries, index, entry);
-                Memory.PFN.ReferencePage(@ptrToInt(entries) - 0xffff800000000000);
-                entries = @intToPtr(*void, @ptrToInt(page.ptr));
+                Memory.PFN.ReferencePage(@intFromPtr(entries) - 0xffff800000000000);
+                entries = @as(*void, @ptrFromInt(@intFromPtr(page.ptr)));
             } else {
-                entries = @intToPtr(*void, (@intCast(usize, entry.phys) << 12) + 0xffff800000000000);
+                entries = @as(*void, @ptrFromInt((@as(usize, @intCast(entry.phys)) << 12) + 0xffff800000000000));
             }
         }
     }
@@ -109,9 +109,9 @@ pub fn MapPage(root: PageDirectory, vaddr: usize, flags: usize, paddr: usize) us
 
 pub fn GetPage(root: PageDirectory, vaddr: usize) HAL.PTEEntry {
     var i: usize = 0;
-    var entries: *void = @ptrCast(*void, root.ptr);
+    var entries: *void = @as(*void, @ptrCast(root.ptr));
     while (i < HAL.Arch.GetPTELevels()) : (i += 1) {
-        const index: u64 = (vaddr >> (39 - @intCast(u6, i * 9))) & 0x1ff;
+        const index: u64 = (vaddr >> (39 - @as(u6, @intCast(i * 9)))) & 0x1ff;
         var entry = HAL.Arch.GetPTE(entries, index);
         if (i + 1 >= HAL.Arch.GetPTELevels()) {
             return entry;
@@ -119,7 +119,7 @@ pub fn GetPage(root: PageDirectory, vaddr: usize) HAL.PTEEntry {
             if (entry.r == 0) {
                 return HAL.PTEEntry{};
             } else {
-                entries = @intToPtr(*void, (@intCast(usize, entry.phys) << 12) + 0xffff800000000000);
+                entries = @as(*void, @ptrFromInt((@as(usize, @intCast(entry.phys)) << 12) + 0xffff800000000000));
             }
         }
     }

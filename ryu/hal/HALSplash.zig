@@ -524,7 +524,7 @@ fn daysInMonth(month: i64, year: i64) i64 {
 pub fn Init() void {
     if (KernelSettings.isQuiet) {
         HAL.Console.info.set(HAL.Console.info, 0, 0, HAL.Console.info.width, HAL.Console.info.height, 0);
-        var days: i64 = @divFloor(HAL.Arch.GetStartupTimestamp(), @intCast(i64, std.time.s_per_day));
+        var days: i64 = @divFloor(HAL.Arch.GetStartupTimestamp(), @as(i64, @intCast(std.time.s_per_day)));
         var year: i64 = 1970;
         while (days >= daysInYear(year)) {
             days -= daysInYear(year);
@@ -547,36 +547,36 @@ pub fn Init() void {
             };
             var i: isize = 0;
             HAL.Console.DrawScaledBitmap(
-                @divFloor(@intCast(isize, HAL.Console.info.width), 2) - (371 / 2),
-                @divFloor(@intCast(isize, HAL.Console.info.height), 2) - 64,
+                @divFloor(@as(isize, @intCast(HAL.Console.info.width)), 2) - (371 / 2),
+                @divFloor(@as(isize, @intCast(HAL.Console.info.height)), 2) - 64,
                 376,
                 128,
                 376,
                 128,
-                @ptrCast([*]u8, @constCast(&zorroOSLogo))[0..zorroOSLogo.len],
+                @as([*]u8, @ptrCast(@constCast(&zorroOSLogo)))[0..zorroOSLogo.len],
                 0xffffff,
             );
             while (i < 128) : (i += 1) {
                 HAL.Console.DrawScaledBitmap(
-                    @divFloor(@intCast(isize, HAL.Console.info.width), 2) - (371 / 2),
-                    (@divFloor(@intCast(isize, HAL.Console.info.height), 2) - 64) + i,
+                    @divFloor(@as(isize, @intCast(HAL.Console.info.width)), 2) - (371 / 2),
+                    (@divFloor(@as(isize, @intCast(HAL.Console.info.height)), 2) - 64) + i,
                     140,
                     1,
                     140,
                     1,
-                    @ptrCast([*]u8, @constCast(&zorroOSLogo))[(47 * @intCast(usize, i))..zorroOSLogo.len],
-                    pal[@intCast(usize, i) / 21],
+                    @as([*]u8, @ptrCast(@constCast(&zorroOSLogo)))[(47 * @as(usize, @intCast(i)))..zorroOSLogo.len],
+                    pal[@as(usize, @intCast(i)) / 21],
                 );
             }
         } else {
             HAL.Console.DrawScaledBitmap(
-                @divFloor(@intCast(isize, HAL.Console.info.width), 2) - (371 / 2),
-                @divFloor(@intCast(isize, HAL.Console.info.height), 2) - 64,
+                @divFloor(@as(isize, @intCast(HAL.Console.info.width)), 2) - (371 / 2),
+                @divFloor(@as(isize, @intCast(HAL.Console.info.height)), 2) - 64,
                 376,
                 128,
                 376,
                 128,
-                @ptrCast([*]u8, @constCast(&zorroOSLogo))[0..zorroOSLogo.len],
+                @as([*]u8, @ptrCast(@constCast(&zorroOSLogo)))[0..zorroOSLogo.len],
                 0xffffff,
             );
         }
@@ -586,17 +586,17 @@ pub fn Init() void {
 
 pub fn UpdateStatus(s: []const u8) void {
     if (KernelSettings.isQuiet) {
-        const x: isize = @intCast(isize, (HAL.Console.info.width / 2) - ((s.len * 9) / 2));
-        HAL.Console.info.set(HAL.Console.info, 0, @divFloor(@intCast(isize, HAL.Console.info.height), 2) + 96, HAL.Console.info.width, 20, 0);
+        const x: isize = @as(isize, @intCast((HAL.Console.info.width / 2) - ((s.len * 9) / 2)));
+        HAL.Console.info.set(HAL.Console.info, 0, @divFloor(@as(isize, @intCast(HAL.Console.info.height)), 2) + 96, HAL.Console.info.width, 20, 0);
         for (s, 0..) |c, i| {
             HAL.Console.DrawScaledBitmap(
-                x + (@intCast(isize, i) * 9),
-                @divFloor(@intCast(isize, HAL.Console.info.height), 2) + 96,
+                x + (@as(isize, @intCast(i)) * 9),
+                @divFloor(@as(isize, @intCast(HAL.Console.info.height)), 2) + 96,
                 16,
                 20,
                 16,
                 20,
-                @constCast(LargeFont[((@intCast(usize, c) - 0x20) * (20 * 2))..LargeFont.len]),
+                @constCast(LargeFont[((@as(usize, @intCast(c)) - 0x20) * (20 * 2))..LargeFont.len]),
                 0xffffff,
             );
         }
