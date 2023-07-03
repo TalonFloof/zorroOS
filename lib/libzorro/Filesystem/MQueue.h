@@ -1,0 +1,6 @@
+#ifndef _LIBZORRO_FILESYSTEM_MQUEUE_H
+#define _LIBZORRO_FILESYSTEM_MQUEUE_H
+
+
+
+#endif

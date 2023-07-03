@@ -46,5 +46,6 @@ typedef struct {
 } OpenedFile;
 
 int64_t Open(const char* path, int mode, OpenedFile* file);
+int64_t Create(const char* path, int mode);
 
 #endif

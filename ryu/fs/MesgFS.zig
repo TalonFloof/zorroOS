@@ -10,7 +10,8 @@ const Session = struct {
     stcBuf: []u8,
     stcRead: usize = 0, // Client
     stcWrite: usize = 0, // Server
-    queue: Executive.EventQueue = Executive.EventQueue{},
+    queueWrite: Executive.EventQueue = Executive.EventQueue{},
+    queueRead: Executive.EventQueue = Executive.EventQueue{},
 };
 
 const SessionTree = AATree(i64, *Session);
@@ -21,7 +22,8 @@ const MQData = struct {
     ctsRead: usize = 0, // Server
     ctsWrite: usize = 0, // Client
     tree: SessionTree,
-    queue: Executive.EventQueue = Executive.EventQueue{},
+    queueWrite: Executive.EventQueue = Executive.EventQueue{},
+    queueRead: Executive.EventQueue = Executive.EventQueue{},
 };
 
 const CTSPacket = extern struct {
@@ -63,7 +65,7 @@ fn ServerSpaceLeft(mq: *MQData) usize {
 fn ReadClientQueue(session: *Session, buf: []u8) void {
     var i: usize = 0;
     while (i < buf.len) : (i += 1) {
-        session.stcBuf[session.stcRead] = buf[i];
+        buf[i] = session.stcBuf[session.stcRead];
         session.stcRead = (session.stcRead + 1) % 4096;
     }
 }
@@ -71,8 +73,24 @@ fn ReadClientQueue(session: *Session, buf: []u8) void {
 fn ReadServerQueue(mq: *MQData, buf: []u8) void {
     var i: usize = 0;
     while (i < buf.len) : (i += 1) {
-        mq.ctsBuf[mq.ctsRead] = buf[i];
+        buf[i] = mq.ctsBuf[mq.ctsRead];
         mq.ctsRead = (mq.ctsRead + 1) % 4096;
+    }
+}
+
+fn WriteClientQueue(mq: *Session, buf: []u8) void {
+    var i: usize = 0;
+    while (i < buf.len) : (i += 1) {
+        mq.stcBuf[mq.stcWrite] = buf[i];
+        mq.stcWrite = (mq.stcWrite + 1) % 4096;
+    }
+}
+
+fn WriteServerQueue(mq: *MQData, buf: []u8) void {
+    var i: usize = 0;
+    while (i < buf.len) : (i += 1) {
+        mq.ctsBuf[mq.ctsWrite] = buf[i];
+        mq.ctsWrite = (mq.ctsWrite + 1) % 4096;
     }
 }
 
@@ -107,34 +125,67 @@ fn Read(inode: *FS.Inode, offset: isize, bufBegin: *void, bufSize: isize) callco
     if (team.teamID == mqData.ownerID) {
         while (mqData.ctsRead == mqData.ctsWrite) {
             @as(*Spinlock, @ptrCast(&inode.lock)).release();
-            _ = mqData.queue.Wait();
+            _ = mqData.queueRead.Wait();
             @as(*Spinlock, @ptrCast(&inode.lock)).acquire();
         }
         ReadServerQueue(mqData, buf[0..@sizeOf(CTSPacket)]);
         const header = @as(*CTSPacket, @alignCast(@ptrCast(buf.ptr)));
         ReadServerQueue(mqData, buf[@sizeOf(CTSPacket)..(@sizeOf(CTSPacket) + header.size)]);
+        mqData.queueWrite.Wakeup(0);
         return @as(isize, @intCast(@sizeOf(CTSPacket) + header.size));
     } else {
         const session: *Session = mqData.tree.search(team.teamID).?;
         while (session.stcRead == session.stcWrite) {
             @as(*Spinlock, @ptrCast(&inode.lock)).release();
-            _ = session.queue.Wait();
+            _ = session.queueRead.Wait();
             @as(*Spinlock, @ptrCast(&inode.lock)).acquire();
         }
         ReadClientQueue(session, buf[0..@sizeOf(u64)]);
         const header = @as(*u64, @alignCast(@ptrCast(buf.ptr)));
         ReadClientQueue(session, buf[@sizeOf(u64)..(@sizeOf(u64) + @as(usize, @intCast(header.*)))]);
+        session.queueWrite.Wakeup(0);
         return @as(isize, @intCast(@sizeOf(u64) + @as(usize, @intCast(header.*))));
     }
 }
 
 fn Write(inode: *FS.Inode, offset: isize, bufBegin: *void, bufSize: isize) callconv(.C) isize {
-    _ = bufSize;
-    _ = bufBegin;
     _ = offset;
+    const buf: []u8 = @as([*]u8, @alignCast(@ptrCast(bufBegin)))[0..@as(usize, @intCast(bufSize))];
     const mqData: *MQData = @alignCast(@ptrCast(inode.private));
-    _ = mqData;
-    return 0;
+    const team: *Executive.Team.Team = HAL.Arch.GetHCB().activeThread.?.team;
+    if (team.teamID == mqData.ownerID) {
+        const session: *Session = mqData.tree.search(team.teamID).?;
+        while (ClientSpaceLeft(session) < (@as(usize, @intCast(bufSize)) + @sizeOf(u64))) {
+            @as(*Spinlock, @ptrCast(&inode.lock)).release();
+            _ = session.queueWrite.Wait();
+            @as(*Spinlock, @ptrCast(&inode.lock)).acquire();
+        }
+        var header: u64 = @intCast(bufSize);
+        const shouldWakeup: bool = mqData.ctsRead == mqData.ctsWrite;
+        WriteClientQueue(session, @as([*]u8, @alignCast(@ptrCast(&header)))[0..@sizeOf(u64)]);
+        WriteClientQueue(session, buf);
+        if (shouldWakeup) {
+            mqData.queueRead.Wakeup(0);
+        }
+        return bufSize;
+    } else {
+        while (ServerSpaceLeft(mqData) < (@as(usize, @intCast(bufSize)) + @sizeOf(CTSPacket))) {
+            @as(*Spinlock, @ptrCast(&inode.lock)).release();
+            _ = mqData.queueWrite.Wait();
+            @as(*Spinlock, @ptrCast(&inode.lock)).acquire();
+        }
+        var header = CTSPacket{
+            .source = team.teamID,
+            .size = @as(u64, @intCast(bufSize)),
+        };
+        const shouldWakeup: bool = mqData.ctsRead == mqData.ctsWrite;
+        WriteServerQueue(mqData, @as([*]u8, @alignCast(@ptrCast(&header)))[0..@sizeOf(CTSPacket)]);
+        WriteServerQueue(mqData, buf);
+        if (shouldWakeup) {
+            mqData.queueRead.Wakeup(0);
+        }
+        return bufSize;
+    }
 }
 
 pub fn Create(inode: *FS.Inode, name: [*c]const u8, mode: usize) callconv(.C) isize {
