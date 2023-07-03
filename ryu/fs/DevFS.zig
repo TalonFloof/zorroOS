@@ -4,21 +4,18 @@ const Spinlock = @import("root").Spinlock;
 const HAL = @import("root").HAL;
 const Framebuffer = @import("Framebuffer.zig");
 
-var nextDevID: isize = 2;
+var nextDevID: i64 = 2;
 
 pub fn RegisterDevice(name: []const u8, inode: *FS.Inode) void {
     var devNode = FS.GetInode("/dev", FS.rootInode.?).?;
-    var id = nextDevID;
-    _ = id;
     inode.parent = devNode;
     inode.mountOwner = devNode.mountPoint;
-    inode.stat.ID = nextDevID;
+    inode.stat.ID = @atomicRmw(i64, &nextDevID, .Add, 1, .Monotonic);
     @memset(inode.name[0..256], 0);
     @memcpy(inode.name[0..name.len], name);
     @as(*Spinlock, @ptrCast(&devNode.lock)).acquire();
     FS.AddInodeToParent(inode);
     @as(*Spinlock, @ptrCast(&devNode.lock)).release();
-    nextDevID += 1;
 }
 
 //////// Basic UNIX Devices ////////

@@ -89,7 +89,7 @@ pub fn Truncate(inode: *FS.Inode, size: isize) callconv(.C) isize {
 }
 
 pub fn Create(inode: *FS.Inode, name: [*c]const u8, mode: usize) callconv(.C) isize {
-    const id = nextInodeID;
+    const id = @atomicRmw(i64, &nextInodeID, .Add, 1, .Monotonic);
     const len: usize = std.mem.len(name);
     var in: *FS.Inode = @as(*FS.Inode, @ptrCast(@alignCast(Memory.Pool.PagedPool.Alloc(@sizeOf(FS.Inode)).?.ptr)));
     @memset(@as([*]u8, @ptrFromInt(@intFromPtr(&in.name)))[0..256], 0);
@@ -108,9 +108,24 @@ pub fn Create(inode: *FS.Inode, name: [*c]const u8, mode: usize) callconv(.C) is
     in.read = &Read;
     in.write = &Write;
     in.trunc = &Truncate;
+    in.unlink = &Unlink;
     in.lock = 0;
-    nextInodeID += 1;
     FS.AddInodeToParent(in);
+    return 0;
+}
+
+pub fn Unlink(inode: *FS.Inode) callconv(.C) isize {
+    if ((inode.stat.mode & 0o0770000) == 0o0040000 and inode.children != null) {
+        return -39;
+    }
+    if ((inode.stat.mode & 0o0770000) != 0o0040000) {
+        _ = inode.trunc.?(inode, 0);
+    }
+    const parent = inode.parent.?;
+    @as(*Spinlock, @ptrCast(&parent.lock)).acquire();
+    FS.RemoveInodeFromParent(inode);
+    @as(*Spinlock, @ptrCast(&parent.lock)).release();
+    Memory.Pool.PagedPool.Free(@as([*]u8, @ptrCast(inode))[0..@sizeOf(FS.Inode)]);
     return 0;
 }
 
@@ -122,6 +137,7 @@ pub fn Mount(fs: *FS.Filesystem) callconv(.C) bool {
     fs.root.read = &Read;
     fs.root.write = &Write;
     fs.root.trunc = &Truncate;
+    fs.root.unlink = &Unlink;
     return true;
 }
 

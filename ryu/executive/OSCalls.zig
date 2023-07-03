@@ -136,7 +136,7 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                                 @as(*Spinlock, @ptrCast(&inode.lock)).acquire();
                                 const res = read(inode, @as(isize, @intCast(node.offset)), @as(*void, @ptrFromInt(@as(usize, @intCast(regs.GetReg(2))))), @as(isize, @bitCast(@as(usize, @intCast(regs.GetReg(3))))));
                                 if (res >= 0) {
-                                    node.offset += @as(i64, @intCast(res));
+                                    node.offset +%= @as(i64, @intCast(res));
                                 }
                                 regs.SetReg(0, @as(u64, @bitCast(@as(i64, @intCast(res)))));
                                 @as(*Spinlock, @ptrCast(&inode.lock)).release();
@@ -191,7 +191,7 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                                 @as(*Spinlock, @ptrCast(&inode.lock)).acquire();
                                 const res = write(inode, @as(isize, @intCast(node.offset)), @as(*void, @ptrFromInt(@as(usize, @intCast(regs.GetReg(2))))), @as(isize, @bitCast(@as(usize, @intCast(regs.GetReg(3))))));
                                 if (res >= 0) {
-                                    node.offset += @as(i64, @intCast(res));
+                                    node.offset +%= @as(i64, @intCast(res));
                                 }
                                 regs.SetReg(0, @as(u64, @bitCast(@as(i64, @intCast(res)))));
                                 @as(*Spinlock, @ptrCast(&inode.lock)).release();

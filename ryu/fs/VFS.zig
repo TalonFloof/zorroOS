@@ -34,6 +34,19 @@ pub fn AddInodeToParent(i: *Inode) void {
     i.parent.?.children = i;
 }
 
+pub fn RemoveInodeFromParent(i: *Inode) void {
+    if (i.prevSibling) |prev| {
+        prev.nextSibling = i.nextSibling;
+    }
+    if (i.nextSibling) |next| {
+        next.prevSibling = i.prevSibling;
+    }
+    if (@intFromPtr(i.parent.?.children) == @intFromPtr(i)) {
+        i.parent.?.children = i.nextSibling;
+    }
+    i.parent = null;
+}
+
 pub fn NewDirInode(name: []const u8) *Inode {
     @as(*Spinlock, @ptrCast(&rootInode.?.lock)).acquire();
     var inode: *Inode = @as(*Inode, @ptrCast(@alignCast(Memory.Pool.PagedPool.Alloc(@sizeOf(Inode)).?.ptr)));
