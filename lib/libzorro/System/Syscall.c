@@ -22,6 +22,10 @@ void* MMap(void* addr, size_t length, int prot, int flags, int64_t fd, off_t off
     return (void*)Syscall(0x10011,(uintptr_t)addr,length,prot,flags,fd,offset);
 }
 
+void MUnMap(void* addr, size_t length) {
+    Syscall(0x10012,(uintptr_t)addr,length,0,0,0,0);
+}
+
 SyscallCode RyuLog(const char* s) {
     return Syscall(0x30001,(uintptr_t)s,0,0,0,0,0);
 }

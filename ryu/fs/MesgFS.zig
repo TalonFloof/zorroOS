@@ -24,6 +24,7 @@ const MQData = struct {
     tree: SessionTree,
     queueWrite: Executive.EventQueue = Executive.EventQueue{},
     queueRead: Executive.EventQueue = Executive.EventQueue{},
+    serverPoll: bool = false,
 };
 
 const CTSPacket = extern struct {
@@ -188,6 +189,26 @@ fn Write(inode: *FS.Inode, offset: isize, bufBegin: *void, bufSize: isize) callc
     }
 }
 
+fn IOCtl(inode: *FS.Inode, request: usize, data: *allowzero void) callconv(.C) isize {
+    _ = data;
+    const mqData: *MQData = @alignCast(@ptrCast(inode.private));
+    const team: *Executive.Team.Team = HAL.Arch.GetHCB().activeThread.?.team;
+    if (request == 1) {
+        if (team.teamID == mqData.ownerID) {
+            mqData.serverPoll = false;
+            return 0;
+        }
+        return 1;
+    } else if (request == 2) {
+        if (team.teamID == mqData.ownerID) {
+            mqData.serverPoll = true;
+            return 0;
+        }
+        return 1;
+    }
+    return 2;
+}
+
 pub fn Create(inode: *FS.Inode, name: [*c]const u8, mode: usize) callconv(.C) isize {
     _ = mode;
     const id = @atomicRmw(i64, &nextInodeID, .Add, 1, .Monotonic);
@@ -209,6 +230,7 @@ pub fn Create(inode: *FS.Inode, name: [*c]const u8, mode: usize) callconv(.C) is
     in.close = &Close;
     in.read = &Read;
     in.write = &Write;
+    in.ioctl = &IOCtl;
     var mq: *MQData = @as(*MQData, @ptrCast(@alignCast(Memory.Pool.PagedPool.Alloc(@sizeOf(MQData)).?.ptr)));
     mq.ctsBuf = Memory.Pool.PagedPool.AllocAnonPages(4096).?;
     in.private = @as(*allowzero void, @ptrCast(mq));

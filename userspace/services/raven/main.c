@@ -1,6 +1,9 @@
 #include <System/Thread.h>
 #include <System/Syscall.h>
 #include <Filesystem/Filesystem.h>
+#include <Filesystem/MQueue.h>
+#include <Common/Alloc.h>
+#include <Common/String.h>
 #include "kbd.h"
 #include "mouse.h"
 
@@ -23,9 +26,9 @@ int main() {
     fbFile.IOCtl(&fbFile,0x100,&fbInfo);
     fbInfo.addr = MMap(NULL,fbInfo.pitch*fbInfo.height,3,MAP_SHARED,fbFile.fd,0);
     fbFile.Close(&fbFile);
-    void* kbdStack = MMap(NULL,0x4000,3,MAP_ANONYMOUS,0,0);
+    void* kbdStack = MMap(NULL,0x4000,3,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
     uintptr_t kbdThr = NewThread("Raven Keyboard Thread",&KeyboardThread,(void*)(((uintptr_t)kbdStack)+0x3ff8));
-    void* mouseStack = MMap(NULL,0x4000,3,MAP_ANONYMOUS,0,0);
+    void* mouseStack = MMap(NULL,0x4000,3,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
     uintptr_t mouseThr = NewThread("Raven Mouse Thread",&MouseThread,(void*)(((uintptr_t)mouseStack)+0x3ff8));
     while(1) {
     }
