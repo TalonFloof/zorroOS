@@ -144,10 +144,10 @@ int main() {
     fbFile.IOCtl(&fbFile,0x100,&fbInfo);
     fbInfo.addr = MMap(NULL,fbInfo.pitch*fbInfo.height,3,MAP_SHARED,fbFile.fd,0);
     fbFile.Close(&fbFile);
-    void* kbdStack = MMap(NULL,0x4000,3,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
-    uintptr_t kbdThr = NewThread("Raven Keyboard Thread",&KeyboardThread,(void*)(((uintptr_t)kbdStack)+0x3ff8));
-    void* mouseStack = MMap(NULL,0x4000,3,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
-    uintptr_t mouseThr = NewThread("Raven Mouse Thread",&MouseThread,(void*)(((uintptr_t)mouseStack)+0x3ff8));
+    void* kbdStack = MMap(NULL,0x8000,3,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
+    uintptr_t kbdThr = NewThread("Raven Keyboard Thread",&KeyboardThread,(void*)(((uintptr_t)kbdStack)+0x8000));
+    void* mouseStack = MMap(NULL,0x8000,3,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
+    uintptr_t mouseThr = NewThread("Raven Mouse Thread",&MouseThread,(void*)(((uintptr_t)mouseStack)+0x8000));
     backgroundWin.w = fbInfo.width;
     backgroundWin.h = fbInfo.height;
     backgroundWin.frontBuf = (uint32_t*)malloc((fbInfo.width*fbInfo.height)*(fbInfo.bpp/8));

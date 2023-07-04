@@ -92,6 +92,7 @@ pub fn PreformStartup(stackTop: usize) void {
 pub export fn HartStart(stack: u64) callconv(.C) noreturn {
     wrmsr(0xC0000102, hart.hartData);
     wrmsr(0x277, 0x0107040600070406); // Enable write combining when PAT, PCD, and PWT is set
+    ContextSetupFPU();
     GetHCB().archData.tss.rsp[0] = stack;
     GetHCB().activeIstack = stack;
     gdt.initialize();
@@ -257,13 +258,13 @@ pub const FloatContext = struct {
     pub fn Save(self: *FloatContext) void {
         asm volatile ("fxsave64 (%rax)"
             :
-            : [state] "{rax}" (@intFromPtr(&(self.data))),
+            : [state] "{rax}" (&self.data),
         );
     }
     pub fn Load(self: *FloatContext) void {
         asm volatile ("fxrstor64 (%rax)"
             :
-            : [state] "{rax}" (@intFromPtr(&(self.data))),
+            : [state] "{rax}" (&self.data),
         );
     }
 };
@@ -431,6 +432,10 @@ pub fn DebugGet() u8 {
 
 pub fn DebugWaitForSalute() void {
     var progress: usize = 0;
+    var ctrl: bool = false;
+    _ = ctrl;
+    var alt: bool = false;
+    _ = alt;
     while (true) {
         // 0x1d 0x38 0xe0 0x53 >> CTRL+ALT+DEL
         while ((io.inb(0x64) & 1) != 0) {
