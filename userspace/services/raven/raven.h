@@ -8,6 +8,7 @@ typedef struct {
     uint32_t pitch;
     uint32_t bpp;
     uint32_t* addr;
+    uint32_t* back;
 } FBInfo;
 
 typedef struct {
@@ -33,6 +34,8 @@ void Redraw(int x, int y, int w, int h);
 #ifndef _RAVEN_IMPL
 extern FBInfo fbInfo;
 extern Window cursorWin;
+extern Window* winHead;
+extern Window* winTail;
 #endif
 
 #endif

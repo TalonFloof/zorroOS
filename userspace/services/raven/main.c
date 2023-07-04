@@ -6,6 +6,7 @@
 #include <Common/String.h>
 #include <Media/QOI.h>
 #include <Media/Image.h>
+#include <Media/StackBlur.h>
 #include "kbd.h"
 #include "mouse.h"
 #define _RAVEN_IMPL
@@ -15,6 +16,7 @@
 #define MAX(__x, __y) ((__x) > (__y) ? (__x) : (__y))
 
 FBInfo fbInfo;
+MQueue* eventQueue = NULL;
 
 Window* winHead = NULL;
 Window* winTail = NULL;
@@ -87,6 +89,9 @@ void Redraw(int x, int y, int w, int h) {
           fY1 = MAX(y,win->y);
           fY2 = MIN(max_y,win->y+(win->h-1));
           int bytes = fbInfo.bpp/8;
+          if((win->flags & FLAG_ACRYLIC)) {
+            StackBlur(fbInfo.back,fbInfo.width,32,fX1,fX2,fY1,fY2);
+          }
           for(int i=fY1; i <= fY2; i++) {
             if(i < 0) {
                 continue;
@@ -101,7 +106,12 @@ void Redraw(int x, int y, int w, int h) {
                 }
                 uint32_t pixel = win->frontBuf[((i - win->y)*win->w)+(j-win->x)];
                 if ((pixel & 0xFF000000) == 0xFF000000 || (win->flags & FLAG_OPAQUE) != 0) {
+                    fbInfo.back[(i*(fbInfo.pitch/bytes))+j] = pixel;
                     fbInfo.addr[(i*(fbInfo.pitch/bytes))+j] = pixel;
+                } else if (((pixel & 0xFF000000) != 0x00000000 && (win->flags & FLAG_OPAQUE) == 0) || (win->flags & FLAG_ACRYLIC)) {
+                    uint32_t result = BlendPixel(fbInfo.back[(i*(fbInfo.pitch/bytes))+j],pixel);
+                    fbInfo.back[(i*(fbInfo.pitch/bytes))+j] = result;
+                    fbInfo.addr[(i*(fbInfo.pitch/bytes))+j] = result;
                 }
             }
           }
@@ -144,6 +154,9 @@ int main() {
     fbFile.IOCtl(&fbFile,0x100,&fbInfo);
     fbInfo.addr = MMap(NULL,fbInfo.pitch*fbInfo.height,3,MAP_SHARED,fbFile.fd,0);
     fbFile.Close(&fbFile);
+    fbInfo.back = (uint32_t*)malloc((fbInfo.width*fbInfo.height)*(fbInfo.bpp/8));
+    MQueue* msgQueue = MQueue_Bind("/dev/mqueue/Raven");
+    eventQueue = MQueue_Bind("/dev/mqueue/RavenEvents");
     void* kbdStack = MMap(NULL,0x8000,3,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
     uintptr_t kbdThr = NewThread("Raven Keyboard Thread",&KeyboardThread,(void*)(((uintptr_t)kbdStack)+0x8000));
     void* mouseStack = MMap(NULL,0x8000,3,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
@@ -151,8 +164,21 @@ int main() {
     backgroundWin.w = fbInfo.width;
     backgroundWin.h = fbInfo.height;
     backgroundWin.frontBuf = (uint32_t*)malloc((fbInfo.width*fbInfo.height)*(fbInfo.bpp/8));
+    winHead = (Window*)malloc(sizeof(Window));
+    winTail = winHead;
+    winHead->x = (fbInfo.width/2)-320;
+    winHead->y = (fbInfo.height/2)-240;
+    winHead->w = 640;
+    winHead->h = 480;
+    winHead->flags = FLAG_ACRYLIC;
+    winHead->frontBuf = malloc(640*480*4);
+    for(int i=0; i < 640*480; i++) {
+        winHead->frontBuf[i] = 0x80333333;
+    }
     LoadBackground("/System/Wallpapers/Autumn.qoi");
+    char packet[1024];
     while(1) {
+        msgQueue->file.Read(&msgQueue->file,&packet,1024);
     }
     return 0;
 }
