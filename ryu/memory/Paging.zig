@@ -1,5 +1,6 @@
 const Memory = @import("root").Memory;
 const HAL = @import("root").HAL;
+const Executive = @import("root").Executive;
 
 pub const PageDirectory = []usize;
 
@@ -160,6 +161,5 @@ pub fn PageFault(pc: usize, addr: usize, accessType: usize) void {
         }
     } else {
         HAL.Console.Put("Userspace Page Fault!! (pc: 0x{x}, addr 0x{x}, accessType: 0x{x})\n", .{ pc, addr, accessType });
-        HAL.Crash.Crash(.RyuUnhandledPageFault, .{ addr, accessType, 0, pc });
     }
 }

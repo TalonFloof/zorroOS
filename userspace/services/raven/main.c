@@ -5,40 +5,16 @@
 #include <Common/Alloc.h>
 #include <Common/String.h>
 #include <Media/QOI.h>
-#include <Media/ImageScale.h>
+#include <Media/Image.h>
 #include "kbd.h"
 #include "mouse.h"
+#define _RAVEN_IMPL
+#include "raven.h"
 
 #define MIN(__x, __y) ((__x) < (__y) ? (__x) : (__y))
 #define MAX(__x, __y) ((__x) > (__y) ? (__x) : (__y))
 
-typedef struct {
-    uint32_t width;
-    uint32_t height;
-    uint32_t pitch;
-    uint32_t bpp;
-    uint32_t* addr;
-} FBInfo;
-
 FBInfo fbInfo;
-
-typedef struct {
-    void* prev;
-    void* next;
-    int64_t id;
-    int x;
-    int y;
-    unsigned int w;
-    unsigned int h;
-    unsigned char flags;
-    uint32_t* backBuf;
-    uint32_t* frontBuf;
-    int64_t owner;
-} Window;
-
-#define FLAG_OPAQUE 1
-#define FLAG_NOMOVE 2
-#define FLAG_ACRYLIC 4
 
 Window* winHead = NULL;
 Window* winTail = NULL;
@@ -147,6 +123,16 @@ void Redraw(int x, int y, int w, int h) {
 void LoadBackground(const char* name) {
     qoi_desc desc;
     void* bgImage = qoi_read(name,&desc,4);
+    if(bgImage == NULL) {
+        RyuLog("RAVEN WARN: Failed to load image ");
+        RyuLog(name);
+        RyuLog("!\n");
+        return;
+    }
+    Image_ABGRToARGB((uint32_t*)bgImage,desc.width*desc.height);
+    Image_ScaleNearest((uint32_t*)bgImage,backgroundWin.frontBuf,desc.width,desc.height,backgroundWin.w,backgroundWin.h);
+    free(bgImage);
+    Redraw(0,0,fbInfo.width,fbInfo.height);
 }
 
 int main() {
@@ -162,8 +148,10 @@ int main() {
     uintptr_t kbdThr = NewThread("Raven Keyboard Thread",&KeyboardThread,(void*)(((uintptr_t)kbdStack)+0x3ff8));
     void* mouseStack = MMap(NULL,0x4000,3,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
     uintptr_t mouseThr = NewThread("Raven Mouse Thread",&MouseThread,(void*)(((uintptr_t)mouseStack)+0x3ff8));
+    backgroundWin.w = fbInfo.width;
+    backgroundWin.h = fbInfo.height;
     backgroundWin.frontBuf = (uint32_t*)malloc((fbInfo.width*fbInfo.height)*(fbInfo.bpp/8));
-    Redraw(0,0,fbInfo.width,fbInfo.height);
+    LoadBackground("/System/Wallpapers/Autumn.qoi");
     while(1) {
     }
     return 0;

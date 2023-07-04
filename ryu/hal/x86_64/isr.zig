@@ -21,6 +21,12 @@ pub export fn ExceptionHandler(entry: u8, con: *HAL.Arch.Context) callconv(.C) v
         const val3: usize = if (con.errcode & 4 == 0) Memory.Paging.AccessSupervisor else 0;
         const val4: usize = if (con.errcode & 16 != 0) Memory.Paging.AccessExecute else 0;
         Memory.Paging.PageFault(con.rip, addr, val1 | val2 | val3 | val4);
+        const hcb = HAL.Arch.GetHCB();
+        hcb.activeThread.?.state = .Debugging;
+        hcb.activeThread.?.activeUstack = hcb.activeUstack;
+        hcb.activeThread.?.context = con.*;
+        hcb.activeThread.?.fcontext.Save();
+        Thread.Reschedule(false);
     } else if (entry == 0x2) {
         apic.write(0xb0, 0);
         if (HAL.Crash.hasCrashed) {
