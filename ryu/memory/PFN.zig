@@ -84,6 +84,10 @@ pub fn AllocatePage(tag: PFNType, swappable: bool, pte: usize) ?[]u8 {
     return null;
 }
 
+pub fn GetPage(page: usize) *PFNEntry {
+    return &pfnDatabase[(page >> 12)];
+}
+
 pub fn ReferencePage(page: usize) void {
     const index: usize = (page >> 12);
     const old = HAL.Arch.IRQEnableDisable(false);

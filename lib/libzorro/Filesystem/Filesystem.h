@@ -27,6 +27,8 @@ typedef int64_t off64_t;
 #define O_PATH 0x8000
 
 #define SEEK_SET 1
+#define SEEK_END 2
+#define SEEK_CUR 3
 
 typedef struct {
     int64_t inodeID;

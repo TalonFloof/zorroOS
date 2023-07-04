@@ -237,8 +237,6 @@ typedef struct {
 	unsigned char colorspace;
 } qoi_desc;
 
-#define QOI_NO_STDIO
-
 #ifndef QOI_NO_STDIO
 
 /* Encode raw RGB or RGBA pixels into a QOI image and write it to the file
@@ -586,56 +584,57 @@ void *qoi_decode(const void *data, int size, qoi_desc *desc, int channels) {
 }
 
 #ifndef QOI_NO_STDIO
-#include <stdio.h>
+#include "../Filesystem/Filesystem.h"
 
 int qoi_write(const char *filename, const void *data, const qoi_desc *desc) {
-	FILE *f = fopen(filename, "wb");
-	int size, err;
+	OpenedFile f;
+	int err = Open(filename, O_RDWR, &f);
+	int size;
 	void *encoded;
 
-	if (!f) {
+	if (err < 0) {
 		return 0;
 	}
 
 	encoded = qoi_encode(data, desc, &size);
 	if (!encoded) {
-		fclose(f);
+		f.Close(&f);
 		return 0;
 	}
 
-	fwrite(encoded, 1, size, f);
-	fflush(f);
-	err = ferror(f);
-	fclose(f);
+	f.Truncate(&f,0);
+	f.LSeek(&f,0,SEEK_SET);
+	err = f.Write(&f, encoded, size);
+	f.Close(&f);
 
 	QOI_FREE(encoded);
-	return err ? 0 : size;
+	return (err < 0) ? 0 : size;
 }
 
 void *qoi_read(const char *filename, qoi_desc *desc, int channels) {
-	FILE *f = fopen(filename, "rb");
+	OpenedFile f;
+	int err = Open(filename, O_RDONLY, &f);
 	int size, bytes_read;
 	void *pixels, *data;
 
-	if (!f) {
+	if (err < 0) {
 		return NULL;
 	}
 
-	fseek(f, 0, SEEK_END);
-	size = ftell(f);
-	if (size <= 0 || fseek(f, 0, SEEK_SET) != 0) {
-		fclose(f);
+	size = f.LSeek(&f, 0, SEEK_END);
+	if (size <= 0 || f.LSeek(&f, 0, SEEK_SET) != 0) {
+		f.Close(&f);
 		return NULL;
 	}
 
 	data = QOI_MALLOC(size);
 	if (!data) {
-		fclose(f);
+		f.Close(&f);
 		return NULL;
 	}
 
-	bytes_read = fread(data, 1, size, f);
-	fclose(f);
+	bytes_read = f.Read(&f, data, size);
+	f.Close(&f);
 	pixels = (bytes_read != size) ? NULL : qoi_decode(data, bytes_read, desc, channels);
 	QOI_FREE(data);
 	return pixels;

@@ -192,7 +192,7 @@ pub fn Init(image: []u8) void {
             }
             index += 1;
         }
-        i += @sizeOf(CPIOHeader) + header.nameSize + (header.nameSize % 2) + fileSize;
+        i += @sizeOf(CPIOHeader) + header.nameSize + (header.nameSize % 2) + fileSize + (fileSize % 2);
     }
     i = 0;
     while (i < image.len) : (i += 4096) {

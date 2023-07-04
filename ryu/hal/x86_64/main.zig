@@ -2,7 +2,7 @@ const std = @import("std");
 const HAL = @import("root").HAL;
 const limine = @import("limine");
 const framebuffer = @import("framebuffer.zig");
-const mem = @import("mem.zig");
+pub const mem = @import("mem.zig");
 const gdt = @import("gdt.zig");
 const idt = @import("idt.zig");
 const acpi = @import("acpi.zig");
@@ -406,8 +406,13 @@ var isShiftPressed: bool = false;
 
 pub fn DebugGet() u8 {
     while (true) {
-        while ((io.inb(0x64) & 1) != 0) {
+        var status = io.inb(0x64);
+        while ((status & 1) != 0) {
             var key = io.inb(0x60);
+            if ((status & 0x20) != 0) {
+                status = io.inb(0x64);
+                continue;
+            }
             if (key == 0x2a or key == 0x36) {
                 isShiftPressed = true;
             } else if (key == 0xaa or key == 0xb6) {
@@ -418,6 +423,7 @@ pub fn DebugGet() u8 {
                     return char;
                 }
             }
+            status = io.inb(0x64);
         }
         std.atomic.spinLoopHint();
     }

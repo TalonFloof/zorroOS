@@ -210,8 +210,10 @@ pub fn LoadELF(ptr: *void, loadType: ELFLoadType, pd: ?Memory.Paging.PageDirecto
                         Memory.Paging.MapRead | (entry.flags & 2) | ((entry.flags & 1) << 2),
                         @intFromPtr(page.ptr) - 0xffff800000000000,
                     );
-                    @memcpy(@as([*]u8, @ptrFromInt(@intFromPtr(page.ptr)))[0..4096], @as([*]u8, @ptrFromInt(@intFromPtr(ptr) + @as(usize, @intCast(entry.offset))))[off..(off + 4096)]);
-                    off += 4096;
+                    if (entry.fileSize > 0) {
+                        @memcpy(@as([*]u8, @ptrFromInt(@intFromPtr(page.ptr)))[0..4096], @as([*]u8, @ptrFromInt(@intFromPtr(ptr) + @as(usize, @intCast(entry.offset))))[off..(off + 4096)]);
+                        off += 4096;
+                    }
                 }
             }
         }

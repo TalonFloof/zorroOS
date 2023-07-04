@@ -21,7 +21,7 @@ pub fn panic(msg: []const u8, stacktrace: ?*std.builtin.StackTrace, wat: ?usize)
 
 var ramdksImage: ?[]u8 = null;
 
-pub export fn RyuInit() noreturn {
+pub export fn RyuInit() void {
     HAL.Splash.UpdateStatus("Setting up UNIX Filesystems...");
     FS.Init();
     HAL.Splash.UpdateStatus("Creating Kernel Team...");
@@ -54,9 +54,6 @@ pub export fn RyuInit() noreturn {
     team.cwd = FS.rootInode;
     var entry = Executive.Team.LoadELFImage("/bin/init", team).?;
     _ = Executive.Thread.NewThread(team, @as([*]u8, @ptrCast(@constCast("Main Thread")))[0..11], entry, 0x9ff8, 10);
-    HAL.Splash.UpdateStatus("Kernel Setup Complete");
-    Executive.Thread.startScheduler = true;
-    Executive.Thread.Reschedule(false);
 }
 
 pub inline fn LoadModule(name: []const u8, data: []u8) void {
