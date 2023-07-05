@@ -158,16 +158,16 @@ fn Write(inode: *FS.Inode, offset: isize, bufBegin: *void, bufSize: isize) callc
     const mqData: *MQData = @alignCast(@ptrCast(inode.private));
     const team: *Executive.Team.Team = HAL.Arch.GetHCB().activeThread.?.team;
     if (team.teamID == mqData.ownerID) {
-        const session: *Session = mqData.tree.search(team.teamID).?;
-        while (ClientSpaceLeft(session) < (@as(usize, @intCast(bufSize)) + @sizeOf(u64))) {
+        const session: *Session = mqData.tree.search(@as(*i64, @alignCast(@ptrCast(buf.ptr))).*).?;
+        while (ClientSpaceLeft(session) < (@as(usize, @intCast(bufSize - 8)) + @sizeOf(u64))) {
             @as(*Spinlock, @ptrCast(&inode.lock)).release();
             _ = session.queueWrite.Wait();
             @as(*Spinlock, @ptrCast(&inode.lock)).acquire();
         }
-        var header: u64 = @intCast(bufSize);
+        var header: u64 = @intCast(bufSize - 8);
         const shouldWakeup: bool = session.stcRead == session.stcWrite;
         WriteClientQueue(session, @as([*]u8, @alignCast(@ptrCast(&header)))[0..@sizeOf(u64)]);
-        WriteClientQueue(session, buf);
+        WriteClientQueue(session, buf[8..]);
         if (shouldWakeup) {
             session.queueRead.Wakeup(0);
         }
