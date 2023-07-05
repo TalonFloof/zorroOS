@@ -12,5 +12,8 @@ int main() {
     RyuLog("Starting Welcome App...\n");
     TeamID welcomeApp = NewTeam("Welcome App");
     LoadExecImage(welcomeApp,(const char*[]){"/bin/welcome",NULL},NULL);
+    //while(1) {
+
+    //}
     return 0;
 }

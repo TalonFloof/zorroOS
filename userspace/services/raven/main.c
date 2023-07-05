@@ -51,6 +51,7 @@ Window backgroundWin = (Window){
     .w = 0,
     .h = 0,
     .flags = FLAG_NOMOVE | FLAG_OPAQUE,
+    .shmID = 0,
     .backBuf = NULL,
     .frontBuf = NULL,
     .owner = 0,
@@ -64,6 +65,7 @@ Window cursorWin = (Window){
     .w = 10,
     .h = 16,
     .flags = FLAG_NOMOVE,
+    .shmID = 0,
     .backBuf = NULL,
     .frontBuf = (uint32_t*)&cursorBuf,
     .owner = 0,
@@ -142,7 +144,6 @@ void MoveWinToFront(Window* win) {
         SpinlockRelease(&windowLock);
         return;
     }
-    SpinlockAcquire(&windowLock);
     if(winHead == win) {
         winHead = win->next;
     }
@@ -157,6 +158,17 @@ void MoveWinToFront(Window* win) {
     win->next = NULL;
     winTail = win;
     SpinlockRelease(&windowLock);
+}
+
+Window* GetWindowByID(int64_t id) {
+    Window* index = winTail;
+    while(index != NULL) {
+        if(index->id == id) {
+            return index;
+        }
+        index = index->prev;
+    }
+    return NULL;
 }
 
 void LoadBackground(const char* name) {
@@ -181,18 +193,19 @@ int main() {
         return 1;
     }
     fbFile.IOCtl(&fbFile,0x100,&fbInfo);
+    backgroundWin.w = fbInfo.width;
+    backgroundWin.h = fbInfo.height;
+    backgroundWin.frontBuf = (uint32_t*)MMap(NULL,fbInfo.width*fbInfo.height*4,3,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
+    fbInfo.back = (uint32_t*)MMap(NULL,fbInfo.pitch*fbInfo.height,3,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
     fbInfo.addr = MMap(NULL,fbInfo.pitch*fbInfo.height,3,MAP_SHARED,fbFile.fd,0);
     fbFile.Close(&fbFile);
-    fbInfo.back = (uint32_t*)malloc(fbInfo.pitch*fbInfo.height);
-    msgQueue = MQueue_Bind("/dev/mqueue/Raven");
     void* kbdStack = MMap(NULL,0x8000,3,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
     uintptr_t kbdThr = NewThread("Raven Keyboard Thread",&KeyboardThread,(void*)(((uintptr_t)kbdStack)+0x8000));
     void* mouseStack = MMap(NULL,0x8000,3,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
     uintptr_t mouseThr = NewThread("Raven Mouse Thread",&MouseThread,(void*)(((uintptr_t)mouseStack)+0x8000));
-    backgroundWin.w = fbInfo.width;
-    backgroundWin.h = fbInfo.height;
-    backgroundWin.frontBuf = (uint32_t*)malloc((fbInfo.width*fbInfo.height)*(fbInfo.bpp/8));
+    msgQueue = MQueue_Bind("/dev/mqueue/Raven");
     LoadBackground("/System/Wallpapers/Autumn.qoi");
+    Redraw(0,0,fbInfo.width,fbInfo.height);
     while(1) {
         int64_t teamID;
         RavenPacket* packet = MQueue_RecieveFromClient(msgQueue,&teamID,NULL);
@@ -202,6 +215,9 @@ int main() {
                 Window* win = malloc(sizeof(Window));
                 win->id = nextWinID++;
                 win->owner = teamID;
+                if(winTail != NULL) {
+                    winTail->next = win;
+                }
                 win->prev = winTail;
                 win->next = NULL;
                 win->w = packet->create.w;
@@ -222,6 +238,18 @@ int main() {
                 MQueue_SendToClient(msgQueue,teamID,&response,sizeof(RavenCreateWindowResponse));
                 SpinlockRelease(&windowLock);
                 Redraw(win->x,win->y,win->w,win->h);
+                break;
+            }
+            case RAVEN_FLIP_BUFFER: {
+                SpinlockAcquire(&windowLock);
+                Window* win = GetWindowByID(packet->flipBuffer.id);
+                if(win != NULL) {
+                    for(int i=packet->flipBuffer.y; i < packet->flipBuffer.y+packet->flipBuffer.h; i++) {
+                        memcpy(&win->frontBuf[(i*win->w)+packet->flipBuffer.x],&win->backBuf[(i*win->w)+packet->flipBuffer.x],packet->flipBuffer.w*4);
+                    }
+                }
+                SpinlockRelease(&windowLock);
+                Redraw(win->x+packet->flipBuffer.x,win->y+packet->flipBuffer.y,packet->flipBuffer.w,packet->flipBuffer.h);
                 break;
             }
             default: {

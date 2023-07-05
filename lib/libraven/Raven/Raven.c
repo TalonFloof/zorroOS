@@ -9,14 +9,18 @@ RavenSession* NewRavenSession() {
 }
 
 ClientWindow* NewRavenWindow(RavenSession* s, int w, int h, int flags) {
-    RavenPacket* packet = malloc(sizeof(RavenPacket));
-    packet->type = RAVEN_CREATE_WINDOW;
-    packet->create.w = w;
-    packet->create.h = h;
-    packet->create.flags = flags;
-    MQueue_SendToServer(s->raven,packet,sizeof(RavenPacket));
-    free(packet);
-    RavenCreateWindowResponse* response = MQueue_RecieveFromServer(s->raven,NULL);
+    RavenPacket packet;
+    packet.type = RAVEN_CREATE_WINDOW;
+    packet.create.w = w;
+    packet.create.h = h;
+    packet.create.flags = flags;
+    MQueue_SendToServer(s->raven,&packet,sizeof(RavenPacket));
+    size_t size;
+    RavenCreateWindowResponse* response = MQueue_RecieveFromServer(s->raven,&size);
+    if(size < sizeof(RavenCreateWindowResponse)) {
+        free(response);
+        return NULL;
+    }
     ClientWindow* win = malloc(sizeof(ClientWindow));
     win->id = response->id;
     win->backID = response->backBuf;
@@ -27,3 +31,13 @@ ClientWindow* NewRavenWindow(RavenSession* s, int w, int h, int flags) {
     return win;
 }
 
+void RavenFlipArea(RavenSession* s, ClientWindow* win, int x, int y, int w, int h) {
+    RavenPacket packet;
+    packet.type = RAVEN_FLIP_BUFFER;
+    packet.flipBuffer.id = win->id;
+    packet.flipBuffer.x = x;
+    packet.flipBuffer.y = y;
+    packet.flipBuffer.w = w;
+    packet.flipBuffer.h = h;
+    MQueue_SendToServer(s->raven,&packet,sizeof(RavenPacket));
+}

@@ -48,6 +48,7 @@ fn reserve(page: usize) void {
         prev = entry;
         i = entry.next;
     }
+    HAL.Console.Put("WARNING: Couldn't find entry!\n", .{});
 }
 
 pub fn reclaim() void {

@@ -11,7 +11,7 @@ int winY = 0;
 Window* winDrag = NULL;
 
 void invertPixel(int x, int y) {
-    if(x >= 0 && x < fbInfo.width && y >= 0 && fbInfo.height) {
+    if(x >= 0 && x < fbInfo.width && y >= 0 && y < fbInfo.height) {
         fbInfo.addr[(y*(fbInfo.pitch/(fbInfo.bpp/8)))+x] = ~fbInfo.addr[(y*(fbInfo.pitch/(fbInfo.bpp/8)))+x];
     }
 }
@@ -85,8 +85,10 @@ void MouseThread() {
                     } else if(cursorWin.x >= win->x && cursorWin.x <= win->x+win->w && cursorWin.y >= win->y && cursorWin.y <= win->y+win->h) {
                         // Mouse Click Event
                         if(win != winTail) {
-                            MoveWinToFront(winDrag);
+                            SpinlockRelease(&windowLock);
+                            MoveWinToFront(win);
                             Redraw(win->x,win->y,win->w,win->h);
+                            SpinlockAcquire(&windowLock);
                         }
                         break;
                     }

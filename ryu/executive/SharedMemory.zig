@@ -39,7 +39,6 @@ pub fn MapSHM(id: i64) ?usize {
                 phys,
             );
             Memory.PFN.ReferencePage(phys);
-            addr += 4096;
         }
         shmLock.release();
         _ = HAL.Arch.IRQEnableDisable(old);

@@ -13,4 +13,4 @@ build-x86_64: $(OBJFILES)
 	rm $(BASEOBJFILES)
 
 %.o: %.c
-	zig cc -I. --target=x86_64-freestanding-none -D_LIBZORRO_TARGET_X86_64 -O3 -c $< -o $(shell basename -a $@)
+	zig cc -I. --target=x86_64-freestanding-none -D_LIBZORRO_TARGET_X86_64 -O2 -c $< -o $(shell basename -a $@)

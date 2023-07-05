@@ -75,7 +75,7 @@ const DirEntry = extern struct {
 pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
     const cat: CallCategory = @as(CallCategory, @enumFromInt(@as(u16, @intCast((regs.GetReg(0) & 0xFFFF0000) >> 16))));
     const func: u16 = @as(u16, @intCast(regs.GetReg(0) & 0xFFFF));
-    //HAL.Console.Put("SystemCall | Cat: {x} Func: {x} ({x},{x},{x},{x},{x},{x})\n", .{ @enumToInt(cat), func, regs.GetReg(1), regs.GetReg(2), regs.GetReg(3), regs.GetReg(4), regs.GetReg(5), regs.GetReg(6) });
+    //HAL.Console.Put("Thread #{} Cat: {x} Func: {x} ({x},{x},{x},{x},{x},{x})\n", .{ HAL.Arch.GetHCB().activeThread.?.threadID, @intFromEnum(cat), func, regs.GetReg(1), regs.GetReg(2), regs.GetReg(3), regs.GetReg(4), regs.GetReg(5), regs.GetReg(6) });
     switch (cat) {
         .Filesystem => {
             switch (@as(FilesystemFuncs, @enumFromInt(func))) {
@@ -396,17 +396,19 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                                 return;
                             }
                         }
+                        regs.SetReg(0, @intCast(a));
                         const addrEnd: usize = a + length;
+                        HAL.Arch.GetHCB().activeThread.?.team.addrLock.acquire();
                         while (a < addrEnd) : (a += 4096) {
                             var page: usize = @intFromPtr(Memory.PFN.AllocatePage(.Active, true, 0).?.ptr) - 0xffff800000000000;
                             _ = Memory.Paging.MapPage(
                                 addrSpace,
                                 a,
-                                Memory.Paging.MapRead | Memory.Paging.MapWrite | (prot & 4),
+                                Memory.Paging.MapRead | (prot & 6),
                                 page,
                             );
                         }
-                        regs.SetReg(0, @as(u64, addrEnd - length));
+                        HAL.Arch.GetHCB().activeThread.?.team.addrLock.release();
                         _ = HAL.Arch.IRQEnableDisable(old);
                     } else {
                         const old = HAL.Arch.IRQEnableDisable(false);
@@ -417,12 +419,14 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                             team.fdLock.release();
                             if (inode.map) |mmap| {
                                 @as(*Spinlock, @ptrCast(&inode.lock)).acquire();
+                                team.addrLock.acquire();
                                 regs.SetReg(0, @as(u64, @bitCast(@as(i64, @intCast(mmap(
                                     inode,
                                     offset,
                                     addr,
                                     length,
                                 ))))));
+                                team.addrLock.release();
                                 @as(*Spinlock, @ptrCast(&inode.lock)).release();
                             } else {
                                 regs.SetReg(0, @as(u64, @bitCast(@as(i64, @intCast(-38)))));

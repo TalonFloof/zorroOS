@@ -25,6 +25,7 @@ pub const Team = struct {
     cwd: ?*FS.Inode = null,
     fdLock: Spinlock = .unaquired,
     mainThread: *allowzero Thread.Thread,
+    addrLock: Spinlock = .unaquired,
     addressSpace: Memory.Paging.PageDirectory,
 };
 

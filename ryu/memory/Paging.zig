@@ -140,8 +140,9 @@ pub fn FindFreeSpace(root: PageDirectory, start: usize, size: usize) ?usize { //
         if (address == 0)
             address = i;
         count += 4096;
-        if (count >= size)
+        if (count >= size) {
             return address;
+        }
     }
     return null;
 }

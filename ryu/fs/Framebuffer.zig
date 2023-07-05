@@ -20,6 +20,7 @@ pub fn FBMap(inode: *FS.Inode, offset: isize, a: *allowzero void, size: usize) c
             return -12;
         }
     }
+    const ret = addr;
     const addrEnd = addr + size;
     var fbAddr: usize = @intFromPtr(HAL.Console.info.ptr) - 0xffff800000000000;
     while (addr < addrEnd) : (addr += 4096) {
@@ -32,7 +33,7 @@ pub fn FBMap(inode: *FS.Inode, offset: isize, a: *allowzero void, size: usize) c
         fbAddr += 4096;
     }
     _ = HAL.Arch.IRQEnableDisable(old);
-    return @as(isize, @intCast(addrEnd - size));
+    return @as(isize, @intCast(ret));
 }
 
 const UserFBInfo = extern struct {

@@ -10,8 +10,8 @@ pub fn stub() void {} // To ensure that the compiler will not optimize this modu
 pub export fn ExceptionHandler(entry: u8, con: *HAL.Arch.Context) callconv(.C) void {
     if (entry == 0x8) {
         HAL.Crash.Crash(.RyuDoubleFault, .{ con.rip, con.rsp, 0, 0 });
-    } else if (entry == 0xd) {
-        HAL.Crash.Crash(.RyuProtectionFault, .{ con.rip, con.errcode, 0, 0 });
+    } else if (entry == 0xd and con.rip >= 0xffff800000000000) {
+        HAL.Crash.Crash(.RyuProtectionFault, .{ con.rip, con.errcode, con.rsp, 0 });
     } else if (entry == 0xe) {
         var addr = asm volatile ("mov %%cr2, %[ret]"
             : [ret] "={rax}" (-> usize),
@@ -40,7 +40,7 @@ pub export fn ExceptionHandler(entry: u8, con: *HAL.Arch.Context) callconv(.C) v
         hcb.activeThread.?.activeUstack = hcb.activeUstack;
         hcb.activeThread.?.context = con.*;
         hcb.activeThread.?.fcontext.Save();
-        HAL.Console.Put("Userspace Exception #{} on Thread #{} (IP=0x{x})\n", .{ entry, hcb.activeThread.?.threadID, con.rip });
+        HAL.Console.Put("Userspace Exception #{} on Thread #{} (IP=0x{x} SP=0x{x} ErrCode=0x{x})\n", .{ entry, hcb.activeThread.?.threadID, con.rip, con.rsp, con.errcode });
         Thread.Reschedule(false);
     }
 }

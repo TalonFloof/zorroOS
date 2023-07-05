@@ -26,6 +26,14 @@ typedef struct {
 
 typedef struct {
     int64_t id;
+    int x;
+    int y;
+    int w;
+    int h;
+} RavenFlipBuffer;
+
+typedef struct {
+    int64_t id;
     int64_t backBuf;
 } RavenCreateWindowResponse;
 
@@ -33,6 +41,7 @@ typedef struct {
     RavenPacketType type;
     union {
         RavenCreateWindow create;
+        RavenFlipBuffer flipBuffer;
     };
 } RavenPacket;
 
@@ -62,5 +71,6 @@ typedef struct {
 
 RavenSession* NewRavenSession();
 ClientWindow* NewRavenWindow(RavenSession* s, int w, int h, int flags);
+void RavenFlipArea(RavenSession* s, ClientWindow* win, int x, int y, int w, int h);
 
 #endif
