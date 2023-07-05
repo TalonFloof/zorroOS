@@ -45,7 +45,7 @@ pub fn NewTeam(parent: ?*Team, name: []const u8) *Team {
     team.fds = FDTree{};
     if (parent) |p| {
         team.cwd = p.cwd;
-        team.siblingNext = p;
+        p.siblingNext = p.children;
         p.children = team;
     }
     team.teamID = nextTeamID;

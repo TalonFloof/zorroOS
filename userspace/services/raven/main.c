@@ -90,7 +90,7 @@ void Redraw(int x, int y, int w, int h) {
           fY2 = MIN(max_y,win->y+(win->h-1));
           int bytes = fbInfo.bpp/8;
           if((win->flags & FLAG_ACRYLIC)) {
-            StackBlur(fbInfo.back,fbInfo.pitch/(fbInfo.bpp/8),32,MAX(1,fX1),MIN(fbInfo.width-1,fX2),MAX(1,fY1),MIN(fbInfo.height-1,fY2));
+            StackBlur(fbInfo.back,fbInfo.pitch/(fbInfo.bpp/8),4,MAX(1,fX1),MIN(fbInfo.width-1,fX2),MAX(1,fY1),MIN(fbInfo.height-1,fY2));
           }
           for(int i=fY1; i <= fY2; i++) {
             if(i < 0) {
@@ -130,6 +130,25 @@ void Redraw(int x, int y, int w, int h) {
     }
 }
 
+void MoveWinToFront(Window* win) {
+    if(winTail == win) {
+        return;
+    }
+    if(winHead == win) {
+        winHead = win->next;
+    }
+    if(win->prev != NULL) {
+        ((Window*)win->prev)->next = win->next;
+    }
+    if(win->next != NULL) {
+        ((Window*)win->next)->prev = win->prev;
+    }
+    winTail->next = win;
+    win->prev = winTail;
+    win->next = NULL;
+    winTail = win;
+}
+
 void LoadBackground(const char* name) {
     qoi_desc desc;
     void* bgImage = qoi_read(name,&desc,4);
@@ -164,27 +183,10 @@ int main() {
     backgroundWin.w = fbInfo.width;
     backgroundWin.h = fbInfo.height;
     backgroundWin.frontBuf = (uint32_t*)malloc((fbInfo.width*fbInfo.height)*(fbInfo.bpp/8));
-    winTail = (Window*)malloc(sizeof(Window));
-    winHead = winTail;
-    winHead->prev = NULL;
-    winHead->next = NULL;
-    winHead->x = (fbInfo.width/2)-320;
-    winHead->y = (fbInfo.height/2)-240;
-    winHead->w = 640;
-    winHead->h = 480;
-    winHead->flags = FLAG_ACRYLIC;
-    winHead->frontBuf = malloc(640*480*4);
-    for(int i=0; i < 640*480; i++) {
-        if(i < 640*192) {
-            winHead->frontBuf[i] = 0xa0333333;
-        } else {
-            winHead->frontBuf[i] = 0xff333333;
-        }
-    }
     LoadBackground("/System/Wallpapers/Autumn.qoi");
     char packet[1024];
     while(1) {
-        //msgQueue->file.Read(&msgQueue->file,&packet,1024);
+        msgQueue->file.Read(&msgQueue->file,&packet,1024);
     }
     return 0;
 }

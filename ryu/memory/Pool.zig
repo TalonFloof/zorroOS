@@ -73,7 +73,7 @@ pub const Bucket = struct {
         const size: usize = mem.len;
         const entries: usize = if ((size % 16) != 0) ((size / 16) + 1) else (size / 16);
         self.usedEntries -= entries;
-        const start = (@intFromPtr(mem.ptr) - @intFromPtr(self)) / 16;
+        const start = (@intFromPtr(mem.ptr) - (@intFromPtr(self) + 0x1000)) / 16;
         var i: usize = start;
         while (i < start + entries) : (i += 1) {
             self.SetBit(i, false);

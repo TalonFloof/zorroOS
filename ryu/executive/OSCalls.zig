@@ -61,6 +61,9 @@ const RyuFuncs = enum(u16) {
     KernelLog = 1,
     GetUNIXTime = 2,
     GetSchedulerTicks = 3,
+    ShmAllocate = 4,
+    ShmMap = 5,
+    ShmFree = 6,
 };
 
 const DirEntry = extern struct {
@@ -530,6 +533,25 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                     var s: [*c]const u8 = @as([*c]const u8, @ptrFromInt(regs.GetReg(1)));
                     HAL.Console.Put("{s}", .{@as([*]const u8, @ptrCast(s))[0..std.mem.len(s)]});
                     regs.SetReg(0, 0);
+                },
+                .ShmAllocate => { // ShmID_t ShmAllocate(size_t size)
+                    regs.SetReg(0, @as(u64, @bitCast(Executive.SharedMemory.CreateSHM(@intCast(regs.GetReg(1))))));
+                },
+                .ShmMap => { // void* ShmMap(ShmID_t id)
+                    const id: i64 = @bitCast(regs.GetReg(1));
+                    if (Executive.SharedMemory.MapSHM(id)) |addr| {
+                        regs.SetReg(0, @intCast(addr));
+                    } else {
+                        regs.SetReg(0, @bitCast(@as(i64, -1)));
+                    }
+                },
+                .ShmFree => { // Status_t ShmFree(ShmID_t id)
+                    const id: i64 = @bitCast(regs.GetReg(1));
+                    if (Executive.SharedMemory.RemoveSHM(id)) {
+                        regs.SetReg(0, 0);
+                    } else {
+                        regs.SetReg(0, @bitCast(@as(i64, -1)));
+                    }
                 },
                 else => {
                     regs.SetReg(0, @as(u64, @bitCast(@as(i64, @intCast(-4096)))));

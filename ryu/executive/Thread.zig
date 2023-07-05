@@ -102,7 +102,7 @@ pub fn NewThread(
     nextThreadID += 1;
     thread.state = .Runnable;
     thread.priority = prior;
-    var stack = Memory.Pool.PagedPool.AllocAnonPages(16384).?;
+    var stack = Memory.Pool.PagedPool.AllocAnonPages(32768).?;
     thread.kstack = stack;
     if (sp == null) {
         thread.context.SetMode(true);
@@ -165,10 +165,8 @@ pub fn KillThread(threadID: i64) void {
                 t = teamThr.nextTeamThread;
             }
             // Set our child teams to be adopted by the kernel team
-            var teams: ?*Team.Team = thread.team.children;
-            while (teams) |team| {
-                Team.AdoptTeam(team, false);
-                teams = team.siblingNext;
+            while (thread.team.children != null) {
+                Team.AdoptTeam(thread.team.children.?, false);
             }
         }
     }
@@ -204,7 +202,7 @@ pub fn DestroyThread(thread: *Thread) bool {
         Memory.Paging.DestroyPageDirectory(team.addressSpace);
         team.fds.destroy(&Team.DestroyFileDescriptor);
         Team.teams.delete(team.teamID);
-        Memory.Pool.PagedPool.Free(@as([*]u8, @ptrFromInt(@intFromPtr(team)))[0..@sizeOf(Team.Team)]);
+        Memory.Pool.PagedPool.Free(@as([*]u8, @ptrCast(@alignCast(team)))[0..@sizeOf(Team.Team)]);
         Team.teamLock.release();
     } else {
         threadLock.release();

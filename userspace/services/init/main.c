@@ -8,6 +8,8 @@ int main() {
     RyuLog("Starting Raven Compositor service...\n");
     TeamID ravenTeam = NewTeam("Raven Compositor Service");
     LoadExecImage(ravenTeam,(const char*[]){"/bin/raven",NULL},NULL);
-    while(1) {}
+    //while(1) {
+
+    //}
     return 0;
 }

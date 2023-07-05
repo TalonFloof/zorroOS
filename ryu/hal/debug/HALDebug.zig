@@ -41,7 +41,13 @@ pub fn EnterDebugger() noreturn {
             var ind: i64 = 1;
             while (ind < Team.nextTeamID) : (ind += 1) {
                 if (Team.teams.search(ind)) |team| {
-                    HAL.Console.Put("{}: {x:0>16} {s}\n", .{ ind, @intFromPtr(team), team.name });
+                    HAL.Console.Put("{}: {x:0>16} {s} Parent #{} Main Thread #{}\n", .{
+                        ind,
+                        @intFromPtr(team),
+                        team.name,
+                        if (team.teamID == 1) 0 else team.parent.?.teamID,
+                        if (@intFromPtr(team.mainThread) != 0) team.mainThread.threadID else 0,
+                    });
                 }
             }
         } else if (std.mem.eql(u8, txt, "threads")) {
