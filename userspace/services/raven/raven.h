@@ -17,8 +17,8 @@ typedef struct {
     int64_t id;
     int x;
     int y;
-    unsigned int w;
-    unsigned int h;
+    int w;
+    int h;
     unsigned char flags;
     uint32_t* backBuf;
     uint32_t* frontBuf;

@@ -90,7 +90,7 @@ void Redraw(int x, int y, int w, int h) {
           fY2 = MIN(max_y,win->y+(win->h-1));
           int bytes = fbInfo.bpp/8;
           if((win->flags & FLAG_ACRYLIC)) {
-            StackBlur(fbInfo.back,fbInfo.width,32,fX1,fX2,fY1,fY2);
+            StackBlur(fbInfo.back,fbInfo.pitch/(fbInfo.bpp/8),32,MAX(1,fX1),MIN(fbInfo.width-1,fX2),MAX(1,fY1),MIN(fbInfo.height-1,fY2));
           }
           for(int i=fY1; i <= fY2; i++) {
             if(i < 0) {
@@ -154,7 +154,7 @@ int main() {
     fbFile.IOCtl(&fbFile,0x100,&fbInfo);
     fbInfo.addr = MMap(NULL,fbInfo.pitch*fbInfo.height,3,MAP_SHARED,fbFile.fd,0);
     fbFile.Close(&fbFile);
-    fbInfo.back = (uint32_t*)malloc((fbInfo.width*fbInfo.height)*(fbInfo.bpp/8));
+    fbInfo.back = (uint32_t*)malloc(fbInfo.pitch*fbInfo.height);
     MQueue* msgQueue = MQueue_Bind("/dev/mqueue/Raven");
     eventQueue = MQueue_Bind("/dev/mqueue/RavenEvents");
     void* kbdStack = MMap(NULL,0x8000,3,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
@@ -164,8 +164,10 @@ int main() {
     backgroundWin.w = fbInfo.width;
     backgroundWin.h = fbInfo.height;
     backgroundWin.frontBuf = (uint32_t*)malloc((fbInfo.width*fbInfo.height)*(fbInfo.bpp/8));
-    winHead = (Window*)malloc(sizeof(Window));
-    winTail = winHead;
+    winTail = (Window*)malloc(sizeof(Window));
+    winHead = winTail;
+    winHead->prev = NULL;
+    winHead->next = NULL;
     winHead->x = (fbInfo.width/2)-320;
     winHead->y = (fbInfo.height/2)-240;
     winHead->w = 640;
@@ -173,12 +175,16 @@ int main() {
     winHead->flags = FLAG_ACRYLIC;
     winHead->frontBuf = malloc(640*480*4);
     for(int i=0; i < 640*480; i++) {
-        winHead->frontBuf[i] = 0x80333333;
+        if(i < 640*192) {
+            winHead->frontBuf[i] = 0xa0333333;
+        } else {
+            winHead->frontBuf[i] = 0xff333333;
+        }
     }
     LoadBackground("/System/Wallpapers/Autumn.qoi");
     char packet[1024];
     while(1) {
-        msgQueue->file.Read(&msgQueue->file,&packet,1024);
+        //msgQueue->file.Read(&msgQueue->file,&packet,1024);
     }
     return 0;
 }
