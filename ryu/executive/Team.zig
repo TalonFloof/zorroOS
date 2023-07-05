@@ -31,6 +31,7 @@ pub const Team = struct {
 const TeamTreeType = AATree(i64, *Team);
 
 pub var teams: TeamTreeType = TeamTreeType{};
+pub var kteam: ?*Team = null;
 pub var teamLock: Spinlock = .unaquired;
 pub var nextTeamID: i64 = 1;
 
@@ -45,7 +46,7 @@ pub fn NewTeam(parent: ?*Team, name: []const u8) *Team {
     team.fds = FDTree{};
     if (parent) |p| {
         team.cwd = p.cwd;
-        p.siblingNext = p.children;
+        team.siblingNext = p.children;
         p.children = team;
     }
     team.teamID = nextTeamID;
@@ -79,14 +80,13 @@ pub fn AdoptTeam(team: *Team, dropTeam: bool) void { // Transfers a team's paren
         if (@intFromPtr(t) == @intFromPtr(team)) {
             if (prev) |p| {
                 p.siblingNext = t.siblingNext;
-            } else {
-                team.parent.?.children = t.siblingNext;
+            } else if (@intFromPtr(team.parent.?.children) == @intFromPtr(team)) {
+                team.parent.?.children = team.siblingNext;
             }
             if (!dropTeam) {
-                const kteam = teams.search(1).?;
-                t.parent = kteam;
-                t.siblingNext = kteam.children;
-                kteam.children = t;
+                team.parent = kteam.?;
+                team.siblingNext = kteam.?.children;
+                kteam.?.children = team;
             }
             break;
         }
@@ -126,6 +126,6 @@ pub fn LoadELFImage(path: []const u8, team: *Team) ?usize {
 }
 
 pub fn Init() void {
-    var kteam = NewTeam(null, "Kernel Team");
+    kteam = NewTeam(null, "Kernel Team");
     _ = NewTeam(kteam, "zorroOS Init Service");
 }

@@ -1,6 +1,7 @@
 #ifndef _RAVEN_RAVEN_H
 #define _RAVEN_RAVEN_H
 #include <stdint.h>
+#include <Raven/Raven.h>
 
 typedef struct {
     uint32_t width;
@@ -20,19 +21,19 @@ typedef struct {
     int w;
     int h;
     unsigned char flags;
+    int64_t shmID;
     uint32_t* backBuf;
     uint32_t* frontBuf;
     int64_t owner;
 } Window;
 
-#define FLAG_OPAQUE 1
-#define FLAG_NOMOVE 2
-#define FLAG_ACRYLIC 4
-
 void Redraw(int x, int y, int w, int h);
+void MoveWinToFront(Window* win);
 
 #ifndef _RAVEN_IMPL
+extern MQueue* msgQueue;
 extern FBInfo fbInfo;
+extern char windowLock;
 extern Window cursorWin;
 extern Window* winHead;
 extern Window* winTail;

@@ -29,7 +29,8 @@ pub const Thread = struct {
     eventQueue: EventQueue = EventQueue{},
     exitReason: usize = 0,
     shouldKill: bool = false,
-    priority: usize = 8,
+    priority: usize = 10,
+    eepTimeout: u64 = 0,
     context: HAL.Arch.Context = HAL.Arch.Context{},
     fcontext: HAL.Arch.FloatContext = HAL.Arch.FloatContext{},
     activeUstack: usize = 0,
@@ -44,6 +45,8 @@ var threadLock: Spinlock = .unaquired;
 pub var nextThreadID: i64 = 1;
 
 pub var startScheduler: bool = false;
+
+pub var ticks: u64 = 0;
 
 pub const Queue = struct {
     lock: Spinlock = .unaquired,

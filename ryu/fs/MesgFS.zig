@@ -43,18 +43,18 @@ var nextInodeID: i64 = 1;
 
 fn ClientSpaceLeft(session: *Session) usize {
     if (session.stcRead == session.stcWrite) {
-        return 0;
+        return 4096;
     }
     if (session.stcRead > session.stcWrite) {
-        return (4096 - session.stcRead) + session.stcWrite;
+        return 4096 - ((4096 - session.stcRead) + session.stcWrite);
     } else {
-        return session.stcWrite - session.stcRead;
+        return 4096 - (session.stcWrite - session.stcRead);
     }
 }
 
 fn ServerSpaceLeft(mq: *MQData) usize {
     if (mq.ctsRead == mq.ctsWrite) {
-        return 0;
+        return 4096;
     }
     if (mq.ctsRead > mq.ctsWrite) {
         return (4096 - mq.ctsRead) + mq.ctsWrite;
@@ -129,11 +129,13 @@ fn Read(inode: *FS.Inode, offset: isize, bufBegin: *void, bufSize: isize) callco
             _ = mqData.queueRead.Wait();
             @as(*Spinlock, @ptrCast(&inode.lock)).acquire();
         }
-        ReadServerQueue(mqData, buf[0..@sizeOf(CTSPacket)]);
-        const header = @as(*CTSPacket, @alignCast(@ptrCast(buf.ptr)));
-        ReadServerQueue(mqData, buf[@sizeOf(CTSPacket)..(@sizeOf(CTSPacket) + header.size)]);
+        var temp: [16]u8 = [_]u8{0} ** 16;
+        ReadServerQueue(mqData, temp[0..@sizeOf(CTSPacket)]);
+        const header = @as(*CTSPacket, @alignCast(@ptrCast(&temp)));
+        @as(*i64, @ptrCast(@alignCast(buf.ptr))).* = header.source;
+        ReadServerQueue(mqData, buf[@sizeOf(i64)..(@sizeOf(i64) + header.size)]);
         mqData.queueWrite.Wakeup(0);
-        return @as(isize, @intCast(@sizeOf(CTSPacket) + header.size));
+        return @as(isize, @intCast(@sizeOf(i64) + header.size));
     } else {
         const session: *Session = mqData.tree.search(team.teamID).?;
         while (session.stcRead == session.stcWrite) {
@@ -141,11 +143,12 @@ fn Read(inode: *FS.Inode, offset: isize, bufBegin: *void, bufSize: isize) callco
             _ = session.queueRead.Wait();
             @as(*Spinlock, @ptrCast(&inode.lock)).acquire();
         }
-        ReadClientQueue(session, buf[0..@sizeOf(u64)]);
-        const header = @as(*u64, @alignCast(@ptrCast(buf.ptr)));
-        ReadClientQueue(session, buf[@sizeOf(u64)..(@sizeOf(u64) + @as(usize, @intCast(header.*)))]);
+        var temp: [8]u8 = [_]u8{0} ** 8;
+        ReadClientQueue(session, temp[0..@sizeOf(u64)]);
+        const header = @as(*u64, @alignCast(@ptrCast(&temp)));
+        ReadClientQueue(session, buf[0..(@as(usize, @intCast(header.*)))]);
         session.queueWrite.Wakeup(0);
-        return @as(isize, @intCast(@sizeOf(u64) + @as(usize, @intCast(header.*))));
+        return @as(isize, @intCast(@as(usize, @intCast(header.*))));
     }
 }
 
@@ -162,11 +165,11 @@ fn Write(inode: *FS.Inode, offset: isize, bufBegin: *void, bufSize: isize) callc
             @as(*Spinlock, @ptrCast(&inode.lock)).acquire();
         }
         var header: u64 = @intCast(bufSize);
-        const shouldWakeup: bool = mqData.ctsRead == mqData.ctsWrite;
+        const shouldWakeup: bool = session.stcRead == session.stcWrite;
         WriteClientQueue(session, @as([*]u8, @alignCast(@ptrCast(&header)))[0..@sizeOf(u64)]);
         WriteClientQueue(session, buf);
         if (shouldWakeup) {
-            mqData.queueRead.Wakeup(0);
+            session.queueRead.Wakeup(0);
         }
         return bufSize;
     } else {
@@ -233,6 +236,7 @@ pub fn Create(inode: *FS.Inode, name: [*c]const u8, mode: usize) callconv(.C) is
     in.ioctl = &IOCtl;
     var mq: *MQData = @as(*MQData, @ptrCast(@alignCast(Memory.Pool.PagedPool.Alloc(@sizeOf(MQData)).?.ptr)));
     mq.ctsBuf = Memory.Pool.PagedPool.AllocAnonPages(4096).?;
+    mq.ownerID = HAL.Arch.GetHCB().activeThread.?.team.teamID;
     in.private = @as(*allowzero void, @ptrCast(mq));
     FS.AddInodeToParent(in);
     return 0;

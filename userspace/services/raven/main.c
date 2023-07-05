@@ -1,5 +1,6 @@
 #include <System/Thread.h>
 #include <System/Syscall.h>
+#include <System/SharedMemory.h>
 #include <Filesystem/Filesystem.h>
 #include <Filesystem/MQueue.h>
 #include <Common/Alloc.h>
@@ -7,6 +8,7 @@
 #include <Media/QOI.h>
 #include <Media/Image.h>
 #include <Media/StackBlur.h>
+#include <Common/Spinlock.h>
 #include "kbd.h"
 #include "mouse.h"
 #define _RAVEN_IMPL
@@ -16,10 +18,12 @@
 #define MAX(__x, __y) ((__x) > (__y) ? (__x) : (__y))
 
 FBInfo fbInfo;
-MQueue* eventQueue = NULL;
+MQueue* msgQueue = NULL;
 
 Window* winHead = NULL;
 Window* winTail = NULL;
+char windowLock = 0;
+uint64_t nextWinID = 1;
 const uint32_t cursorBuf[10*16] = {
     0xffffffff,0xffffffff,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,
     0xffffffff,0xff000000,0xffffffff,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,
@@ -77,6 +81,7 @@ uint32_t BlendPixel(uint32_t px1, uint32_t px2) {
 }
 
 void Redraw(int x, int y, int w, int h) {
+    SpinlockAcquire(&windowLock);
     Window* win = &backgroundWin;
     int max_x, max_y;
     max_x = x+(w-1);
@@ -128,12 +133,16 @@ void Redraw(int x, int y, int w, int h) {
             win = win->next;
         }
     }
+    SpinlockRelease(&windowLock);
 }
 
 void MoveWinToFront(Window* win) {
+    SpinlockAcquire(&windowLock);
     if(winTail == win) {
+        SpinlockRelease(&windowLock);
         return;
     }
+    SpinlockAcquire(&windowLock);
     if(winHead == win) {
         winHead = win->next;
     }
@@ -147,6 +156,7 @@ void MoveWinToFront(Window* win) {
     win->prev = winTail;
     win->next = NULL;
     winTail = win;
+    SpinlockRelease(&windowLock);
 }
 
 void LoadBackground(const char* name) {
@@ -174,8 +184,7 @@ int main() {
     fbInfo.addr = MMap(NULL,fbInfo.pitch*fbInfo.height,3,MAP_SHARED,fbFile.fd,0);
     fbFile.Close(&fbFile);
     fbInfo.back = (uint32_t*)malloc(fbInfo.pitch*fbInfo.height);
-    MQueue* msgQueue = MQueue_Bind("/dev/mqueue/Raven");
-    eventQueue = MQueue_Bind("/dev/mqueue/RavenEvents");
+    msgQueue = MQueue_Bind("/dev/mqueue/Raven");
     void* kbdStack = MMap(NULL,0x8000,3,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
     uintptr_t kbdThr = NewThread("Raven Keyboard Thread",&KeyboardThread,(void*)(((uintptr_t)kbdStack)+0x8000));
     void* mouseStack = MMap(NULL,0x8000,3,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
@@ -184,9 +193,42 @@ int main() {
     backgroundWin.h = fbInfo.height;
     backgroundWin.frontBuf = (uint32_t*)malloc((fbInfo.width*fbInfo.height)*(fbInfo.bpp/8));
     LoadBackground("/System/Wallpapers/Autumn.qoi");
-    char packet[1024];
     while(1) {
-        msgQueue->file.Read(&msgQueue->file,&packet,1024);
+        int64_t teamID;
+        RavenPacket* packet = MQueue_RecieveFromClient(msgQueue,&teamID,NULL);
+        switch(packet->type) {
+            case RAVEN_CREATE_WINDOW: {
+                SpinlockAcquire(&windowLock);
+                Window* win = malloc(sizeof(Window));
+                win->id = nextWinID++;
+                win->owner = teamID;
+                win->prev = winTail;
+                win->next = NULL;
+                win->w = packet->create.w;
+                win->h = packet->create.h;
+                win->flags = packet->create.flags;
+                win->x = (fbInfo.width/2)-(packet->create.w/2);
+                win->y = (fbInfo.height/2)-(packet->create.h/2);
+                win->shmID = NewSharedMemory((win->w*win->h)*4);
+                win->backBuf = MapSharedMemory(win->shmID);
+                win->frontBuf = malloc((win->w*win->h)*4);
+                winTail = win;
+                if(winHead == NULL) {
+                    winHead = win;
+                }
+                RavenCreateWindowResponse response;
+                response.id = win->id;
+                response.backBuf = win->shmID;
+                MQueue_SendToClient(msgQueue,teamID,&response,sizeof(RavenCreateWindowResponse));
+                SpinlockRelease(&windowLock);
+                Redraw(win->x,win->y,win->w,win->h);
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+        free(packet);
     }
     return 0;
 }

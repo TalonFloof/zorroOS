@@ -31,12 +31,14 @@ pub fn MapSHM(id: i64) ?usize {
         var addr: usize = space;
         const addrEnd = space + data.len;
         while (addr < addrEnd) : (addr += 4096) {
+            var phys = @as(usize, @intCast(Memory.Paging.GetPage(addrSpace, (addr - space) + @intFromPtr(data.ptr)).phys)) << 12;
             _ = Memory.Paging.MapPage(
                 addrSpace,
                 addr,
                 Memory.Paging.MapRead | Memory.Paging.MapWrite,
-                @as(usize, @intCast(Memory.Paging.GetPage(addrSpace, (addr - space) + @intFromPtr(data.ptr)).phys)) << 12,
+                phys,
             );
+            Memory.PFN.ReferencePage(phys);
             addr += 4096;
         }
         shmLock.release();

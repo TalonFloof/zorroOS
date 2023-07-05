@@ -48,6 +48,9 @@ pub export fn IRQHandler(entry: u8, con: *HAL.Arch.Context) callconv(.C) void {
     if (entry == 0xfd or entry == 0xf2 or entry == 0x20) { // Reschedule (either via ThreadYield, IPI, or Preemption Clock)
         if (entry == 0x20) {
             const hcb = HAL.Arch.GetHCB();
+            if (hcb.hartID == 0) {
+                Thread.ticks += 1;
+            }
             if (hcb.quantumsLeft > 1) {
                 hcb.quantumsLeft -= 1;
                 apic.write(0xb0, 0);

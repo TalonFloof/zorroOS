@@ -3,3 +3,6 @@ build:
 	cd services; \
 	make build; \
 	cd ..
+	cd apps; \
+	make build; \
+	cd ..

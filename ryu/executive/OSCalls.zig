@@ -522,6 +522,14 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                     regs.SetReg(0, @as(u64, @intCast(newThread.threadID)));
                     _ = HAL.Arch.IRQEnableDisable(old);
                 },
+                .Eep => { // void Eep(int ms)
+                    const deadline = Executive.Thread.ticks + regs.GetReg(1);
+                    while (Executive.Thread.ticks < deadline) {
+                        const old = HAL.Arch.IRQEnableDisable(true);
+                        _ = HAL.Arch.ThreadYield();
+                        _ = HAL.Arch.IRQEnableDisable(old);
+                    }
+                },
                 else => {
                     regs.SetReg(0, @as(u64, @bitCast(@as(i64, @intCast(-4096)))));
                 },

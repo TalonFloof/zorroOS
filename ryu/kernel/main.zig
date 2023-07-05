@@ -14,6 +14,13 @@ const builtin = @import("builtin");
 pub fn panic(msg: []const u8, stacktrace: ?*std.builtin.StackTrace, wat: ?usize) noreturn {
     _ = wat;
     _ = stacktrace;
+    if (builtin.mode != .Debug) {
+        HAL.Console.bgColor = 0x303030;
+        HAL.Console.showCursor = false;
+        HAL.Console.largeFont = true;
+        HAL.Console.info.set(HAL.Console.info, 0, 0, HAL.Console.info.width, HAL.Console.info.height, HAL.Console.bgColor);
+        HAL.Console.EnableDisable(false);
+    }
     HAL.Console.EnableDisable(true);
     HAL.Console.Put("Fatal Zig Error: {s}\n", .{msg});
     HAL.Crash.Crash(.RyuZigPanic, .{ 0, 0, 0, 0 });

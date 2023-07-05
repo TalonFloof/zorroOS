@@ -11,6 +11,7 @@ pub const CrashCode = enum(u32) {
     RyuKernelInitializationFailure,
     RyuPFNCorruption,
     RyuNoACPI,
+    RyuNoHPET,
     RyuStaticPoolDepleated,
     RyuPageFaultInStaticPool,
     RyuPageFaultInPagedPool,
@@ -31,7 +32,7 @@ pub fn Crash(code: CrashCode, args: [4]usize) noreturn {
     _ = HAL.Arch.IRQEnableDisable(false);
     hasCrashed = true;
     HAL.Arch.Halt();
-    if (builtin.mode != .Debug) {
+    if (builtin.mode != .Debug and code != .RyuZigPanic) {
         HAL.Console.bgColor = 0x303030;
         HAL.Console.showCursor = false;
         HAL.Console.largeFont = true;

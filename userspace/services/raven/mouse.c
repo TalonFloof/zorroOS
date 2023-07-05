@@ -1,6 +1,7 @@
 #include "mouse.h"
 #include <System/Thread.h>
 #include <Filesystem/Filesystem.h>
+#include <Common/Spinlock.h>
 #include "raven.h"
 #include <stdbool.h>
 
@@ -67,10 +68,12 @@ void MouseThread() {
                 int oldY = winDrag->y;
                 winDrag->x = cursorWin.x - winX;
                 winDrag->y = cursorWin.y - winY;
+                MoveWinToFront(winDrag);
                 Redraw(oldX,oldY,winDrag->w,winDrag->h);
                 Redraw(winDrag->x,winDrag->y,winDrag->w,winDrag->h);
                 winDrag = NULL;
             } else if ((buttons & 1) != 0 && !lButton) {
+                SpinlockAcquire(&windowLock);
                 Window* win = winTail;
                 while(win != NULL) {
                     if(cursorWin.x >= win->x && cursorWin.x < win->x+win->w && cursorWin.y >= win->y && cursorWin.y < win->y+20 && !(win->flags & FLAG_NOMOVE)) {
@@ -81,10 +84,15 @@ void MouseThread() {
                         break;
                     } else if(cursorWin.x >= win->x && cursorWin.x <= win->x+win->w && cursorWin.y >= win->y && cursorWin.y <= win->y+win->h) {
                         // Mouse Click Event
+                        if(win != winTail) {
+                            MoveWinToFront(winDrag);
+                            Redraw(win->x,win->y,win->w,win->h);
+                        }
                         break;
                     }
                     win = win->prev;
                 }
+                SpinlockRelease(&windowLock);
             }
             lButton = (buttons & 1) != 0;
         } else {
