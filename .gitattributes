@@ -3,3 +3,5 @@
 
 kernel/Makefile -linguist-vendored
 Makefile -linguist-vendored
+*.c -linguist-vendored
+*.h -linguist-vendored

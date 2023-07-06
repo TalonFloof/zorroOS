@@ -2,6 +2,7 @@
 #include <System/Thread.h>
 #include <Filesystem/Filesystem.h>
 #include <Common/Spinlock.h>
+#include <Filesystem/MQueue.h>
 #include "raven.h"
 #include <stdbool.h>
 
@@ -63,36 +64,63 @@ void MouseThread() {
                     renderInvertOutline(cursorWin.x - winX, cursorWin.y - winY, winDrag->w, winDrag->h);
                 }
             }
-            if ((buttons & 1) == 0 && lButton && winDrag != NULL) {
-                int oldX = winDrag->x;
-                int oldY = winDrag->y;
-                winDrag->x = cursorWin.x - winX;
-                winDrag->y = cursorWin.y - winY;
-                MoveWinToFront(winDrag);
-                Redraw(oldX,oldY,winDrag->w,winDrag->h);
-                Redraw(winDrag->x,winDrag->y,winDrag->w,winDrag->h);
-                winDrag = NULL;
+            if ((buttons & 1) == 0 && lButton) {
+                if(winDrag != NULL) {
+                    int oldX = winDrag->x;
+                    int oldY = winDrag->y;
+                    winDrag->x = cursorWin.x - winX;
+                    winDrag->y = cursorWin.y - winY;
+                    MoveWinToFront(winDrag);
+                    Redraw(oldX,oldY,winDrag->w,winDrag->h);
+                    Redraw(winDrag->x,winDrag->y,winDrag->w,winDrag->h);
+                    winDrag = NULL;
+                } else if (winFocus != NULL) {
+                    if(cursorWin.x >= winFocus->x && cursorWin.x <= winFocus->x+winFocus->w && cursorWin.y >= winFocus->y && cursorWin.y <= winFocus->y+winFocus->h) {
+                        RavenEvent event;
+                        event.type = RAVEN_MOUSE_RELEASED;
+                        event.mouse.x = winFocus->x-cursorWin.x;
+                        event.mouse.y = winFocus->y-cursorWin.y;
+                        event.mouse.buttons = 0;
+                        MQueue_SendToClient(msgQueue,winFocus->owner,&event,sizeof(RavenEvent));
+                    }
+                }
             } else if ((buttons & 1) != 0 && !lButton) {
                 SpinlockAcquire(&windowLock);
                 Window* win = winTail;
+                bool clicked = false;
                 while(win != NULL) {
                     if(cursorWin.x >= win->x && cursorWin.x < win->x+win->w && cursorWin.y >= win->y && cursorWin.y < win->y+20 && !(win->flags & FLAG_NOMOVE)) {
                         winDrag = win;
                         winX = cursorWin.x - win->x;
                         winY = cursorWin.y - win->y;
                         renderInvertOutline(cursorWin.x - winX,cursorWin.y - winY,win->w,win->h);
+                        clicked = true;
                         break;
                     } else if(cursorWin.x >= win->x && cursorWin.x <= win->x+win->w && cursorWin.y >= win->y && cursorWin.y <= win->y+win->h) {
                         // Mouse Click Event
-                        if(win != winTail) {
-                            SpinlockRelease(&windowLock);
-                            MoveWinToFront(win);
-                            Redraw(win->x,win->y,win->w,win->h);
-                            SpinlockAcquire(&windowLock);
+                        if(win != winFocus) {
+                            if(win != winTail) {
+                                SpinlockRelease(&windowLock);
+                                MoveWinToFront(win);
+                                Redraw(win->x,win->y,win->w,win->h);
+                                SpinlockAcquire(&windowLock);
+                            }
+                            winFocus = win;
+                        } else {
+                            RavenEvent event;
+                            event.type = RAVEN_MOUSE_PRESSED;
+                            event.mouse.x = win->x-cursorWin.x;
+                            event.mouse.y = win->y-cursorWin.y;
+                            event.mouse.buttons = 1;
+                            MQueue_SendToClient(msgQueue,win->owner,&event,sizeof(RavenEvent));
                         }
+                        clicked = true;
                         break;
                     }
                     win = win->prev;
+                }
+                if(!clicked) {
+                    winFocus = NULL;
                 }
                 SpinlockRelease(&windowLock);
             }

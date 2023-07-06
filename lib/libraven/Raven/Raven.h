@@ -2,6 +2,7 @@
 #define _LIBRAVEN_RAVEN_RAVEN_H
 #include <stdint.h>
 #include <Filesystem/MQueue.h>
+#include <Media/Graphics.h>
 
 typedef enum {
     RAVEN_INVALID_MESSAGE,
@@ -14,6 +15,8 @@ typedef enum {
 
 typedef enum {
     RAVEN_INVALID_EVENT,
+    RAVEN_KEY_PRESSED,
+    RAVEN_KEY_RELEASED,
     RAVEN_MOUSE_PRESSED,
     RAVEN_MOUSE_RELEASED,
 } RavenEventType;
@@ -38,19 +41,31 @@ typedef struct {
 } RavenCreateWindowResponse;
 
 typedef struct {
+    uint32_t key;
+    uint32_t rune;
+} RavenKeyEvent;
+
+typedef struct {
+    int x;
+    int y;
+    uint32_t buttons;
+} RavenMouseEvent;
+
+typedef struct {
+    RavenEventType type;
+    union {
+        RavenKeyEvent key;
+        RavenMouseEvent mouse;
+    };
+} RavenEvent;
+
+typedef struct {
     RavenPacketType type;
     union {
         RavenCreateWindow create;
         RavenFlipBuffer flipBuffer;
     };
 } RavenPacket;
-
-typedef struct {
-    RavenEventType type;
-    union {
-        
-    };
-} RavenEvent;
 ///////////////////////////////////////////////////////////
 typedef struct {
     MQueue* raven;
@@ -72,5 +87,7 @@ typedef struct {
 RavenSession* NewRavenSession();
 ClientWindow* NewRavenWindow(RavenSession* s, int w, int h, int flags);
 void RavenFlipArea(RavenSession* s, ClientWindow* win, int x, int y, int w, int h);
+RavenEvent* RavenGetEvent(RavenSession* s);
+void RavenDrawWindowDecoration(ClientWindow* win, GraphicsContext* gfx);
 
 #endif

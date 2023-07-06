@@ -22,6 +22,7 @@ MQueue* msgQueue = NULL;
 
 Window* winHead = NULL;
 Window* winTail = NULL;
+Window* winFocus = NULL;
 char windowLock = 0;
 uint64_t nextWinID = 1;
 const uint32_t cursorBuf[10*16] = {

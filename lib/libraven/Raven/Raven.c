@@ -1,6 +1,7 @@
 #include "Raven.h"
 #include <Common/Alloc.h>
 #include <System/SharedMemory.h>
+#include <Media/Graphics.h>
 
 RavenSession* NewRavenSession() {
     RavenSession* s = malloc(sizeof(RavenSession));
@@ -40,4 +41,26 @@ void RavenFlipArea(RavenSession* s, ClientWindow* win, int x, int y, int w, int 
     packet.flipBuffer.w = w;
     packet.flipBuffer.h = h;
     MQueue_SendToServer(s->raven,&packet,sizeof(RavenPacket));
+}
+
+RavenEvent* RavenGetEvent(RavenSession* s) {
+    size_t size;
+    RavenEvent* packet = MQueue_RecieveFromServer(s->raven,&size);
+    if(size != sizeof(RavenEvent)) {
+        free(packet);
+        return NULL;
+    }
+    return packet;
+}
+
+void RavenDrawWindowDecoration(ClientWindow* win, GraphicsContext* gfx) {
+    Graphics_DrawRect(gfx,0,0,gfx->w,1,0xff555555);
+    Graphics_DrawRect(gfx,0,gfx->h-1,gfx->w,1,0xff555555);
+    Graphics_DrawRect(gfx,0,0,1,gfx->h,0xff555555);
+    Graphics_DrawRect(gfx,gfx->w-1,0,1,gfx->h,0xff555555);
+    for(int i=2; i < 19; i+=4) {
+        Graphics_DrawRect(gfx,20,i,40,1,0xff555555);
+    }
+    Graphics_DrawRect(gfx,18,1,1,18,0xff555555);
+    Graphics_DrawRect(gfx,1,18,18,1,0xff555555);
 }
