@@ -13,12 +13,12 @@ pub export var DriverInfo = devlib.RyuDriverInfo{
 var packetID: usize = 0;
 var packetData: [3]u8 = .{ 0, 0, 0 };
 
-var kbdBuffer: [64]u8 = [_]u8{0} ** 64;
+var kbdBuffer: [256]u8 = [_]u8{0} ** 256;
 var kbdRead: usize = 0;
 var kbdWrite: usize = 0;
 var kbdEventQueue: devlib.EventQueue = devlib.EventQueue{};
 
-var mouseBuffer: [64]u8 = [_]u8{0} ** 64;
+var mouseBuffer: [256]u8 = [_]u8{0} ** 256;
 var mouseRead: usize = 0;
 var mouseWrite: usize = 0;
 var mouseEventQueue: devlib.EventQueue = devlib.EventQueue{};
@@ -78,7 +78,7 @@ pub fn PS2KbdIRQ() callconv(.C) void {
         return;
     const data = devlib.io.inb(0x60);
     kbdBuffer[kbdWrite] = data;
-    kbdWrite = (kbdWrite + 1) % 64;
+    kbdWrite = (kbdWrite + 1) % 256;
     if (kbdEventQueue.threadHead != null) {
         DriverInfo.krnlDispatch.?.wakeupEvent(&kbdEventQueue, 0);
     }
@@ -87,10 +87,12 @@ pub fn PS2KbdIRQ() callconv(.C) void {
 pub fn PS2MouseIRQ() callconv(.C) void {
     packetData[packetID] = devlib.io.inb(0x60);
     if (packetID == 2) {
-        mouseBuffer[mouseWrite] = packetData[0];
-        mouseBuffer[(mouseWrite + 1) % 64] = packetData[1];
-        mouseBuffer[(mouseWrite + 2) % 64] = packetData[2];
-        mouseWrite = (mouseWrite + 3) % 64;
+        if ((mouseWrite + 3) % 256 != mouseRead) {
+            mouseBuffer[mouseWrite] = packetData[0];
+            mouseBuffer[(mouseWrite + 1) % 256] = packetData[1];
+            mouseBuffer[(mouseWrite + 2) % 256] = packetData[2];
+            mouseWrite = (mouseWrite + 3) % 256;
+        }
         if (mouseEventQueue.threadHead != null) {
             DriverInfo.krnlDispatch.?.wakeupEvent(&mouseEventQueue, 0);
         }
@@ -126,9 +128,9 @@ pub fn PS2DevRead(inode: *devlib.fs.Inode, offset: isize, addr: *void, len: isiz
         }
         const buf = @as([*]u8, @ptrFromInt(@intFromPtr(addr)))[0..3];
         buf[0] = mouseBuffer[mouseRead];
-        buf[1] = mouseBuffer[(mouseRead + 1) % 64];
-        buf[2] = mouseBuffer[(mouseRead + 2) % 64];
-        mouseRead = (mouseRead + 3) % 64;
+        buf[1] = mouseBuffer[(mouseRead + 1) % 256];
+        buf[2] = mouseBuffer[(mouseRead + 2) % 256];
+        mouseRead = (mouseRead + 3) % 256;
         return 3;
     } else {
         // PS/2 Keyboard
@@ -142,7 +144,7 @@ pub fn PS2DevRead(inode: *devlib.fs.Inode, offset: isize, addr: *void, len: isiz
         }
         const buf = @as(*u8, @ptrFromInt(@intFromPtr(addr)));
         buf.* = kbdBuffer[kbdRead];
-        kbdRead = (kbdRead + 1) % 64;
+        kbdRead = (kbdRead + 1) % 256;
         return 1;
     }
 }

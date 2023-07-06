@@ -3,7 +3,7 @@
 #include <Common/Alloc.h>
 
 void UIDrawBaseWindow(GraphicsContext* gfx) {
-    Graphics_DrawRect(gfx,0,0,gfx->w,gfx->h,0xff09090b);
+    Graphics_DrawRect(gfx,0,0,gfx->w,gfx->h,0xff18181b);
     Graphics_DrawRect(gfx,0,0,gfx->w,64,0xc018181b);
     Graphics_DrawRectOutline(gfx,0,0,gfx->w,gfx->h,0xff27272a);
     Graphics_DrawRect(gfx,0,64,gfx->w,1,0xff27272a);

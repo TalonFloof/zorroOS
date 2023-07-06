@@ -135,6 +135,9 @@ void Redraw(int x, int y, int w, int h) {
         }
     }
     for(int i=y; i < y+h; i++) {
+        if(i < 0 || i >= fbInfo.height) {
+            break;
+        }
         memcpy(&fbInfo.addr[(i*(fbInfo.pitch/bytes))+x],&fbInfo.back[(i*(fbInfo.pitch/bytes))+x],w*4);
     }
     SpinlockRelease(&windowLock);

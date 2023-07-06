@@ -18,16 +18,38 @@ void invertPixel(int x, int y) {
 }
 
 void renderInvertOutline(int x, int y, int w, int h) {
-    for(int i=0; i < w; i++) {
-        if(i == 0 || i == w - 1) {
-            for(int j=0; j < h; j++) {
-                invertPixel(x + i, y + j);
-            }
-        } else {
-            invertPixel(x + i, y);
-            invertPixel(x + i, y + (h - 1));
-        }
+    for(int i=x+5; i < x+(w-5); i++) {
+        invertPixel(i,y);
+        invertPixel(i,y+(h-1));
     }
+    for(int i=y+5; i < y+(h-5); i++) {
+        invertPixel(x,i);
+        invertPixel(x+(w-1),i);
+    }
+    // Top Left
+    invertPixel(x+3,y+1);
+    invertPixel(x+4,y+1);
+    invertPixel(x+2,y+2);
+    invertPixel(x+1,y+3);
+    invertPixel(x+1,y+4);
+    // Top Right
+    invertPixel((x+w)-5,y+1);
+    invertPixel((x+w)-4,y+1);
+    invertPixel((x+w)-3,y+2);
+    invertPixel((x+w)-2,y+3);
+    invertPixel((x+w)-2,y+4);
+    // Bottom Left
+    invertPixel(x+3,(y+h)-2);
+    invertPixel(x+4,(y+h)-2);
+    invertPixel(x+2,(y+h)-3);
+    invertPixel(x+1,(y+h)-4);
+    invertPixel(x+1,(y+h)-5);
+    // Bottom Right
+    invertPixel((x+w)-5,(y+h)-2);
+    invertPixel((x+w)-4,(y+h)-2);
+    invertPixel((x+w)-3,(y+h)-3);
+    invertPixel((x+w)-2,(y+h)-4);
+    invertPixel((x+w)-2,(y+h)-5);
 }
 
 void MouseThread() {

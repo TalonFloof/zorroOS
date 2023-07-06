@@ -46,26 +46,14 @@ pub export fn ExceptionHandler(entry: u8, con: *HAL.Arch.Context) callconv(.C) v
 }
 pub export fn IRQHandler(entry: u8, con: *HAL.Arch.Context) callconv(.C) void {
     if (entry == 0xfd or entry == 0xf2 or entry == 0x20) { // Reschedule (either via ThreadYield, IPI, or Preemption Clock)
-        if (entry == 0x20) {
-            const hcb = HAL.Arch.GetHCB();
-            if (hcb.hartID == 0) {
-                Thread.ticks += 1;
-            }
-            if (hcb.quantumsLeft > 1) {
-                hcb.quantumsLeft -= 1;
-                apic.write(0xb0, 0);
-                return;
-            }
-        }
         if (entry != 0xfd) {
             apic.write(0xb0, 0);
         }
-        const hcb = HAL.Arch.GetHCB();
-        hcb.activeThread.?.activeUstack = hcb.activeUstack;
-        hcb.activeThread.?.context = con.*;
-        hcb.activeThread.?.fcontext.Save();
-        Thread.Reschedule(entry == 0x20);
-        unreachable;
+        Thread.Tick(con, switch (entry) {
+            0x20 => 0,
+            0xfd => 1,
+            else => 1,
+        });
     } else if (HAL.Arch.irqISRs[entry - 0x20]) |isr| {
         isr();
     }

@@ -257,6 +257,24 @@ pub fn GetNextThread() *Thread {
     }
 }
 
+pub fn Tick(con: *HAL.Arch.Context, tickType: u8) void {
+    if (tickType == 0) {
+        const hcb = HAL.Arch.GetHCB();
+        if (hcb.hartID == 0) {
+            ticks += 1;
+        }
+        if (hcb.quantumsLeft > 1) {
+            hcb.quantumsLeft -= 1;
+            return;
+        }
+    }
+    const hcb = HAL.Arch.GetHCB();
+    hcb.activeThread.?.activeUstack = hcb.activeUstack;
+    hcb.activeThread.?.context = con.*;
+    hcb.activeThread.?.fcontext.Save();
+    Reschedule(tickType == 0);
+}
+
 pub fn Reschedule(demote: bool) noreturn {
     const hcb = HAL.Arch.GetHCB();
     if (hcb.activeThread != null) {
