@@ -115,13 +115,12 @@ void Redraw(int x, int y, int w, int h) {
                 uint32_t pixel = win->frontBuf[((i - win->y)*win->w)+(j-win->x)];
                 if ((pixel & 0xFF000000) == 0xFF000000 || (win->flags & FLAG_OPAQUE) != 0) {
                     fbInfo.back[(i*(fbInfo.pitch/bytes))+j] = pixel;
-                    fbInfo.addr[(i*(fbInfo.pitch/bytes))+j] = pixel;
                 } else if (((pixel & 0xFF000000) != 0x00000000 && (win->flags & FLAG_OPAQUE) == 0) || (win->flags & FLAG_ACRYLIC)) {
                     uint32_t result = BlendPixel(fbInfo.back[(i*(fbInfo.pitch/bytes))+j],pixel);
                     fbInfo.back[(i*(fbInfo.pitch/bytes))+j] = result;
-                    fbInfo.addr[(i*(fbInfo.pitch/bytes))+j] = result;
                 }
             }
+            memcpy(&fbInfo.addr[(i*(fbInfo.pitch/bytes))+fX1],&fbInfo.back[(i*(fbInfo.pitch/bytes))+fX1],((fX2-fX1)+1)*4);
           }
         }
         if(win == &backgroundWin) {

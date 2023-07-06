@@ -25,7 +25,7 @@ pub const PFNEntry = struct {
     pte: usize,
 };
 
-pub fn Initialize(begin: usize, entryCount: usize, ranges: *[32]Memory.PhysicalRange) void {
+pub fn Initialize(begin: usize, entryCount: usize, ranges: *[64]Memory.PhysicalRange) void {
     pfnDatabase = @as([*]PFNEntry, @ptrFromInt(begin))[0..entryCount];
     for (0..pfnDatabase.len) |i| {
         pfnDatabase[i].next = null;

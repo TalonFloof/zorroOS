@@ -71,8 +71,12 @@ void MouseThread() {
                     winDrag->x = cursorWin.x - winX;
                     winDrag->y = cursorWin.y - winY;
                     MoveWinToFront(winDrag);
-                    Redraw(oldX,oldY,winDrag->w,winDrag->h);
-                    Redraw(winDrag->x,winDrag->y,winDrag->w,winDrag->h);
+                    if(oldX != winDrag->x || oldY != winDrag->y) {
+                        Redraw(oldX,oldY,winDrag->w,winDrag->h);
+                        Redraw(winDrag->x,winDrag->y,winDrag->w,winDrag->h);
+                    } else {
+                        renderInvertOutline(winDrag->x, winDrag->y, winDrag->w, winDrag->h);
+                    }
                     winDrag = NULL;
                 } else if (winFocus != NULL) {
                     if(cursorWin.x >= winFocus->x && cursorWin.x <= winFocus->x+winFocus->w && cursorWin.y >= winFocus->y && cursorWin.y <= winFocus->y+winFocus->h) {

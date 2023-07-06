@@ -1,7 +1,7 @@
 build: limine-zig
 	nasm -f elf64 ryu/hal/x86_64/_lowlevel.s -o ryu/_lowlevel.o; \
 	cd ryu; \
-	zig build -Doptimize=ReleaseSafe; \
+	zig build -Doptimize=Debug; \
 	rm -f -r zig-cache _lowlevel.o; \
 	cd ..
 	mkdir -p drivers/out
@@ -14,6 +14,9 @@ build: limine-zig
 	cd userspace; \
 	make; \
 	cd ..
+	cd files/iconData; \
+	python3 genIconPack.py; \
+	cd ../..
 
 limine-zig:
 	git clone https://github.com/limine-bootloader/limine-zig.git --depth=1

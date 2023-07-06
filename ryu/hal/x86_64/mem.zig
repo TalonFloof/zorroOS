@@ -6,7 +6,7 @@ const HAL = @import("root").HAL;
 export var memmap_request: limine.MemoryMapRequest = .{};
 
 pub fn init(kfStart: usize, kfEnd: usize) void {
-    var ranges: [32]Memory.PhysicalRange = [_]Memory.PhysicalRange{.{ .start = 0, .end = 0 }} ** 32;
+    var ranges: [64]Memory.PhysicalRange = [_]Memory.PhysicalRange{.{ .start = 0, .end = 0 }} ** 64;
     var i: usize = 0;
     if (memmap_request.response) |response| {
         for (response.entries()) |entry| {

@@ -58,9 +58,9 @@ void RavenDrawWindowDecoration(ClientWindow* win, GraphicsContext* gfx) {
     Graphics_DrawRect(gfx,0,gfx->h-1,gfx->w,1,0xff555555);
     Graphics_DrawRect(gfx,0,0,1,gfx->h,0xff555555);
     Graphics_DrawRect(gfx,gfx->w-1,0,1,gfx->h,0xff555555);
-    for(int i=2; i < 19; i+=4) {
+    for(int i=3; i < 18; i+=4) {
         Graphics_DrawRect(gfx,20,i,40,1,0xff555555);
     }
-    Graphics_DrawRect(gfx,18,1,1,18,0xff555555);
-    Graphics_DrawRect(gfx,1,18,18,1,0xff555555);
+    Graphics_DrawRect(gfx,16,1,1,16,0xff555555);
+    Graphics_DrawRect(gfx,1,16,16,1,0xff555555);
 }

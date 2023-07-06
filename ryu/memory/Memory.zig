@@ -8,7 +8,7 @@ pub const PhysicalRange = struct {
     end: usize = 0,
 };
 
-pub fn Initialize(ranges: *[32]PhysicalRange, initialPD: ?Paging.PageDirectory) void {
+pub fn Initialize(ranges: *[64]PhysicalRange, initialPD: ?Paging.PageDirectory) void {
     Paging.initialPageDir = initialPD;
     var highestAddress: usize = 0x100000000;
     for (ranges) |r| {

@@ -15,6 +15,7 @@ limine-zig/
 zig-cache/
 zig-out/
 root/bin/
+root/System/Icons/IconPack
 
 # Ignore common editor/system specific metadata
 .DS_Store
