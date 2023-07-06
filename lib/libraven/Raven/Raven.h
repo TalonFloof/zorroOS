@@ -75,6 +75,7 @@ typedef struct {
     int64_t id;
     int w;
     int h;
+    int flags;
     int64_t backID;
     uint32_t* backBuf;
 } ClientWindow;

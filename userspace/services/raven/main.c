@@ -89,6 +89,7 @@ void Redraw(int x, int y, int w, int h) {
     int max_x, max_y;
     max_x = x+(w-1);
     max_y = y+(h);
+    int bytes = fbInfo.bpp/8;
     while(win != NULL) {
         if(!(max_x <= win->x || max_y <= win->y || x >= (win->x+win->w) || y >= (win->y+win->h))) {
           int fX1, fX2, fY1, fY2;
@@ -96,7 +97,6 @@ void Redraw(int x, int y, int w, int h) {
           fX2 = MIN(max_x,win->x+(win->w-1));
           fY1 = MAX(y,win->y);
           fY2 = MIN(max_y,win->y+(win->h-1));
-          int bytes = fbInfo.bpp/8;
           if((win->flags & FLAG_ACRYLIC)) {
             StackBlur(fbInfo.back,fbInfo.pitch/(fbInfo.bpp/8),4,MAX(1,fX1),MIN(fbInfo.width-1,fX2),MAX(1,fY1),MIN(fbInfo.height-1,fY2));
           }
@@ -120,7 +120,6 @@ void Redraw(int x, int y, int w, int h) {
                     fbInfo.back[(i*(fbInfo.pitch/bytes))+j] = result;
                 }
             }
-            memcpy(&fbInfo.addr[(i*(fbInfo.pitch/bytes))+fX1],&fbInfo.back[(i*(fbInfo.pitch/bytes))+fX1],((fX2-fX1)+1)*4);
           }
         }
         if(win == &backgroundWin) {
@@ -134,6 +133,9 @@ void Redraw(int x, int y, int w, int h) {
         } else {
             win = win->next;
         }
+    }
+    for(int i=y; i < y+h; i++) {
+        memcpy(&fbInfo.addr[(i*(fbInfo.pitch/bytes))+x],&fbInfo.back[(i*(fbInfo.pitch/bytes))+x],w*4);
     }
     SpinlockRelease(&windowLock);
 }

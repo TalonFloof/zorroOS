@@ -28,6 +28,7 @@ ClientWindow* NewRavenWindow(RavenSession* s, int w, int h, int flags) {
     win->backBuf = MapSharedMemory(response->backBuf);
     win->w = w;
     win->h = h;
+    win->flags = flags;
     free(response);
     return win;
 }
@@ -51,16 +52,4 @@ RavenEvent* RavenGetEvent(RavenSession* s) {
         return NULL;
     }
     return packet;
-}
-
-void RavenDrawWindowDecoration(ClientWindow* win, GraphicsContext* gfx) {
-    Graphics_DrawRect(gfx,0,0,gfx->w,1,0xff555555);
-    Graphics_DrawRect(gfx,0,gfx->h-1,gfx->w,1,0xff555555);
-    Graphics_DrawRect(gfx,0,0,1,gfx->h,0xff555555);
-    Graphics_DrawRect(gfx,gfx->w-1,0,1,gfx->h,0xff555555);
-    for(int i=3; i < 18; i+=4) {
-        Graphics_DrawRect(gfx,20,i,40,1,0xff555555);
-    }
-    Graphics_DrawRect(gfx,16,1,1,16,0xff555555);
-    Graphics_DrawRect(gfx,1,16,16,1,0xff555555);
 }

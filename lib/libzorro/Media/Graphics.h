@@ -32,6 +32,7 @@ typedef struct {
 
 GraphicsContext* Graphics_NewContext(uint32_t* buf, int w, int h);
 void Graphics_DrawRect(GraphicsContext* context, int x, int y, int w, int h, uint32_t color);
+void Graphics_DrawRectOutline(GraphicsContext* context, int x, int y, int w, int h, uint32_t color);
 void Graphics_RenderMonoBitmap(GraphicsContext* context, unsigned int x, unsigned int y, unsigned int w, unsigned int h, 
                                   unsigned int scW, unsigned int scH, uint8_t* data, uint32_t color);
 void Graphics_RenderGlyph(GraphicsContext* context, unsigned int x, unsigned int y, uint32_t color, PSFHeader* font, int scale, uint8_t glyph);

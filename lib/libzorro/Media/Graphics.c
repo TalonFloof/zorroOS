@@ -25,6 +25,13 @@ void Graphics_DrawRect(GraphicsContext* context, int x, int y, int w, int h, uin
     }
 }
 
+void Graphics_DrawRectOutline(GraphicsContext* context, int x, int y, int w, int h, uint32_t color) {
+    Graphics_DrawRect(context,x,y,w,1,color);
+    Graphics_DrawRect(context,x,y+(h-1),w,1,color);
+    Graphics_DrawRect(context,x,y,1,h,color);
+    Graphics_DrawRect(context,x+(w-1),y,1,h,color);
+}
+
 void Graphics_RenderMonoBitmap(GraphicsContext* context, unsigned int x, unsigned int y, unsigned int w, unsigned int h, 
                                 unsigned int scW, unsigned int scH, uint8_t* data, uint32_t color) {
     uint32_t x_ratio = ((w<<16)/scW)+1;
