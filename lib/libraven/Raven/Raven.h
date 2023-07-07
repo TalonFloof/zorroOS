@@ -9,6 +9,8 @@ typedef enum {
     RAVEN_ACK,
     RAVEN_OKEE_BYEEEE, // the furry version of a goodbye message :3
     RAVEN_CREATE_WINDOW,
+    RAVEN_MOVE_WINDOW,
+    RAVEN_GET_RESOLUTION,
     RAVEN_DESTROY_WINDOW,
     RAVEN_FLIP_BUFFER,
 } RavenPacketType;
@@ -37,8 +39,19 @@ typedef struct {
 
 typedef struct {
     int64_t id;
+    int x;
+    int y;
+} RavenMoveWindowData;
+
+typedef struct {
+    int64_t id;
     int64_t backBuf;
 } RavenCreateWindowResponse;
+
+typedef struct {
+    int w;
+    int h;
+} RavenGetResolutionResponse;
 
 typedef struct {
     uint32_t key;
@@ -63,6 +76,7 @@ typedef struct {
     RavenPacketType type;
     union {
         RavenCreateWindow create;
+        RavenMoveWindowData move;
         RavenFlipBuffer flipBuffer;
     };
 } RavenPacket;
@@ -87,6 +101,8 @@ typedef struct {
 
 RavenSession* NewRavenSession();
 ClientWindow* NewRavenWindow(RavenSession* s, int w, int h, int flags);
+void RavenMoveWindow(RavenSession* s, ClientWindow* win, int x, int y);
+void RavenGetResolution(RavenSession* s, int* w, int* h);
 void RavenFlipArea(RavenSession* s, ClientWindow* win, int x, int y, int w, int h);
 RavenEvent* RavenGetEvent(RavenSession* s);
 void RavenDrawWindowDecoration(ClientWindow* win, GraphicsContext* gfx);

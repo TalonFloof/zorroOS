@@ -8,6 +8,9 @@ build: limine-zig
 	cd drivers/ps2; \
 	zig build -Doptimize=ReleaseSmall; \
 	cd ../..
+	cd drivers/pci; \
+	zig build -Doptimize=Debug; \
+	cd ../..
 	cd lib; \
 	make; \
 	cd ..

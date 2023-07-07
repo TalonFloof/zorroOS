@@ -12,6 +12,8 @@ pub const Status = enum(c_int) {
 pub const RyuDispatch = extern struct {
     // Basic
     put: *const fn ([*c]const u8) callconv(.C) void,
+    putRaw: *const fn ([*c]u8, usize) callconv(.C) void,
+    putNumber: *const fn (u64, u8, bool, u8, usize) callconv(.C) void,
     abort: *const fn ([*c]const u8) callconv(.C) noreturn,
     // Memory
     staticAlloc: *const fn (usize) callconv(.C) *void,

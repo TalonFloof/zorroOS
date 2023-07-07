@@ -135,7 +135,9 @@ void Redraw(int x, int y, int w, int h) {
         }
     }
     for(int i=y; i < y+h; i++) {
-        if(i < 0 || i >= fbInfo.height) {
+        if(i < 0) {
+            continue;
+        } else if(i >= fbInfo.height) {
             break;
         }
         memcpy(&fbInfo.addr[(i*(fbInfo.pitch/bytes))+x],&fbInfo.back[(i*(fbInfo.pitch/bytes))+x],w*4);
@@ -209,8 +211,8 @@ int main() {
     void* mouseStack = MMap(NULL,0x8000,3,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
     uintptr_t mouseThr = NewThread("Raven Mouse Thread",&MouseThread,(void*)(((uintptr_t)mouseStack)+0x8000));
     msgQueue = MQueue_Bind("/dev/mqueue/Raven");
-    LoadBackground("/System/Wallpapers/Autumn.qoi");
-    Redraw(0,0,fbInfo.width,fbInfo.height);
+    LoadBackground("/System/Wallpapers/Aurora.qoi");
+    //Redraw(0,0,fbInfo.width,fbInfo.height);
     while(1) {
         int64_t teamID;
         RavenPacket* packet = MQueue_RecieveFromClient(msgQueue,&teamID,NULL);
@@ -243,6 +245,26 @@ int main() {
                 MQueue_SendToClient(msgQueue,teamID,&response,sizeof(RavenCreateWindowResponse));
                 SpinlockRelease(&windowLock);
                 Redraw(win->x,win->y,win->w,win->h);
+                break;
+            }
+            case RAVEN_MOVE_WINDOW: {
+                int oldX, oldY;
+                SpinlockAcquire(&windowLock);
+                Window* win = GetWindowByID(packet->move.id);
+                oldX = win->x;
+                oldY = win->y;
+                win->x = packet->move.x;
+                win->y = packet->move.y;
+                SpinlockRelease(&windowLock);
+                Redraw(oldX,oldY,win->w,win->h);
+                Redraw(win->x,win->y,win->w,win->h);
+                break;
+            }
+            case RAVEN_GET_RESOLUTION: {
+                RavenGetResolutionResponse response;
+                response.w = fbInfo.width;
+                response.h = fbInfo.height;
+                MQueue_SendToClient(msgQueue,teamID,&response,sizeof(RavenGetResolutionResponse));
                 break;
             }
             case RAVEN_FLIP_BUFFER: {

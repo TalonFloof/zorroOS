@@ -33,6 +33,8 @@ pub fn InitDrivers() void {
 
 pub export const KDriverDispatch = devlib.RyuDispatch{
     .put = &DriverPut,
+    .putRaw = &DriverPutRaw,
+    .putNumber = &DriverPutNumber,
     .abort = &DriverAbort,
     .staticAlloc = &DriverStaticAlloc,
     .staticAllocAnon = &DriverStaticAllocAnon,
@@ -54,6 +56,29 @@ pub export const KDriverDispatch = devlib.RyuDispatch{
 
 fn DriverPut(s: [*c]const u8) callconv(.C) void {
     HAL.Console.Put("{s}", .{s[0..std.mem.len(s)]});
+}
+
+fn DriverPutRaw(s: [*c]u8, len: usize) callconv(.C) void {
+    HAL.Console.Put("{s}", .{@as([*]u8, @ptrCast(s))[0..len]});
+}
+
+fn DriverPutNumber(n: u64, base: u8, isSigned: bool, padding: u8, width: usize) callconv(.C) void {
+    var buf: [64]u8 = [_]u8{0} ** 64;
+    if (isSigned) {
+        const size = std.fmt.formatIntBuf(buf[0..64], @as(i64, @bitCast(n)), base, .lower, std.fmt.FormatOptions{
+            .fill = padding,
+            .width = if (width == 0) null else width,
+            .alignment = .right,
+        });
+        HAL.Console.Put("{s}", .{buf[0..size]});
+    } else {
+        const size = std.fmt.formatIntBuf(buf[0..64], n, base, .lower, std.fmt.FormatOptions{
+            .fill = padding,
+            .width = if (width == 0) null else width,
+            .alignment = .right,
+        });
+        HAL.Console.Put("{s}", .{buf[0..size]});
+    }
 }
 
 fn DriverAbort(s: [*c]const u8) callconv(.C) noreturn {
