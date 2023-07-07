@@ -59,6 +59,13 @@ pub fn NewDirInode(name: []const u8) *Inode {
     inode.stat.gid = 1;
     inode.stat.nlinks = 1;
     inode.stat.mode = 0o0040755;
+    const time: [2]i64 = HAL.Arch.GetCurrentTimestamp();
+    inode.stat.ctime = time[0];
+    inode.stat.reserved1 = @bitCast(time[1]);
+    inode.stat.mtime = time[0];
+    inode.stat.reserved2 = @bitCast(time[1]);
+    inode.stat.atime = time[0];
+    inode.stat.reserved3 = @bitCast(time[1]);
     AddInodeToParent(inode);
     @as(*Spinlock, @ptrCast(&rootInode.?.lock)).release();
     return inode;

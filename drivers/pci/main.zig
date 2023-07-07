@@ -1,5 +1,6 @@
 const devlib = @import("devlib");
 const std = @import("std");
+const pci = @import("pci.zig");
 
 const PCI_VENDOR_ID: u16 = 0x00;
 const PCI_DEVICE_ID: u16 = 0x02;
@@ -28,7 +29,7 @@ pub export var DriverInfo = devlib.RyuDriverInfo{
     .apiMinor = 1,
     .apiMajor = 0,
     .drvName = "PCIDriver",
-    .exportedDispatch = null,
+    .exportedDispatch = @alignCast(@constCast(@ptrCast(&interface))),
     .loadFn = &LoadDriver,
     .unloadFn = &UnloadDriver,
 };
@@ -43,19 +44,38 @@ pub const writer = Writer{ .context = .{} };
 
 const PCIDevice = extern struct {};
 
-pub fn ReadU8(bus: u8, slot: u8, fun: u8, offset: u16) u8 {
+pub fn ReadU8(bus: u8, slot: u8, fun: u8, offset: u16) callconv(.C) u8 {
     devlib.io.outw(0xcf8, (@as(u32, @intCast(bus)) << 16) | (@as(u32, @intCast(slot)) << 11) | (@as(u32, @intCast(fun)) << 8) | (@as(u32, @intCast(offset)) & 0xFC) | 0x80000000);
     return @truncate(devlib.io.inw(0xcfc) >> @intCast((offset & 3) * 8));
 }
 
-pub fn ReadU16(bus: u8, slot: u8, fun: u8, offset: u16) u16 {
+pub fn ReadU16(bus: u8, slot: u8, fun: u8, offset: u16) callconv(.C) u16 {
     devlib.io.outw(0xcf8, (@as(u32, @intCast(bus)) << 16) | (@as(u32, @intCast(slot)) << 11) | (@as(u32, @intCast(fun)) << 8) | (@as(u32, @intCast(offset)) & 0xFC) | 0x80000000);
     return @truncate(devlib.io.inw(0xcfc) >> @intCast((offset & 2) * 8));
 }
 
-pub fn ReadU32(bus: u8, slot: u8, fun: u8, offset: u16) u32 {
+pub fn ReadU32(bus: u8, slot: u8, fun: u8, offset: u16) callconv(.C) u32 {
     devlib.io.outw(0xcf8, (@as(u32, @intCast(bus)) << 16) | (@as(u32, @intCast(slot)) << 11) | (@as(u32, @intCast(fun)) << 8) | (@as(u32, @intCast(offset)) & 0xFC) | 0x80000000);
     return devlib.io.inw(0xcfc);
+}
+
+pub fn WriteU8(bus: u8, slot: u8, fun: u8, offset: u16, data: u8) callconv(.C) void {
+    const oldData: u32 = ReadU32(bus, slot, fun, offset);
+    const pos: u5 = @intCast((offset & 0x3) * 8);
+    devlib.io.outw(0xcf8, (@as(u32, @intCast(bus)) << 16) | (@as(u32, @intCast(slot)) << 11) | (@as(u32, @intCast(fun)) << 8) | (@as(u32, @intCast(offset)) & 0xFC) | 0x80000000);
+    devlib.io.outw(0xcfc, (oldData & (~(@as(u32, @intCast(0xFF)) << pos))) | (@as(u32, @intCast(data)) << pos));
+}
+
+pub fn WriteU16(bus: u8, slot: u8, fun: u8, offset: u16, data: u16) callconv(.C) void {
+    const oldData: u32 = ReadU32(bus, slot, fun, offset);
+    const pos: u5 = @intCast((offset & 0x2) * 8);
+    devlib.io.outw(0xcf8, (@as(u32, @intCast(bus)) << 16) | (@as(u32, @intCast(slot)) << 11) | (@as(u32, @intCast(fun)) << 8) | (@as(u32, @intCast(offset)) & 0xFC) | 0x80000000);
+    devlib.io.outw(0xcfc, (oldData & (~(@as(u32, @intCast(0xFFFF)) << pos))) | (@as(u32, @intCast(data)) << pos));
+}
+
+pub fn WriteU32(bus: u8, slot: u8, fun: u8, offset: u16, data: u32) callconv(.C) void {
+    devlib.io.outw(0xcf8, (@as(u32, @intCast(bus)) << 16) | (@as(u32, @intCast(slot)) << 11) | (@as(u32, @intCast(fun)) << 8) | (@as(u32, @intCast(offset)) & 0xFC) | 0x80000000);
+    devlib.io.outw(0xcfc, data);
 }
 
 pub fn PCIDevToString(class: u8, subClass: u8, progIF: u8) []const u8 {
@@ -291,6 +311,15 @@ pub fn PCIDevToString(class: u8, subClass: u8, progIF: u8) []const u8 {
     };
 }
 
+const interface: pci.PCIInterface = pci.PCIInterface{
+    .readU8 = &ReadU8,
+    .readU16 = &ReadU16,
+    .readU32 = &ReadU32,
+    .writeU8 = &WriteU8,
+    .writeU16 = &WriteU16,
+    .writeU32 = &WriteU32,
+};
+
 pub fn LoadDriver() callconv(.C) devlib.Status {
     if (DriverInfo.krnlDispatch) |dispatch| {
         dispatch.put("Scanning PCI Buses...\n");
@@ -322,6 +351,7 @@ pub fn LoadDriver() callconv(.C) devlib.Status {
                 }
             }
         }
+        // TODO: Add PCIe Enumeration
         return .Okay;
     }
     return .Failure;

@@ -471,3 +471,13 @@ pub fn DebugWaitForSalute() void {
 pub fn GetStartupTimestamp() i64 {
     return initialUNIXTime;
 }
+
+pub fn GetCurrentTimestamp() [2]i64 { // Returns a Nanosecond Precision Timestamp (in reality the precision is actually microsecond precision due to limitations with the HPET)
+    var ret: [2]i64 = .{ 0, 0 };
+    var addr: usize = acpi.HPETAddr.?.address + 0xffff800000000000;
+    const hpetAddr: [*]align(1) volatile u64 = @as([*]align(1) volatile u64, @ptrFromInt(addr));
+    const us: u64 = hpetAddr[30] / (@as(u64, @intCast(apic.hpetTicksPer100NS)) * 10);
+    ret[0] = initialUNIXTime + @as(i64, @intCast(us / 1000000));
+    ret[1] = @rem(@as(i64, @intCast(us)), 1000000) * 1000;
+    return ret;
+}

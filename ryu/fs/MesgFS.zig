@@ -226,6 +226,13 @@ pub fn Create(inode: *FS.Inode, name: [*c]const u8, mode: usize) callconv(.C) is
     in.stat.gid = 1;
     in.stat.mode = 0o0020666;
     in.stat.size = 0;
+    const time: [2]i64 = HAL.Arch.GetCurrentTimestamp();
+    in.stat.ctime = time[0];
+    in.stat.reserved1 = @bitCast(time[1]);
+    in.stat.mtime = time[0];
+    in.stat.reserved2 = @bitCast(time[1]);
+    in.stat.atime = time[0];
+    in.stat.reserved3 = @bitCast(time[1]);
     in.mountOwner = inode.mountOwner;
     in.parent = inode;
     in.lock = 0;

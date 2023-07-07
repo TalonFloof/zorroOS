@@ -546,6 +546,11 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                     HAL.Console.Put("{s}", .{@as([*]const u8, @ptrCast(s))[0..std.mem.len(s)]});
                     regs.SetReg(0, 0);
                 },
+                .GetUNIXTime => {
+                    const time = HAL.Arch.GetCurrentTimestamp();
+                    @as([*]i64, @ptrFromInt(regs.GetReg(1)))[0] = time[0];
+                    @as([*]i64, @ptrFromInt(regs.GetReg(1)))[1] = time[1];
+                },
                 .ShmAllocate => { // ShmID_t ShmAllocate(size_t size)
                     regs.SetReg(0, @as(u64, @bitCast(Executive.SharedMemory.CreateSHM(@intCast(regs.GetReg(1))))));
                 },

@@ -11,6 +11,9 @@ const x2apic_register_base: usize = 0x800;
 pub var ioapic_redirect: [24]u8 = .{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23 };
 pub var ioapic_activelow: [24]bool = [_]bool{false} ** 24;
 pub var ioapic_leveltrig: [24]bool = [_]bool{false} ** 24;
+pub var hpetPeriod: usize = 0;
+pub var hpetNSPeriod: usize = 0;
+pub var hpetTicksPer100NS: usize = 0;
 
 inline fn x2apicSupport() bool {
     return (HAL.Arch.cpuid(0x1).ecx & (@as(u32, @intCast(1)) << 21)) != 0;
@@ -41,10 +44,14 @@ pub fn setup() void {
     var addr: usize = acpi.HPETAddr.?.address;
     const hpetAddr: [*]align(1) volatile u64 = @as([*]align(1) volatile u64, @ptrFromInt(addr));
     var clock = hpetAddr[0] >> 32;
-    hpetAddr[2] = 0;
-    hpetAddr[32] = (hpetAddr[32] | (1 << 6)) & (~@as(u64, @intCast(0b100)));
-    hpetAddr[30] = 0;
-    hpetAddr[2] = 1;
+    if (HAL.Arch.GetHCB().hartID == 0) {
+        hpetPeriod = clock;
+        hpetNSPeriod = hpetPeriod / 1000000;
+        hpetTicksPer100NS = 100000000 / hpetPeriod;
+        hpetAddr[2] = 0;
+        hpetAddr[30] = 0;
+        hpetAddr[2] = 1;
+    }
     const hz = @as(u64, @intCast(1000000000000000)) / clock;
     var interval = (10 * (1000000000000 / clock));
     const val = (((hz << 16) / (interval)));
