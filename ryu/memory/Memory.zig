@@ -32,7 +32,7 @@ pub fn Initialize(ranges: *[64]PhysicalRange, initialPD: ?Paging.PageDirectory) 
         }
     }
     if (startAddr == 0) {
-        HAL.Crash.Crash(.RyuPFNCorruption, .{ 0xdeaddeaddeaddead, 0, 0, 0 });
+        HAL.Crash.Crash(.RyuPFNCorruption, .{ 0xdeaddeaddeaddead, 0, 0, 0 }, null);
     }
     HAL.Console.Put("Preparing PFN Database [{d} entries, {d} KiB, 0x{x:0>16}]...\n", .{ entries, neededSize / 1024, startAddr });
     PFN.Initialize(startAddr, entries, ranges);

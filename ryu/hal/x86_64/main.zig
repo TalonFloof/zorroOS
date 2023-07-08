@@ -250,6 +250,16 @@ pub const Context = packed struct {
     pub inline fn Enter(self: *Context) noreturn {
         ContextEnter(@as(*allowzero void, @ptrFromInt(@intFromPtr(self))));
     }
+
+    pub fn Dump(self: *Context) void {
+        HAL.Console.Put(" rax 0x{x: <16}    rbx 0x{x: <16}    rcx 0x{x: <16}\n", .{ self.rax, self.rbx, self.rcx });
+        HAL.Console.Put(" rdx 0x{x: <16}    rsi 0x{x: <16}    rdi 0x{x: <16}\n", .{ self.rdx, self.rsi, self.rdi });
+        HAL.Console.Put(" rbp 0x{x: <16}     r8 0x{x: <16}     r9 0x{x: <16}\n", .{ self.rbp, self.r8, self.r9 });
+        HAL.Console.Put(" r10 0x{x: <16}    r11 0x{x: <16}    r12 0x{x: <16}\n", .{ self.r10, self.r11, self.r12 });
+        HAL.Console.Put(" r13 0x{x: <16}    r14 0x{x: <16}    r15 0x{x: <16}\n", .{ self.r13, self.r14, self.r15 });
+        HAL.Console.Put(" rip 0x{x: <16}    rsp 0x{x: <16} rflags 0x{x: <16}\n", .{ self.rip, self.rsp, self.rflags });
+        HAL.Console.Put(" error code: 0x{x}\n", .{self.errcode});
+    }
 };
 
 pub const FloatContext = struct {

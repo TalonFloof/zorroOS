@@ -15,8 +15,6 @@ pub const FBInfo = struct {
 };
 
 pub var bgColor: usize = 0x1e1e2e;
-pub var showCursor: bool = true;
-pub var largeFont: bool = false;
 pub var info: *FBInfo = undefined;
 pub var cursorX: usize = 0;
 pub var cursorY: usize = 0;
@@ -79,41 +77,21 @@ pub fn Init(i: *FBInfo) void {
 
 fn newline() void {
     cursorX = 0;
-    if (largeFont) {
+    if (((cursorY + 1) * 12) >= conHeight) {
+        cursorY = 0;
+    } else {
         cursorY += 1;
-    } else {
-        if (((cursorY + 1) * 12) >= conHeight) {
-            cursorY = 0;
-        } else {
-            cursorY += 1;
-        }
     }
-    if (largeFont) {
-        if (showCursor) {
-            info.set(info, 0, @as(isize, @intCast(cursorY * 20)), info.width, 20, bgColor);
-        }
-    } else {
-        info.set(info, 0, @as(isize, @intCast(cursorY * 12)), info.width, 12, bgColor);
-    }
+    info.set(info, 0, @as(isize, @intCast(cursorY * 12)), info.width, 12, bgColor);
 }
 
 fn conWriteString(_: @TypeOf(.{}), string: []const u8) error{}!usize {
     for (0..string.len) |i| {
         const c = string[i];
-        if (showCursor) {
-            if (largeFont) {
-                info.set(info, @as(isize, @intCast(cursorX * 9)), @as(isize, @intCast(cursorY * 20)), 9, 20, bgColor);
-            } else {
-                info.set(info, @as(isize, @intCast(cursorX * 6)), @as(isize, @intCast(cursorY * 12)), 6, 12, bgColor);
-            }
-        }
+        info.set(info, @as(isize, @intCast(cursorX * 6)), @as(isize, @intCast(cursorY * 12)), 6, 12, bgColor);
         if (c == 8) {
             if (cursorX == 0) {
-                if (largeFont) {
-                    cursorX = info.width / 9;
-                } else {
-                    cursorX = info.width / 6;
-                }
+                cursorX = info.width / 6;
                 cursorY -= 1;
             } else {
                 cursorX -= 1;
@@ -122,38 +100,14 @@ fn conWriteString(_: @TypeOf(.{}), string: []const u8) error{}!usize {
             newline();
         } else {
             if (c >= 0x20 and c <= 0x7e) {
-                if (largeFont) {
-                    fbDrawBitmap(
-                        @as(isize, @intCast(cursorX * 9)),
-                        @as(isize, @intCast(cursorY * 20)),
-                        16,
-                        20,
-                        @constCast(LargeFont[((@as(usize, @intCast(c)) - 0x20) * (20 * 2))..LargeFont.len]),
-                        0xcdd6f4,
-                        false,
-                    );
-                } else {
-                    fbDrawBitmap(@as(isize, @intCast(cursorX * 6)), @as(isize, @intCast(cursorY * 12)), 8, 12, @constCast(HaikuFont[((@as(usize, @intCast(c)) - 0x20) * 12)..HaikuFont.len]), 0xcdd6f4, true);
-                }
+                fbDrawBitmap(@as(isize, @intCast(cursorX * 6)), @as(isize, @intCast(cursorY * 12)), 8, 12, @constCast(HaikuFont[((@as(usize, @intCast(c)) - 0x20) * 12)..HaikuFont.len]), 0xcdd6f4, true);
             }
             cursorX += 1;
-            if (largeFont) {
-                if ((cursorX * 9) >= info.width) {
-                    newline();
-                }
-            } else {
-                if ((cursorX * 6) >= info.width) {
-                    newline();
-                }
+            if ((cursorX * 6) >= info.width) {
+                newline();
             }
         }
-        if (showCursor) {
-            if (largeFont) {
-                info.set(info, @as(isize, @intCast(cursorX * 9)), @as(isize, @intCast(cursorY * 20)), 9, 20, 0xCDD6F4);
-            } else {
-                info.set(info, @as(isize, @intCast(cursorX * 6)), @as(isize, @intCast(cursorY * 12)), 6, 12, 0xCDD6F4);
-            }
-        }
+        info.set(info, @as(isize, @intCast(cursorX * 6)), @as(isize, @intCast(cursorY * 12)), 6, 12, 0xCDD6F4);
     }
     return string.len;
 }
@@ -171,18 +125,8 @@ pub fn EnableDisable(en: bool) void {
     if (en and !conEnabled) {
         cursorX = 0;
         cursorY = 0;
-        if (largeFont) {
-            info.set(info, 0, 0, info.width, 20, bgColor);
-        } else {
-            info.set(info, 0, 0, info.width, 12, bgColor);
-        }
-        if (showCursor) {
-            if (largeFont) {
-                info.set(info, @as(isize, @intCast(cursorX * 9)), @as(isize, @intCast(cursorY * 20)), 9, 20, 0xCDD6F4);
-            } else {
-                info.set(info, @as(isize, @intCast(cursorX * 6)), @as(isize, @intCast(cursorY * 12)), 6, 12, 0xCDD6F4);
-            }
-        }
+        info.set(info, 0, 0, info.width, 12, bgColor);
+        info.set(info, @as(isize, @intCast(cursorX * 6)), @as(isize, @intCast(cursorY * 12)), 6, 12, 0xCDD6F4);
     }
     conEnabled = en;
 }

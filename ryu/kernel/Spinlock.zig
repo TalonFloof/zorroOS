@@ -14,7 +14,7 @@ pub const Spinlock = enum(u8) {
             }
             std.atomic.spinLoopHint();
         }
-        HAL.Crash.Crash(.RyuDeadlock, .{ @intFromPtr(spinlock), 0, 0, 0 });
+        HAL.Crash.Crash(.RyuDeadlock, .{ @intFromPtr(spinlock), 0, 0, 0 }, null);
     }
 
     pub inline fn release(spinlock: *volatile Spinlock) void {

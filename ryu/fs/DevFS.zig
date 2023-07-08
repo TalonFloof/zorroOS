@@ -70,7 +70,7 @@ pub fn UMount(fs: *FS.Filesystem) callconv(.C) void {
 pub fn Init() void {
     FS.RegisterFilesystem("devfs", &Mount, &UMount);
     if (!FS.Mount(FS.GetInode("/dev", FS.rootInode.?).?, null, "devfs")) {
-        HAL.Crash.Crash(.RyuKernelInitializationFailure, .{ 0x2001, 0, 0, 0 });
+        HAL.Crash.Crash(.RyuKernelInitializationFailure, .{ 0x2001, 0, 0, 0 }, null);
     }
     RegisterDevice("null", &nullFile);
     RegisterDevice("zero", &zeroFile);

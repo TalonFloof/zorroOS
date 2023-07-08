@@ -89,7 +89,7 @@ pub var HPETAddr: ?*HPETTable = null;
 pub fn initialize() void {
     if (rsdp_request.response) |rsdp_response| {
         if (@intFromPtr(rsdp_response.address) == 0) {
-            HAL.Crash.Crash(.RyuNoACPI, .{ 0, 0, 0, 0 });
+            HAL.Crash.Crash(.RyuNoACPI, .{ 0, 0, 0, 0 }, null);
         }
         const rsdp: *RSDP = @as(*RSDP, @ptrCast(rsdp_response.address));
         const rsdt = @as(*Header, @ptrFromInt(@as(usize, @intCast(rsdp.RSDT)) + 0xffff800000000000));
@@ -106,7 +106,7 @@ pub fn initialize() void {
             }
         }
     } else {
-        HAL.Crash.Crash(.RyuNoACPI, .{ 0, 0, 0, 0 });
+        HAL.Crash.Crash(.RyuNoACPI, .{ 0, 0, 0, 0 }, null);
     }
     if (MADTAddr) |madt| {
         var entry = &madt.firstEntry;

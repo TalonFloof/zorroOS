@@ -50,7 +50,7 @@ pub fn AllocatePage(tag: PFNType, swappable: bool, pte: usize) ?[]u8 {
     if (pfnZeroedHead) |entry| {
         const phys: usize = ((@intFromPtr(entry) - @intFromPtr(pfnDatabase.ptr)) / @sizeOf(PFNEntry)) << 12;
         if (entry.state != .Zeroed) {
-            HAL.Crash.Crash(.RyuPFNCorruption, .{ phys, @intFromEnum(@as(PFNType, entry.state)), @intFromEnum(PFNType.Zeroed), 0 });
+            HAL.Crash.Crash(.RyuPFNCorruption, .{ phys, @intFromEnum(@as(PFNType, entry.state)), @intFromEnum(PFNType.Zeroed), 0 }, null);
         }
         pfnZeroedHead = entry.next;
         entry.next = null;
@@ -65,7 +65,7 @@ pub fn AllocatePage(tag: PFNType, swappable: bool, pte: usize) ?[]u8 {
     } else if (pfnFreeHead) |entry| {
         const phys: usize = ((@intFromPtr(entry) - @intFromPtr(pfnDatabase.ptr)) / @sizeOf(PFNEntry)) << 12;
         if (entry.state != .Free) {
-            HAL.Crash.Crash(.RyuPFNCorruption, .{ phys, @intFromEnum(@as(PFNType, entry.state)), @intFromEnum(PFNType.Free), 0 });
+            HAL.Crash.Crash(.RyuPFNCorruption, .{ phys, @intFromEnum(@as(PFNType, entry.state)), @intFromEnum(PFNType.Free), 0 }, null);
         }
         pfnFreeHead = entry.next;
         entry.next = null;
@@ -112,7 +112,7 @@ pub fn DereferencePage(page: usize) void {
                 const entry: usize = pfnDatabase[index].pte;
                 const pt = entry & (~@as(usize, @intCast(0xFFF))) - 0xffff800000000000;
                 if (pfnDatabase[pt >> 12].state != .PageTable) {
-                    HAL.Crash.Crash(.RyuPFNCorruption, .{ pt, @intFromEnum(pfnDatabase[pt >> 12].state), @intFromEnum(PFNType.PageTable), 0 });
+                    HAL.Crash.Crash(.RyuPFNCorruption, .{ pt, @intFromEnum(pfnDatabase[pt >> 12].state), @intFromEnum(PFNType.PageTable), 0 }, null);
                 }
                 @as(*usize, @ptrFromInt(entry)).* = 0;
                 pfnFreeHead = &pfnDatabase[index];

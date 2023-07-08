@@ -32,6 +32,8 @@ pub fn EnterDebugger() noreturn {
             }
         }
         const txt = buf[0..i];
+        const iter = std.mem.split(u8, buf[0..i]);
+        _ = iter;
         if (std.mem.eql(u8, txt, "poolInfo")) {
             HAL.Console.Put("StaticPool | Buckets: {} UsedBlocks: {} FreeBlocks: {} TotalBlocks: {}\n", .{ Memory.Pool.StaticPool.buckets, Memory.Pool.StaticPool.usedBlocks, Memory.Pool.StaticPool.totalBlocks - Memory.Pool.StaticPool.usedBlocks, Memory.Pool.StaticPool.totalBlocks });
             HAL.Console.Put("           | Anonymous: {} KiB Committed: {} KiB Active: {} bytes\n", .{ Memory.Pool.StaticPool.anonymousPages * 4, (Memory.Pool.StaticPool.buckets * 512) + (Memory.Pool.StaticPool.anonymousPages * 4), (Memory.Pool.StaticPool.usedBlocks * 16) + (Memory.Pool.StaticPool.anonymousPages * 4096) });

@@ -331,7 +331,7 @@ fn IdleThread() callconv(.C) void {
                         @intFromEnum(@as(Memory.PFN.PFNType, page.state)),
                         @intFromEnum(Memory.PFN.PFNType.Free),
                         0,
-                    });
+                    }, null);
                 }
                 Memory.PFN.pfnFreeHead = page.next;
                 page.next = Memory.PFN.pfnZeroedHead;

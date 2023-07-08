@@ -156,9 +156,9 @@ pub const AccessIsValid = 16;
 pub fn PageFault(pc: usize, addr: usize, accessType: usize) void {
     if (accessType & AccessSupervisor != 0) {
         if (addr >= 0xfffffe8000000000 and addr <= 0xfffffeffffffffff) {
-            HAL.Crash.Crash(.RyuPageFaultInStaticPool, .{ addr, accessType, 0, pc });
+            HAL.Crash.Crash(.RyuPageFaultInStaticPool, .{ addr, accessType, 0, pc }, null);
         } else {
-            HAL.Crash.Crash(.RyuUnhandledPageFault, .{ addr, accessType, 0, pc });
+            HAL.Crash.Crash(.RyuUnhandledPageFault, .{ addr, accessType, 0, pc }, null);
         }
     } else {
         HAL.Console.Put("Userspace Page Fault!! (pc: 0x{x}, addr 0x{x}, accessType: 0x{x})\n", .{ pc, addr, accessType });

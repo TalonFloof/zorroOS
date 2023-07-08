@@ -38,7 +38,7 @@ pub fn startSMP() void {
                     cycles += 1;
                     if (cycles >= 50000000) {
                         HAL.Console.Put("Hart #{} took too long (potential triple fault on hart!)\n", .{hartCount});
-                        HAL.Crash.Crash(.RyuHALInitializationFailure, .{ 0x808600000001dead, @as(usize, @intCast(hartCount)), 0, 0 });
+                        HAL.Crash.Crash(.RyuHALInitializationFailure, .{ 0x808600000001dead, @as(usize, @intCast(hartCount)), 0, 0 }, null);
                     }
                     std.atomic.spinLoopHint();
                 }
