@@ -224,6 +224,8 @@ pub fn GetThreadByID(id: i64) ?*Thread {
 }
 
 pub fn Init() void {
+    HAL.Debug.NewDebugCommand("threads", "Lists all of the avaiable threads", &threadsCommand);
+    HAL.Debug.NewDebugCommand("thread", "Shows info about a specific thread", &threadCommand);
     var kteam = Team.GetTeamByID(1).?;
     var i: i32 = 0;
     var buf: [32]u8 = [_]u8{0} ** 32;
@@ -233,6 +235,53 @@ pub fn Init() void {
         };
         var thread = NewThread(kteam, name, @intFromPtr(&IdleThread), null, 0);
         thread.hartID = i;
+    }
+}
+
+fn threadCommand(cmd: []const u8, iter: *std.mem.SplitIterator(u8, .sequence)) void {
+    _ = cmd;
+    if (iter.next()) |id| {
+        const threadID: i64 = std.fmt.parseInt(i64, id, 0) catch {
+            HAL.Console.Put("Specified Thread ID wasn't a number!\n", .{});
+            return;
+        };
+        if (threads.search(threadID)) |thread| {
+            const t = @as(*Thread, thread);
+            _ = t;
+            HAL.Console.Put("Thread #{}: {s}\n", .{ thread.threadID, thread.name });
+            HAL.Console.Put("  PrevQueueThread 0x{x: <16} NextQueueThread 0x{x: <16}\n", .{ @intFromPtr(thread.prevThread), @intFromPtr(thread.nextThread) });
+            HAL.Console.Put("   PrevTeamThread 0x{x: <16}  NextTeamThread 0x{x: <16}\n", .{ @intFromPtr(thread.prevTeamThread), @intFromPtr(thread.nextTeamThread) });
+            HAL.Console.Put("  NextEventThread 0x{x: <16}            Team 0x{x: <16} (Team #{})\n", .{ @intFromPtr(thread.nextEventThread), @intFromPtr(thread.team), thread.team.teamID });
+            HAL.Console.Put("            State {s: <18}        WaitType {: <18}\n", .{ @tagName(thread.state), thread.waitType });
+            HAL.Console.Put("       ExitReason 0x{x: <16}      ShouldKill {}\n", .{ thread.exitReason, thread.shouldKill });
+            HAL.Console.Put("         Priority {: <18}          UStack 0x{x: <16}\n", .{ thread.priority, thread.activeUstack });
+            HAL.Console.Put("           HartID {}\n", .{thread.hartID});
+        } else {
+            HAL.Console.Put("Thread #{} doesn't exist!\n", .{threadID});
+        }
+    } else {
+        HAL.Console.Put("Usage: thread [threadID]\n", .{});
+    }
+}
+
+fn threadsCommand(cmd: []const u8, iter: *std.mem.SplitIterator(u8, .sequence)) void {
+    _ = iter;
+    _ = cmd;
+    var ind: i64 = 1;
+    while (ind < nextThreadID) : (ind += 1) {
+        if (threads.search(ind)) |thread| {
+            HAL.Console.Put("{}: 0x{x: <16} {s} {s} IP: 0x{x: <16} SP: 0x{x: <16} Team #{} Priority: {} Quantum: ~{} ms\n", .{
+                ind,
+                @intFromPtr(thread),
+                thread.name,
+                @tagName(thread.state),
+                thread.context.GetReg(128),
+                thread.context.GetReg(129),
+                thread.team.teamID,
+                thread.priority,
+                (20 * (16 - thread.priority) + 5 * thread.priority) >> 4,
+            });
+        }
     }
 }
 

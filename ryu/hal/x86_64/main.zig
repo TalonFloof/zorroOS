@@ -440,44 +440,6 @@ pub fn DebugGet() u8 {
     }
 }
 
-pub fn DebugWaitForSalute() void {
-    var progress: usize = 0;
-    var ctrl: bool = false;
-    _ = ctrl;
-    var alt: bool = false;
-    _ = alt;
-    while (true) {
-        // 0x1d 0x38 0xe0 0x53 >> CTRL+ALT+DEL
-        while ((io.inb(0x64) & 1) != 0) {
-            var key = io.inb(0x60);
-            if (progress == 0) {
-                if (key == 0x1d) {
-                    progress = 1;
-                    continue;
-                }
-            } else if (progress == 1) {
-                if (key == 0x38) {
-                    progress = 2;
-                    continue;
-                }
-                progress = 0;
-            } else if (progress == 2) {
-                if (key == 0xe0) {
-                    progress = 3;
-                    continue;
-                }
-                progress = 0;
-            } else if (progress == 3) {
-                if (key == 0x53) {
-                    return;
-                }
-                progress = 0;
-            }
-        }
-        std.atomic.spinLoopHint();
-    }
-}
-
 pub fn GetStartupTimestamp() i64 {
     return initialUNIXTime;
 }

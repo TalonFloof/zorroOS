@@ -81,7 +81,7 @@ fn DriverPutNumber(n: u64, base: u8, isSigned: bool, padding: u8, width: usize) 
     }
 }
 
-fn DriverAbort(s: [*c]const u8) callconv(.C) noreturn {
+fn DriverAbort(s: [*c]const u8) callconv(.C) void {
     HAL.Console.EnableDisable(true);
     HAL.Console.Put("DriverAbort: {s}\n", .{s[0..std.mem.len(s)]});
     HAL.Crash.Crash(.RyuDriverAbort, .{ 0, 0, 0, 0 }, null);

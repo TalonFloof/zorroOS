@@ -7,6 +7,8 @@ pub var pfnDatabase: []PFNEntry = undefined;
 pub var pfnFreeHead: ?*PFNEntry = null;
 pub var pfnZeroedHead: ?*PFNEntry = null;
 pub var pfnSpinlock: Spinlock = .unaquired;
+pub var pfnTotalPages: usize = 0;
+pub var pfnUsedPages: usize = 0;
 
 pub const PFNType = enum(u3) {
     Free = 0,
@@ -40,6 +42,7 @@ pub fn Initialize(begin: usize, entryCount: usize, ranges: *[64]Memory.PhysicalR
             pfnDatabase[i >> 12].refs = 0;
             pfnDatabase[i >> 12].state = .Free;
             pfnFreeHead = &pfnDatabase[i >> 12];
+            pfnTotalPages += 1;
         }
     }
 }
@@ -59,6 +62,7 @@ pub fn AllocatePage(tag: PFNType, swappable: bool, pte: usize) ?[]u8 {
         entry.swappable = if (swappable) 1 else 0;
         entry.pte = pte;
         var ret = @as([*]u8, @ptrFromInt(phys + 0xFFFF800000000000))[0..4096];
+        pfnUsedPages += 1;
         pfnSpinlock.release();
         _ = HAL.Arch.IRQEnableDisable(old);
         return ret;
@@ -75,6 +79,7 @@ pub fn AllocatePage(tag: PFNType, swappable: bool, pte: usize) ?[]u8 {
         entry.pte = pte;
         var ret = @as([*]u8, @ptrFromInt(phys + 0xFFFF800000000000))[0..4096];
         @memset(ret, 0); // Freed Pages haven't been zeroed yet so we'll manually do it.
+        pfnUsedPages += 1;
         pfnSpinlock.release();
         _ = HAL.Arch.IRQEnableDisable(old);
         return ret;
@@ -105,6 +110,7 @@ pub fn DereferencePage(page: usize) void {
         pfnDatabase[index].refs -= 1;
         if (pfnDatabase[index].refs == 0) {
             const oldState = pfnDatabase[index].state;
+            pfnUsedPages -= 1;
             pfnDatabase[index].state = .Free;
             pfnDatabase[index].next = pfnFreeHead;
             pfnDatabase[index].swappable = 0;
@@ -133,6 +139,9 @@ pub fn ForceFreePage(page: usize) void {
     const index: usize = (page >> 12);
     const old = HAL.Arch.IRQEnableDisable(false);
     pfnSpinlock.acquire();
+    if (pfnDatabase[index].state == .Reserved) {
+        pfnTotalPages += 1;
+    }
     pfnDatabase[index].state = .Free;
     pfnDatabase[index].next = pfnFreeHead;
     pfnDatabase[index].swappable = 0;

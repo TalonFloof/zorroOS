@@ -2,6 +2,7 @@ const HAL = @import("root").HAL;
 const apic = @import("apic.zig");
 const io = @import("io.zig");
 const Thread = @import("root").Executive.Thread;
+const std = @import("std");
 
 const Memory = @import("root").Memory;
 
@@ -9,7 +10,9 @@ pub fn stub() void {} // To ensure that the compiler will not optimize this modu
 
 pub export fn ExceptionHandler(entry: u8, con: *HAL.Arch.Context) callconv(.C) void {
     if (entry == 0x8) {
-        HAL.Crash.Crash(.RyuDoubleFault, .{ con.rip, con.rsp, 0, 0 }, con);
+        while (true) {
+            HAL.Crash.Crash(.RyuDoubleFault, .{ con.rip, con.rsp, 0, 0 }, con);
+        }
     } else if (entry == 0xd and con.rip >= 0xffff800000000000) {
         HAL.Crash.Crash(.RyuProtectionFault, .{ con.rip, con.errcode, con.rsp, 0 }, con);
     } else if (entry == 0xe) {
@@ -24,12 +27,11 @@ pub export fn ExceptionHandler(entry: u8, con: *HAL.Arch.Context) callconv(.C) v
     } else if (entry == 0x2) {
         apic.write(0xb0, 0);
         if (HAL.Crash.hasCrashed) {
-            while (true) {
-                _ = HAL.Arch.IRQEnableDisable(false);
-                HAL.Arch.WaitForIRQ();
+            while (HAL.Crash.hasCrashed) {
+                std.atomic.spinLoopHint();
             }
         } else {
-            @panic("Non-maskable interrupt!");
+            HAL.Crash.Crash(.RyuUncorrectableHardwareError, .{ 0, 0, 0, 0 }, con);
         }
     } else if (con.rip >= 0xffff800000000000) {
         HAL.Crash.Crash(.RyuUnknownException, .{ con.rip, con.rsp, entry, con.errcode }, con);

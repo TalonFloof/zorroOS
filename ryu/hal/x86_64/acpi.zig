@@ -138,6 +138,6 @@ pub fn initialize() void {
         @panic("ACPI didn't provide an MADT and we don't know how to parse the MP table (if it even exist!)");
     }
     if (HPETAddr == null) {
-        @panic("System appears to not have an HPET. An HPET is required to calibrate the Local APIC Timers");
+        HAL.Crash.Crash(.RyuNoHPET, .{ 0, 0, 0, 0 }, null);
     }
 }

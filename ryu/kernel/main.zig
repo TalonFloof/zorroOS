@@ -18,7 +18,9 @@ pub fn panic(msg: []const u8, stacktrace: ?*std.builtin.StackTrace, wat: ?usize)
         HAL.Console.EnableDisable(true);
     }
     HAL.Console.Put("Fatal Zig Error: {s}\n", .{msg});
-    HAL.Crash.Crash(.RyuZigPanic, .{ 0, 0, 0, 0 }, null);
+    while (true) {
+        HAL.Crash.Crash(.RyuZigPanic, .{ 0, 0, 0, 0 }, null);
+    }
 }
 
 var ramdksImage: ?[]u8 = null;
@@ -35,7 +37,9 @@ pub export fn RyuInit() void {
     Executive.OSCalls.stub();
     HAL.Splash.UpdateStatus("Mounting Root Filesystem...");
     if (KernelSettings.rootFS == null) {
-        HAL.Crash.Crash(.RyuNoRootFilesystem, .{ 0, 0, 0, 0 }, null);
+        while (true) {
+            HAL.Crash.Crash(.RyuNoRootFilesystem, .{ 0, 0, 0, 0 }, null);
+        }
     } else {
         if (std.mem.eql(u8, KernelSettings.rootFS.?, "ramdks")) {
             HAL.Console.Put("Bootloader has requested a RamDisk boot\n", .{});

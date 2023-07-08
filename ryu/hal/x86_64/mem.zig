@@ -43,6 +43,7 @@ fn reserve(page: usize) void {
             entry.swappable = 0;
             entry.refs = 0;
             entry.pte = 0;
+            Memory.PFN.pfnTotalPages -= 1;
             return;
         }
         prev = entry;

@@ -1,7 +1,7 @@
 const HAL = @import("HAL.zig");
 const Drivers = @import("root").Drivers;
 const std = @import("std");
-const builtin = @import("builtin");
+const KernelSettings = @import("root").KernelSettings;
 
 pub const CrashCode = enum(u32) {
     RyuUnknownCrash = 0,
@@ -20,6 +20,7 @@ pub const CrashCode = enum(u32) {
     RyuIllegalOpcode,
     RyuProtectionFault,
     RyuDoubleFault,
+    RyuUncorrectableHardwareError,
     RyuDeadlock,
     RyuZigPanic,
     RyuDriverAbort,
@@ -28,8 +29,8 @@ pub const CrashCode = enum(u32) {
 
 pub var hasCrashed: bool = false;
 
-pub fn Crash(code: CrashCode, args: [4]usize, con: ?*HAL.Arch.Context) noreturn {
-    _ = HAL.Arch.IRQEnableDisable(false);
+pub fn Crash(code: CrashCode, args: [4]usize, con: ?*HAL.Arch.Context) void {
+    const old = HAL.Arch.IRQEnableDisable(false);
     hasCrashed = true;
     HAL.Arch.Halt();
     HAL.Console.EnableDisable(true);
@@ -72,9 +73,12 @@ pub fn Crash(code: CrashCode, args: [4]usize, con: ?*HAL.Arch.Context) noreturn 
         HAL.Console.Put("{x:0>16} ", .{frame});
     }
     if (con) |c| {
+        HAL.Console.Put("\n", .{});
         c.Dump();
     }
     HAL.Console.Put("\n", .{});
     HAL.Debug.EnterDebugger();
-    unreachable;
+    HAL.Console.EnableDisable(!KernelSettings.isQuiet);
+    _ = HAL.Arch.IRQEnableDisable(old);
+    hasCrashed = false;
 }

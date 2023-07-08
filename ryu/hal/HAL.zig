@@ -24,6 +24,7 @@ pub var hcbList: ?[]*root.HCB = null;
 pub export fn HALPreformStartup(stackTop: usize) callconv(.C) noreturn {
     Arch.PreformStartup(stackTop);
     root.RyuInit();
+    //Arch.mem.reclaim();
     Splash.UpdateStatus("Kernel Setup Complete");
     root.Executive.Thread.startScheduler = true;
     root.Executive.Thread.Reschedule(false);
