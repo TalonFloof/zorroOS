@@ -7,7 +7,6 @@ pub const PCIInterface = extern struct {
     writeU32: *const fn (u8, u8, u8, u16, u32) callconv(.C) void,
 };
 pub const PCIDevice = extern struct {
-    prev: ?*PCIDevice,
     next: ?*PCIDevice,
     bus: u8,
     slot: u8,

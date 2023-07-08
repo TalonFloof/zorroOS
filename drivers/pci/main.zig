@@ -42,8 +42,6 @@ fn ryuWriteString(_: @TypeOf(.{}), string: []const u8) error{}!usize {
 pub const Writer = std.io.Writer(@TypeOf(.{}), error{}, ryuWriteString);
 pub const writer = Writer{ .context = .{} };
 
-const PCIDevice = extern struct {};
-
 pub fn ReadU8(bus: u8, slot: u8, fun: u8, offset: u16) callconv(.C) u8 {
     devlib.io.outw(0xcf8, (@as(u32, @intCast(bus)) << 16) | (@as(u32, @intCast(slot)) << 11) | (@as(u32, @intCast(fun)) << 8) | (@as(u32, @intCast(offset)) & 0xFC) | 0x80000000);
     return @truncate(devlib.io.inw(0xcfc) >> @intCast((offset & 3) * 8));
@@ -76,6 +74,43 @@ pub fn WriteU16(bus: u8, slot: u8, fun: u8, offset: u16, data: u16) callconv(.C)
 pub fn WriteU32(bus: u8, slot: u8, fun: u8, offset: u16, data: u32) callconv(.C) void {
     devlib.io.outw(0xcf8, (@as(u32, @intCast(bus)) << 16) | (@as(u32, @intCast(slot)) << 11) | (@as(u32, @intCast(fun)) << 8) | (@as(u32, @intCast(offset)) & 0xFC) | 0x80000000);
     devlib.io.outw(0xcfc, data);
+}
+
+pub fn ReadBAR(bus: u8, slot: u8, fun: u8, bar: u8) callconv(.C) u64 {
+    const addr = (@as(u16, @intCast(bar)) * 4) + PCI_BAR0;
+    const low = @as(u64, @intCast(ReadU32(bus, slot, fun, addr)));
+    const Type = low & 7;
+    if (Type == 0) {
+        return low & (~@as(u64, @intCast(0xf)));
+    } else if (low & 1 == 1) {
+        return low & (~@as(u64, @intCast(0x3)));
+    }
+    const high = @as(u64, @intCast(ReadU32(bus, slot, fun, addr + 4)));
+    return (low & (~@as(u64, @intCast(0xf)))) | (high << 32);
+}
+
+pub fn SearchCapability(bus: u8, slot: u8, func: u8, cap: u8) callconv(.C) u16 {
+    if (ReadU8(bus, slot, func, PCI_STATUS) & 0x10 == 0x10) {
+        var capOff = @as(u16, @intCast(ReadU8(bus, slot, func, 0x34)));
+        while (capOff != 0) {
+            if (ReadU8(bus, slot, func, capOff) == cap) {
+                return capOff;
+            }
+            capOff = @as(u16, @intCast(ReadU8(bus, slot, func, capOff + 1)));
+        }
+        return 0;
+    }
+    return 0;
+}
+
+pub fn AcquireIRQ(bus: u8, slot: u8, func: u8) ?u16 {
+    var msix = SearchCapability(bus, slot, func, 0x11);
+    var msi = SearchCapability(bus, slot, func, 0x5);
+    _ = msi;
+    if (msix != 0) {
+        const msgCtl = ReadU16(bus, slot, func, msix + 2) | 0x8000;
+        _ = msgCtl;
+    }
 }
 
 pub fn PCIDevToString(class: u8, subClass: u8, progIF: u8) []const u8 {
@@ -320,6 +355,8 @@ const interface: pci.PCIInterface = pci.PCIInterface{
     .writeU32 = &WriteU32,
 };
 
+var pciHead: ?*pci.PCIDevice = null;
+
 pub fn LoadDriver() callconv(.C) devlib.Status {
     if (DriverInfo.krnlDispatch) |dispatch| {
         dispatch.put("Scanning PCI Buses...\n");
@@ -347,6 +384,19 @@ pub fn LoadDriver() callconv(.C) devlib.Status {
                         dispatch.put(":0x");
                         dispatch.putNumber(@intCast(device), 16, false, '0', 4);
                         dispatch.put("\n");
+                        var entry: *pci.PCIDevice = @as(*pci.PCIDevice, @alignCast(@ptrCast(dispatch.staticAlloc(@sizeOf(pci.PCIDevice)))));
+                        entry.bus = @truncate(bus);
+                        entry.slot = slot;
+                        entry.func = func;
+                        entry.vendor = vendor;
+                        entry.device = device;
+                        entry.class = class;
+                        entry.subclass = subclass;
+                        entry.progif = progif;
+                        entry.next = pciHead;
+                        if (pciHead == null) {
+                            pciHead = entry;
+                        }
                     }
                 }
             }
