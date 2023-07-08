@@ -104,8 +104,8 @@ void MouseThread() {
                     if(cursorWin.x >= winFocus->x && cursorWin.x <= winFocus->x+winFocus->w && cursorWin.y >= winFocus->y && cursorWin.y <= winFocus->y+winFocus->h) {
                         RavenEvent event;
                         event.type = RAVEN_MOUSE_RELEASED;
-                        event.mouse.x = winFocus->x-cursorWin.x;
-                        event.mouse.y = winFocus->y-cursorWin.y;
+                        event.mouse.x = cursorWin.x-winFocus->x;
+                        event.mouse.y = cursorWin.y-winFocus->y;
                         event.mouse.buttons = 0;
                         MQueue_SendToClient(msgQueue,winFocus->owner,&event,sizeof(RavenEvent));
                     }
@@ -115,7 +115,7 @@ void MouseThread() {
                 Window* win = winTail;
                 bool clicked = false;
                 while(win != NULL) {
-                    if(cursorWin.x >= win->x && cursorWin.x < win->x+win->w && cursorWin.y >= win->y && cursorWin.y < win->y+20 && !(win->flags & FLAG_NOMOVE)) {
+                    if(cursorWin.x >= win->x && cursorWin.x < win->x+win->w && cursorWin.y >= win->y && cursorWin.y < win->y+32 && !(win->flags & FLAG_NOMOVE)) {
                         winDrag = win;
                         winX = cursorWin.x - win->x;
                         winY = cursorWin.y - win->y;
@@ -135,8 +135,8 @@ void MouseThread() {
                         } else {
                             RavenEvent event;
                             event.type = RAVEN_MOUSE_PRESSED;
-                            event.mouse.x = win->x-cursorWin.x;
-                            event.mouse.y = win->y-cursorWin.y;
+                            event.mouse.x = cursorWin.x-win->x;
+                            event.mouse.y = cursorWin.y-win->y;
                             event.mouse.buttons = 1;
                             MQueue_SendToClient(msgQueue,win->owner,&event,sizeof(RavenEvent));
                         }

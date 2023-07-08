@@ -87,8 +87,8 @@ void Redraw(int x, int y, int w, int h) {
     SpinlockAcquire(&windowLock);
     Window* win = &backgroundWin;
     int max_x, max_y;
-    max_x = x+(w-1);
-    max_y = y+(h);
+    max_x = x+w;
+    max_y = y+h;
     int bytes = fbInfo.bpp/8;
     while(win != NULL) {
         if(!(max_x <= win->x || max_y <= win->y || x >= (win->x+win->w) || y >= (win->y+win->h))) {
@@ -194,6 +194,7 @@ void LoadBackground(const char* name) {
 }
 
 int main() {
+    msgQueue = MQueue_Bind("/dev/mqueue/Raven");
     OpenedFile fbFile;
     if(Open("/dev/fb0",O_RDWR,&fbFile) < 0) {
         RyuLog("Failed to open /dev/fb0!\n");
@@ -210,7 +211,6 @@ int main() {
     uintptr_t kbdThr = NewThread("Raven Keyboard Thread",&KeyboardThread,(void*)(((uintptr_t)kbdStack)+0x8000));
     void* mouseStack = MMap(NULL,0x8000,3,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
     uintptr_t mouseThr = NewThread("Raven Mouse Thread",&MouseThread,(void*)(((uintptr_t)mouseStack)+0x8000));
-    msgQueue = MQueue_Bind("/dev/mqueue/Raven");
     LoadBackground("/System/Wallpapers/Aurora.qoi");
     //Redraw(0,0,fbInfo.width,fbInfo.height);
     while(1) {

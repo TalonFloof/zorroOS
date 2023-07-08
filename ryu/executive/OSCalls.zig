@@ -526,10 +526,17 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                     regs.SetReg(0, @as(u64, @intCast(newThread.threadID)));
                     _ = HAL.Arch.IRQEnableDisable(old);
                 },
-                .Eep => { // void Eep(int ms)
-                    const deadline = Executive.Thread.ticks + regs.GetReg(1);
+                .Eep => { // void Eep(int us)
+                    var deadline = HAL.Arch.GetCurrentTimestamp();
+                    const ns = deadline[1] + (@as(i64, @intCast(regs.GetReg(1))) * 1000);
+                    deadline[0] = deadline[0] + @divTrunc(ns, 1000000000);
+                    deadline[1] = @rem(ns, 1000000000);
                     const old = HAL.Arch.IRQEnableDisable(true);
-                    while (Executive.Thread.ticks < deadline) {
+                    while (true) {
+                        const time = HAL.Arch.GetCurrentTimestamp();
+                        if ((time[0] > deadline[0]) or (time[0] == deadline[0] and time[1] >= deadline[1])) {
+                            break;
+                        }
                         std.atomic.spinLoopHint();
                     }
                     _ = HAL.Arch.IRQEnableDisable(old);

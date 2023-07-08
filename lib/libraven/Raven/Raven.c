@@ -28,6 +28,9 @@ ClientWindow* NewRavenWindow(RavenSession* s, int w, int h, int flags) {
     win->backBuf = MapSharedMemory(response->backBuf);
     win->w = w;
     win->h = h;
+    win->nextWidgetID = 1;
+    win->widgetHead = NULL;
+    win->widgetTail = NULL;
     win->flags = flags;
     free(response);
     return win;

@@ -92,6 +92,9 @@ typedef struct {
     int flags;
     int64_t backID;
     uint32_t* backBuf;
+    void* widgetHead;
+    void* widgetTail;
+    int64_t nextWidgetID;
 } ClientWindow;
 
 #define FLAG_OPAQUE 1

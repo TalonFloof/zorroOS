@@ -14,6 +14,7 @@ pub var ioapic_leveltrig: [24]bool = [_]bool{false} ** 24;
 pub var hpetPeriod: usize = 0;
 pub var hpetNSPeriod: usize = 0;
 pub var hpetTicksPer100NS: usize = 0;
+pub var hpetHZ: usize = 0;
 
 inline fn x2apicSupport() bool {
     return (HAL.Arch.cpuid(0x1).ecx & (@as(u32, @intCast(1)) << 21)) != 0;
@@ -53,10 +54,10 @@ pub fn setup() void {
         hpetAddr[2] = 1;
     }
     const hz = @as(u64, @intCast(1000000000000000)) / clock;
-    var interval = (10 * (1000000000000 / clock));
-    const val = (((hz << 16) / (interval)));
+    var interval = hpetTicksPer100NS * 10000;
+    const val = (((hz << 16) / (1000000000000 / clock)));
     if (HAL.Arch.GetHCB().hartID == 0) {
-        HAL.Console.Put("HPET @ {d} Hz (~{d}.{d} Hz interval) for Local APIC Timer calibration\n", .{ hz, val >> 16, (10000 * (val & 0xFFFF)) >> 16 });
+        HAL.Console.Put("HPET @ {d} Hz (~{d}.{d} Hz scheduler tick interval) for Local APIC Timer calibration\n", .{ hz, val >> 16, (10000 * (val & 0xFFFF)) >> 16 });
     }
     write(0x380, 0xffffffff); // Set the Initial Count to 0xffffffff
     // Start the HPET or PIT timer and wait for it to finish counting down.
@@ -68,7 +69,7 @@ pub fn setup() void {
     var ticks: u32 = 0xffffffff - @as(u32, @intCast(read(0x390))); // We now have the number of ticks that elapses in 10 ms (with divider 16 of course)
     // Set the Local APIC timer to Periodic Mode, Divider 16, and to trigger every millisecond.
     write(0x3e0, 0x3);
-    write(0x380, ticks / 10);
+    write(0x380, ticks);
     write(0x320, 32 | 0x20000);
     // Now, we'll start to recieve interrupts from the timer!
     // This is vital for preemptive multitasking, and will be super useful for the kernel.

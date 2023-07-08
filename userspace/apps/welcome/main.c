@@ -3,6 +3,7 @@
 #include <System/Syscall.h>
 #include <Common/Alloc.h>
 #include <Media/Graphics.h>
+#include <Raven/Widgets/Button.h>
 
 int main() {
     RavenSession* session = NewRavenSession();
@@ -11,5 +12,6 @@ int main() {
         RyuLog("Unable to open window!\n");
         return 0;
     }
+    NewButtonWidget(win,50,50,0,0,"Install","File/Archive",NULL);
     UIRun(session,win);
 }

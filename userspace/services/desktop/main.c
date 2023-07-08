@@ -18,7 +18,7 @@ void ClockThread() {
         char buf[9] = {'0'+(time.hour/10),'0'+(time.hour%10),':','0'+(time.min/10),'0'+(time.min%10),':','0'+(time.sec/10),'0'+(time.sec%10),0};
         Graphics_RenderString(gfx,(win->w/2)-(4*knxt->width),16-(knxt->height/2),0xffffffff,knxt,1,(const char*)&buf);
         RavenFlipArea(session,win,(win->w/2)-(4*knxt->width),0,8*knxt->width,32);
-        Eep(1000 - (utime.nsecs / 1000000));
+        Eep((1000*1000) - (utime.nsecs / 1000));
     }
 }
 
