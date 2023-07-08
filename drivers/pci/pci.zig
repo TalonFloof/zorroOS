@@ -5,6 +5,10 @@ pub const PCIInterface = extern struct {
     writeU8: *const fn (u8, u8, u8, u16, u8) callconv(.C) void,
     writeU16: *const fn (u8, u8, u8, u16, u16) callconv(.C) void,
     writeU32: *const fn (u8, u8, u8, u16, u32) callconv(.C) void,
+    readBar: *const fn (u8, u8, u8, u8) callconv(.C) u64,
+    searchCapability: *const fn (u8, u8, u8, u8) callconv(.C) u16,
+    acquireIRQ: *const fn (u8, u8, u8, *const fn () callconv(.C) void) callconv(.C) u16,
+    getDevices: *const fn () callconv(.C) *PCIDevice,
 };
 pub const PCIDevice = extern struct {
     next: ?*PCIDevice,
