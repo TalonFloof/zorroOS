@@ -103,6 +103,7 @@ typedef struct {
 #define FLAG_RESIZE 8
 
 RavenSession* NewRavenSession();
+void CloseRavenSession(RavenSession* session);
 ClientWindow* NewRavenWindow(RavenSession* s, int w, int h, int flags);
 void RavenMoveWindow(RavenSession* s, ClientWindow* win, int x, int y);
 void RavenGetResolution(RavenSession* s, int* w, int* h);

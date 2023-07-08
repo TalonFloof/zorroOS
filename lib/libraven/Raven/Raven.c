@@ -9,6 +9,13 @@ RavenSession* NewRavenSession() {
     return s;
 }
 
+void CloseRavenSession(RavenSession* session) {
+    RavenPacket packet;
+    packet.type = RAVEN_OKEE_BYEEEE;
+    MQueue_SendToServer(session->raven,&packet,sizeof(RavenPacket));
+    free(session);
+}
+
 ClientWindow* NewRavenWindow(RavenSession* s, int w, int h, int flags) {
     RavenPacket packet;
     packet.type = RAVEN_CREATE_WINDOW;

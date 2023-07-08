@@ -211,12 +211,51 @@ int main() {
     uintptr_t kbdThr = NewThread("Raven Keyboard Thread",&KeyboardThread,(void*)(((uintptr_t)kbdStack)+0x8000));
     void* mouseStack = MMap(NULL,0x8000,3,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
     uintptr_t mouseThr = NewThread("Raven Mouse Thread",&MouseThread,(void*)(((uintptr_t)mouseStack)+0x8000));
-    LoadBackground("/System/Wallpapers/Aurora.qoi");
-    //Redraw(0,0,fbInfo.width,fbInfo.height);
+    LoadBackground("/System/Wallpapers/Mountain.qoi");
     while(1) {
         int64_t teamID;
         RavenPacket* packet = MQueue_RecieveFromClient(msgQueue,&teamID,NULL);
         switch(packet->type) {
+            case RAVEN_OKEE_BYEEEE: {
+                SpinlockAcquire(&windowLock);
+                Window* win = winTail;
+                while(win != NULL) {
+                    if(win->owner == teamID) {
+                        if(win == winFocus) {
+                            winFocus = NULL;
+                        }
+                        void* prev = win->prev;
+                        int x = win->x;
+                        int y = win->y;
+                        int w = win->w;
+                        int h = win->h;
+                        if(win->prev != NULL) {
+                            ((Window*)win->prev)->next = win->next;
+                        }
+                        if(win->next != NULL) {
+                            ((Window*)win->next)->prev = win->prev;
+                        }
+                        if(win == winTail) {
+                            winTail = win->prev;
+                        }
+                        if(win == winHead) {
+                            winHead = win->next;
+                        }
+                        free(win->frontBuf);
+                        MUnMap(win->backBuf,(win->w*win->h)*4);
+                        DestroySharedMemory(win->shmID);
+                        free(win);
+                        SpinlockRelease(&windowLock);
+                        Redraw(x,y,w,h);
+                        SpinlockAcquire(&windowLock);
+                        win = prev;
+                    } else {
+                        win = win->prev;
+                    }
+                }
+                SpinlockRelease(&windowLock);
+                break;
+            }
             case RAVEN_CREATE_WINDOW: {
                 SpinlockAcquire(&windowLock);
                 Window* win = malloc(sizeof(Window));

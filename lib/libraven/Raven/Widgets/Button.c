@@ -10,7 +10,7 @@ extern void* RavenIconPack;
 
 typedef struct {
     char pressed;
-    ButtonEventHandler* onClick;
+    ButtonEventHandler onClick;
     int hMargin;
     int vMargin;
     const char* text;
@@ -26,10 +26,10 @@ static void ButtonRedraw(void* self, RavenSession* session, ClientWindow* win, G
     int innerX = widget->x+((widget->w/2)-(innerW/2));
     int innerY = widget->y+((widget->h/2)-(innerH/2));
     if(private->icon != NULL) {
-        Graphics_RenderIcon(gfx,RavenIconPack,private->icon,(widget->x+(widget->w/2))-16,innerY,32,32,0xffffffff);
-        Graphics_RenderCenteredString(gfx,widget->x+(widget->w/2),innerY+32,0xffffffff,RavenUnifont,1,private->text);
+        Graphics_RenderIcon(gfx,RavenIconPack,private->icon,(widget->x+(widget->w/2))-16,innerY,32,32,0xffcbcbcf);
+        Graphics_RenderCenteredString(gfx,widget->x+(widget->w/2),innerY+32,0xffcbcbcf,RavenUnifont,1,private->text);
     } else {
-        Graphics_RenderCenteredString(gfx,widget->x+(widget->w/2),innerY,0xffffffff,RavenUnifont,1,private->text);
+        Graphics_RenderCenteredString(gfx,widget->x+(widget->w/2),innerY,0xffcbcbcf,RavenUnifont,1,private->text);
     }
 }
 
@@ -41,6 +41,11 @@ static void ButtonEvent(void* self, RavenSession* session, ClientWindow* win, Gr
         ButtonRedraw(self,session,win,gfx);
         RavenFlipArea(session,win,widget->x,widget->y,widget->w,widget->h);
     } else if(event->type == RAVEN_MOUSE_RELEASED) {
+        if(private->pressed) {
+            if(private->onClick != NULL) {
+                private->onClick(session,win,widget->id);
+            }
+        }
         private->pressed = 0;
         ButtonRedraw(self,session,win,gfx);
         RavenFlipArea(session,win,widget->x,widget->y,widget->w,widget->h);

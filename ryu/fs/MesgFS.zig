@@ -114,6 +114,8 @@ fn Close(inode: *FS.Inode) callconv(.C) void {
         var session: *Session = mqData.tree.search(team.teamID).?;
         Memory.Pool.PagedPool.FreeAnonPages(session.stcBuf);
         mqData.tree.delete(team.teamID);
+        session.queueRead.Wakeup(0);
+        session.queueWrite.Wakeup(0);
         Memory.Pool.PagedPool.Free(@as([*]u8, @ptrCast(@alignCast(session)))[0..@sizeOf(Session)]);
     }
 }

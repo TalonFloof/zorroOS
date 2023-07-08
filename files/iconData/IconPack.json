@@ -1,4 +1,10 @@
 {
+	"Device/CD": {
+		"file": "Device/CD.data",
+        "width": 32,
+		"height": 32,
+		"bpp": 1
+	},
 	"Device/HardDrive": {
 		"file": "Device/HardDrive.data",
         "width": 32,

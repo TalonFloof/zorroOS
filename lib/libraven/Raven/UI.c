@@ -3,12 +3,20 @@
 #include <Common/Alloc.h>
 #include "Widget.h"
 
+PSFHeader* RavenKNXT;
 PSFHeader* RavenUnifont;
 void* RavenIconPack;
 
-void UIDrawBaseWindow(GraphicsContext* gfx) {
+void UIDrawBaseWindow(GraphicsContext* gfx, const char* title, const char* bg) {
     Graphics_DrawRect(gfx,0,0,gfx->w,gfx->h,0xff09090b);
+    if(bg != NULL) {
+        Graphics_RenderIcon(gfx,RavenIconPack,bg,gfx->w-192,gfx->h-192,256,256,0xff121214);
+        for(int i=gfx->h-191; i < gfx->h; i+=2) {
+            Graphics_DrawRect(gfx,gfx->w-192,i,256,1,0xff09090b);
+        }
+    }
     Graphics_DrawRect(gfx,0,0,gfx->w,32,0xe018181b);
+    Graphics_DrawRect(gfx,0,0,32,32,0xe027272a);
     Graphics_DrawRectOutline(gfx,0,0,gfx->w,gfx->h,0xff27272a);
     Graphics_DrawRect(gfx,0,32,gfx->w,1,0xff27272a);
 
@@ -39,6 +47,8 @@ void UIDrawBaseWindow(GraphicsContext* gfx) {
     Graphics_DrawRect(gfx,gfx->w-3,gfx->h-3,1,1,0xff27272a);
     Graphics_DrawRect(gfx,gfx->w-2,gfx->h-5,1,2,0xff27272a);
     Graphics_DrawRect(gfx,gfx->w-5,gfx->h-2,2,1,0xff27272a);
+
+    Graphics_RenderString(gfx,32+4,16-(RavenKNXT->height/2),0xffcbcbcf,RavenKNXT,1,title);
 }
 
 void UIDrawRoundedBox(GraphicsContext* gfx, int x, int y, int w, int h, uint32_t color) {
@@ -75,11 +85,12 @@ void UIRedrawWidgets(RavenSession* session, ClientWindow* win, GraphicsContext* 
     }
 }
 
-void UIRun(RavenSession* session, ClientWindow* win) {
+void UIRun(RavenSession* session, ClientWindow* win, const char* title, const char* bg) {
+    RavenKNXT = Graphics_LoadFont("/System/Fonts/knxt.psf");
     RavenUnifont = Graphics_LoadFont("/System/Fonts/unifont.psf");
     RavenIconPack = Graphics_LoadIconPack("/System/Icons/IconPack");
     GraphicsContext* gfx = Graphics_NewContext(win->backBuf,win->w,win->h);
-    UIDrawBaseWindow(gfx);
+    UIDrawBaseWindow(gfx,title,bg);
     RavenFlipArea(session,win,0,0,win->w,win->h);
     UIRedrawWidgets(session,win,gfx);
     while(1) {
