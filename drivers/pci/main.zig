@@ -103,7 +103,7 @@ pub fn SearchCapability(bus: u8, slot: u8, func: u8, cap: u8) callconv(.C) u16 {
     return 0;
 }
 
-pub fn AcquireIRQ(bus: u8, slot: u8, func: u8, f: *const fn () callconv(.C) void) callconv(.C) u16 {
+pub fn AcquireIRQ(bus: u8, slot: u8, func: u8, f: *const fn (u16) callconv(.C) void) callconv(.C) u16 {
     var msix = SearchCapability(bus, slot, func, 0x11);
     var msi = SearchCapability(bus, slot, func, 0x5);
     if (msix != 0) {
@@ -115,7 +115,7 @@ pub fn AcquireIRQ(bus: u8, slot: u8, func: u8, f: *const fn () callconv(.C) void
         p[1] = @intCast(irq);
         p[0] = 0xfee00000;
         WriteU16(bus, slot, func, msix + 2, msgCtl);
-        return irq;
+        return irq - 0x20;
     } else if (msi != 0) {
         const msgCtl = ((ReadU16(bus, slot, func, msi + 2) & (~@as(u16, 0x70))) & (~@as(u16, 0x100))) | 0x1;
         const irq = DriverInfo.krnlDispatch.?.attachDetatchIRQ(65535, f) + 0x20;
@@ -128,7 +128,7 @@ pub fn AcquireIRQ(bus: u8, slot: u8, func: u8, f: *const fn () callconv(.C) void
             WriteU16(bus, slot, func, msi + 0x8, irq);
         }
         WriteU16(bus, slot, func, msi + 2, msgCtl);
-        return irq;
+        return irq - 0x20;
     }
     return 0;
 }
@@ -403,9 +403,7 @@ pub fn GetDevices() callconv(.C) *pci.PCIDevice {
                         entry.subclass = subclass;
                         entry.progif = progif;
                         entry.next = pciHead;
-                        if (pciHead == null) {
-                            pciHead = entry;
-                        }
+                        pciHead = entry;
                     }
                 }
             }
@@ -446,5 +444,7 @@ pub fn UnloadDriver() callconv(.C) devlib.Status {
 pub fn panic(msg: []const u8, stacktrace: ?*std.builtin.StackTrace, wat: ?usize) noreturn {
     _ = wat;
     _ = stacktrace;
-    DriverInfo.krnlDispatch.?.abort(@ptrCast(msg.ptr));
+    while (true) {
+        DriverInfo.krnlDispatch.?.abort(@ptrCast(msg.ptr));
+    }
 }

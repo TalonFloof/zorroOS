@@ -58,7 +58,7 @@ pub export fn IRQHandler(entry: u8, con: *HAL.Arch.Context) callconv(.C) void {
             else => 1,
         });
     } else if (HAL.Arch.irqISRs[entry - 0x20]) |isr| {
-        isr();
+        isr(entry - 0x20);
     }
     apic.write(0xb0, 0);
 }

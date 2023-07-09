@@ -347,7 +347,7 @@ pub const ArchHCBData = struct {
     apicID: u32 = 0,
 };
 
-pub var irqISRs: [224]?*const fn () callconv(.C) void = [_]?*const fn () callconv(.C) void{null} ** 224;
+pub var irqISRs: [224]?*const fn (u16) callconv(.C) void = [_]?*const fn (u16) callconv(.C) void{null} ** 224;
 pub const irqSearchStart = 16;
 
 // x86_64 Exclusives

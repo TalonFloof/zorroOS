@@ -11,6 +11,9 @@ build: limine-zig
 	cd drivers/pci; \
 	zig build -Doptimize=ReleaseSmall; \
 	cd ../..
+	cd drivers/nvme; \
+	zig build -Doptimize=ReleaseSmall; \
+	cd ../..
 	cd lib; \
 	make; \
 	cd ..

@@ -26,7 +26,7 @@ pub const RyuDispatch = extern struct {
     pagedFreeAnon: *const fn (*void, usize) callconv(.C) void,
     // IRQ
     enableDisableIRQ: *const fn (bool) callconv(.C) bool,
-    attachDetatchIRQ: *const fn (u16, ?*const fn () callconv(.C) void) callconv(.C) u16,
+    attachDetatchIRQ: *const fn (u16, ?*const fn (u16) callconv(.C) void) callconv(.C) u16,
     // Spinlock
     acquireSpinlock: *const fn (*volatile u8) callconv(.C) void,
     releaseSpinlock: *const fn (*volatile u8) callconv(.C) void,
@@ -58,14 +58,14 @@ pub const RyuDriverInfo = extern struct {
 pub fn FindDriver(info: *RyuDriverInfo, name: []const u8) ?*void {
     var index = info.next;
     while (index) |drvr| {
-        if (std.mem.eql(u8, @as([*]u8, @ptrCast(drvr.drvName))[0..std.mem.len(drvr.drvName)], name)) {
+        if (std.mem.eql(u8, @as([*]const u8, @ptrCast(drvr.drvName))[0..std.mem.len(drvr.drvName)], name)) {
             return drvr.exportedDispatch;
         }
         index = drvr.next;
     }
     index = info.prev;
     while (index) |drvr| {
-        if (std.mem.eql(u8, @as([*]u8, @ptrCast(drvr.drvName))[0..std.mem.len(drvr.drvName)], name)) {
+        if (std.mem.eql(u8, @as([*]const u8, @ptrCast(drvr.drvName))[0..std.mem.len(drvr.drvName)], name)) {
             return drvr.exportedDispatch;
         }
         index = drvr.prev;

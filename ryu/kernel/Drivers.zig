@@ -11,9 +11,9 @@ pub var drvrHead: ?*devlib.RyuDriverInfo = null;
 pub var drvrTail: ?*devlib.RyuDriverInfo = null;
 
 pub fn LoadDriver(name: []const u8, relocObj: *void) void {
-    HAL.Console.Put("Loading Driver: {s}...\n", .{name});
+    _ = name;
     _ = ELF.LoadELF(relocObj, .Driver, null) catch |err| {
-        HAL.Console.Put("Failed to Load Driver \"{s}\", Reason: {}\n", .{ name, err });
+        HAL.Console.Put("Failed to Load Driver, Reason: {}\n", .{err});
         return;
     };
     drvrTail.?.krnlDispatch = &KDriverDispatch;
@@ -119,7 +119,7 @@ fn DriverPagedFreeAnon(p: *void, n: usize) callconv(.C) void {
     Memory.Pool.PagedPool.FreeAnonPages(@as([*]u8, @ptrCast(@alignCast(p)))[0..n]);
 }
 
-fn DriverAttachDetatchIRQ(irq: u16, routine: ?*const fn () callconv(.C) void) callconv(.C) u16 {
+fn DriverAttachDetatchIRQ(irq: u16, routine: ?*const fn (u16) callconv(.C) void) callconv(.C) u16 {
     if (irq == 65535) {
         var i: usize = HAL.Arch.irqSearchStart;
         while (i < HAL.Arch.irqISRs.len) : (i += 1) {

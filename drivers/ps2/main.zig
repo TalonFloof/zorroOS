@@ -73,7 +73,8 @@ fn PS2MouseWrite(write: u8, specialRead: bool) u8 {
     return r;
 }
 
-pub fn PS2KbdIRQ() callconv(.C) void {
+pub fn PS2KbdIRQ(irq: u16) callconv(.C) void {
+    _ = irq;
     while (devlib.io.inb(0x64) & 1 == 0)
         return;
     const data = devlib.io.inb(0x60);
@@ -84,7 +85,8 @@ pub fn PS2KbdIRQ() callconv(.C) void {
     }
 }
 
-pub fn PS2MouseIRQ() callconv(.C) void {
+pub fn PS2MouseIRQ(irq: u16) callconv(.C) void {
+    _ = irq;
     packetData[packetID] = devlib.io.inb(0x60);
     if (packetID == 2) {
         if ((mouseWrite + 3) % 256 != mouseRead) {
@@ -214,5 +216,7 @@ pub fn UnloadDriver() callconv(.C) devlib.Status {
 pub fn panic(msg: []const u8, stacktrace: ?*std.builtin.StackTrace, wat: ?usize) noreturn {
     _ = wat;
     _ = stacktrace;
-    DriverInfo.krnlDispatch.?.abort(msg);
+    while (true) {
+        DriverInfo.krnlDispatch.?.abort(@ptrCast(msg.ptr));
+    }
 }
