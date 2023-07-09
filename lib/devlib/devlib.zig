@@ -24,6 +24,8 @@ pub const RyuDispatch = extern struct {
     pagedAllocAnon: *const fn (usize) callconv(.C) *void,
     pagedFree: *const fn (*void, usize) callconv(.C) void,
     pagedFreeAnon: *const fn (*void, usize) callconv(.C) void,
+    pfnAlloc: *const fn (bool) callconv(.C) *void,
+    pfnDeref: *const fn (*void) callconv(.C) void,
     // IRQ
     enableDisableIRQ: *const fn (bool) callconv(.C) bool,
     attachDetatchIRQ: *const fn (u16, ?*const fn (u16) callconv(.C) void) callconv(.C) u16,

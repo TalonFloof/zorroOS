@@ -44,6 +44,8 @@ pub export const KDriverDispatch = devlib.RyuDispatch{
     .pagedAllocAnon = &DriverPagedAllocAnon,
     .pagedFree = &DriverPagedFree,
     .pagedFreeAnon = &DriverPagedFreeAnon,
+    .pfnAlloc = &DriverPFNAlloc,
+    .pfnDeref = &DriverPFNDeref,
     .attachDetatchIRQ = &DriverAttachDetatchIRQ,
     .enableDisableIRQ = &HAL.Arch.IRQEnableDisable,
     .acquireSpinlock = &DriverAcquireSpinlock,
@@ -117,6 +119,14 @@ fn DriverPagedFree(p: *void, n: usize) callconv(.C) void {
 
 fn DriverPagedFreeAnon(p: *void, n: usize) callconv(.C) void {
     Memory.Pool.PagedPool.FreeAnonPages(@as([*]u8, @ptrCast(@alignCast(p)))[0..n]);
+}
+
+fn DriverPFNAlloc(swappable: bool) callconv(.C) *void {
+    return @as(*void, @ptrCast(@alignCast(Memory.PFN.AllocatePage(.Active, swappable, 0).?.ptr)));
+}
+
+fn DriverPFNDeref(page: *void) callconv(.C) void {
+    Memory.PFN.DereferencePage(@intFromPtr(page));
 }
 
 fn DriverAttachDetatchIRQ(irq: u16, routine: ?*const fn (u16) callconv(.C) void) callconv(.C) u16 {
