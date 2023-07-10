@@ -106,17 +106,7 @@ pub fn SearchCapability(bus: u8, slot: u8, func: u8, cap: u8) callconv(.C) u16 {
 pub fn AcquireIRQ(bus: u8, slot: u8, func: u8, f: *const fn (u16) callconv(.C) void) callconv(.C) u16 {
     var msix = SearchCapability(bus, slot, func, 0x11);
     var msi = SearchCapability(bus, slot, func, 0x5);
-    if (msix != 0) {
-        const msgCtl = ReadU16(bus, slot, func, msix + 2) | 0x8000;
-        const irq = DriverInfo.krnlDispatch.?.attachDetatchIRQ(65535, f) + 0x20;
-        const tabPos: u16 = @truncate(ReadU32(bus, slot, func, msix + 4));
-        const addr: u64 = ReadBAR(bus, slot, func, @truncate(tabPos & 7)) + (tabPos & (~@as(u64, @intCast(7))));
-        const p = @as([*]volatile u64, @ptrFromInt(@as(usize, @intCast(addr)) + 0xffff800000000000));
-        p[1] = @intCast(irq);
-        p[0] = 0xfee00000;
-        WriteU16(bus, slot, func, msix + 2, msgCtl);
-        return irq - 0x20;
-    } else if (msi != 0) {
+    if (msi != 0) {
         const msgCtl = ((ReadU16(bus, slot, func, msi + 2) & (~@as(u16, 0x70))) & (~@as(u16, 0x100))) | 0x1;
         const irq = DriverInfo.krnlDispatch.?.attachDetatchIRQ(65535, f) + 0x20;
         if ((msgCtl & 0x80) == 0x80) {
@@ -128,6 +118,18 @@ pub fn AcquireIRQ(bus: u8, slot: u8, func: u8, f: *const fn (u16) callconv(.C) v
             WriteU16(bus, slot, func, msi + 0x8, irq);
         }
         WriteU16(bus, slot, func, msi + 2, msgCtl);
+        WriteU16(bus, slot, func, PCI_COMMAND, ReadU16(bus, slot, func, PCI_COMMAND) | 1024);
+        return irq - 0x20;
+    } else if (msix != 0) {
+        const msgCtl = ReadU16(bus, slot, func, msix + 2) | 0x8000;
+        const irq = DriverInfo.krnlDispatch.?.attachDetatchIRQ(65535, f) + 0x20;
+        const tabPos: u16 = @truncate(ReadU32(bus, slot, func, msix + 4));
+        const addr: u64 = ReadBAR(bus, slot, func, @truncate(tabPos & 7)) + (tabPos & (~@as(u64, @intCast(7))));
+        const p = @as([*]volatile u64, @ptrFromInt(@as(usize, @intCast(addr)) + 0xffff800000000000));
+        p[1] = @intCast(irq);
+        p[0] = 0xfee00000;
+        WriteU16(bus, slot, func, msix + 2, msgCtl);
+        WriteU16(bus, slot, func, PCI_COMMAND, ReadU16(bus, slot, func, PCI_COMMAND) | 1024);
         return irq - 0x20;
     }
     return 0;

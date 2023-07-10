@@ -33,6 +33,7 @@ pub export fn RyuInit() void {
     HAL.Splash.UpdateStatus("Creating Hart Idle Threads...");
     Executive.Thread.Init();
     HAL.Splash.UpdateStatus("Loading Drivers...");
+    HAL.Console.Put("Main Hart's LAPIC ID is 0x{x}\n", .{HAL.Arch.GetHCB().archData.apicID});
     Drivers.InitDrivers();
     Executive.OSCalls.stub();
     HAL.Splash.UpdateStatus("Mounting Root Filesystem...");
