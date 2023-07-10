@@ -28,18 +28,18 @@ const NVMeRegisters = extern struct {
 };
 
 const NVMeQueueDesc = struct {
-    addr: *allowzero void,
-    entryCount: usize,
-    index: u32,
-    id: usize,
+    addr: *allowzero void = @ptrFromInt(0),
+    entryCount: usize = 0,
+    index: u32 = 0,
+    id: usize = 0,
     event: bool = false,
-    doorbell: *align(1) volatile u32,
+    doorbell: *allowzero align(1) volatile u32 = @ptrFromInt(0),
 };
 
 const NVMeQueuePair = struct {
     currentPhase: u1 = 1,
-    submitQueue: NVMeQueueDesc,
-    completeQueue: NVMeQueueDesc,
+    submitQueue: NVMeQueueDesc = NVMeQueueDesc{},
+    completeQueue: NVMeQueueDesc = NVMeQueueDesc{},
 };
 
 const NVMeSubmitDWord = packed struct {
@@ -76,41 +76,76 @@ const NVMeLBAFormat = packed struct {
     reserved: u6,
 };
 
+const NVMeControllerID = extern struct {
+    vendorID: u16,
+    subsystemVendorID: u16,
+    serialNumber: [20]u8,
+    modelNumber: [40]u8,
+    firmwareRevision: [8]u8,
+    recommendedArbitrationBurst: u8,
+    ieee: [3]u8,
+    cmic: u8,
+    maximumDataTransferSize: u8,
+    controllerID: u16,
+    version: u32,
+    rtd3ResumeLatency: u32,
+    rtd3EntryLatency: u32,
+    oaes: u32,
+    controllerAttributes: u32,
+    rrls: u16,
+    reserved: [9]u8,
+    controllerType: u8,
+    fGUID: [16]u8,
+    crdt: [3]u16,
+    reserved2: [122]u8,
+    oacs: u16,
+    acl: u8,
+    aerl: u8,
+    firmwareUpdates: u8,
+    logPageAttributes: u8,
+    errorLogPageEntries: u8,
+    numberOfPowerStates: u8,
+    apsta: u8,
+    wcTemp: u16,
+    ccTemp: u16,
+    mtfa: u16,
+    hostMemoryBufferPreferredSize: u32,
+    hostMemoryBufferMinimumSize: u32,
+    unused: [232]u8,
+    sqEntrySize: u8,
+    cqEntrySize: u8,
+    maxCmd: u16,
+    numNamespaces: u32,
+    unused2: [248]u8,
+    name: [256]u8,
+    unused3: [3072]u8,
+
+    comptime {
+        if (@sizeOf(@This()) != 4096) {
+            @compileLog(@sizeOf(@This()));
+            @compileError("NVMe Controller ID size is != 4096!");
+        }
+    }
+};
+
 const NVMeNamespaceID = extern struct {
-    lbaSize: u64 align(1),
+    namespaceSize: u64 align(1),
     lbaCapacity: u64 align(1),
-    lbaUtilized: u64 align(1),
+    namespaceUtilized: u64 align(1),
     features: u8 align(1),
     lbaFormatCount: u8 align(1),
-    metadataCap: u8 align(1),
-    endToEndProt: u8 align(1),
-    endToEndProtSettings: u8 align(1),
-    sharingCap: u8 align(1),
-    resCap: u8 align(1),
-    fpi: u8 align(1),
-    deallocate: u8 align(1),
-    atomicWrite: u16 align(1),
-    atomicWritePowerFail: u16 align(1),
-    atomicCompareWrite: u16 align(1),
-    atomicBoundaryWrite: u16 align(1),
-    atomicBoundaryOffset: u16 align(1),
-    atomicBoundaryPowerFail: u16 align(1),
-    optimalIOBoundary: u16 align(1),
-    nvmCapacity: [2]u64 align(1),
-    preferredWriteGranularity: u16 align(1),
-    preferredWriteAlignment: u16 align(1),
-    preferredDeallocateGranularity: u16 align(1),
-    preferredDeallocateAlignment: u16 align(1),
-    optimalWriteSize: u16 align(1),
-    _reserved1: [18]u8 align(1),
-    anaGrpID: u32 align(1),
-    _reserved2: [3]u8 align(1),
-    namespaceAttr: u8 align(1),
-    nvmsetID: u16 align(1),
-    endgID: u16 align(1),
-    namespaceGUID: [2]u64 align(1),
-    eui64: u64 align(1),
+    fmtLbaSize: u8 align(1),
+    unused: [101]u8 align(1),
     lbaFormat: [16]NVMeLBAFormat align(1),
+    reserved: [192]u8 align(1),
+    vendor: [3712]u8 align(1),
+};
+
+const NVMeNamespace = struct {
+    id: *NVMeNamespaceID,
+    blockSize: u64,
+    blocks: u64,
+    queue: NVMeQueuePair = NVMeQueuePair{},
 };
 
 const NVMeDrive = struct {
@@ -120,13 +155,12 @@ const NVMeDrive = struct {
     func: u8,
     irq: u16,
     regs: *volatile NVMeRegisters,
-    identify: *NVMeNamespaceID,
+    namespaces: []NVMeNamespace,
+    contID: *NVMeControllerID,
     // Controller Info
     maxQueue: usize,
     doorbellStride: usize,
     adminQueue: NVMeQueuePair,
-    ioQueue: NVMeQueuePair,
-    maxDataTransfer: u8,
 
     pub fn SubmitAndWait(self: *NVMeDrive, entry: NVMeSubmitEntry, queue: *NVMeQueuePair) NVMeCompletionEntry {
         _ = self;
@@ -161,10 +195,10 @@ const NVMeDrive = struct {
         }
     }
 
-    pub fn Identify(self: *NVMeDrive, buf: []u8, t: u32, what: u32) void {
+    pub fn Identify(self: *NVMeDrive, buf: []u8, t: u32, what: u32) bool {
         if (t >= 3) {
             DriverInfo.krnlDispatch.?.abort("NVMe Identification of t >= 3 is not supported");
-            return;
+            return false;
         }
         var sub: NVMeSubmitEntry = NVMeSubmitEntry{};
         sub.dataptr[0] = @intFromPtr(DriverInfo.krnlDispatch.?.pfnAlloc(false)) - 0xffff800000000000;
@@ -172,9 +206,12 @@ const NVMeDrive = struct {
         sub.d0.opcode = 0x6; // IDENTIFY
         if (t == 0)
             sub.namespace = what;
-        _ = self.SubmitAndWait(sub, &self.adminQueue);
-        std.mem.copyForwards(u8, buf[0..4096], @as([*]u8, @ptrFromInt(sub.dataptr[0] + 0xffff800000000000))[0..4096]);
+        const response = self.SubmitAndWait(sub, &self.adminQueue);
+        if (response.status == 0) {
+            std.mem.copyForwards(u8, buf[0..4096], @as([*]u8, @ptrFromInt(sub.dataptr[0] + 0xffff800000000000))[0..4096]);
+        }
         DriverInfo.krnlDispatch.?.pfnDeref(@as(*void, @ptrFromInt(sub.dataptr[0])));
+        return response.status == 0;
     }
 
     pub fn Init(self: *NVMeDrive) void {
@@ -232,9 +269,57 @@ const NVMeDrive = struct {
         self.adminQueue.completeQueue.doorbell.* = 0;
         self.adminQueue.currentPhase = 1;
         const conAddr = @intFromPtr(DriverInfo.krnlDispatch.?.staticAllocAnon(4096));
-        self.Identify(@as([*]u8, @ptrFromInt(conAddr))[0..4096], 1, 0);
-        self.maxDataTransfer = @as(*u8, @ptrFromInt(conAddr + 77)).*;
-        DriverInfo.krnlDispatch.?.staticFreeAnon(@as(*void, @ptrFromInt(conAddr)), 4096);
+        _ = self.Identify(@as([*]u8, @ptrFromInt(conAddr))[0..4096], 1, 0);
+        self.contID = @ptrFromInt(conAddr);
+        DriverInfo.krnlDispatch.?.put("Serial Number: \"");
+        DriverInfo.krnlDispatch.?.putRaw(@as([*c]u8, @ptrCast(&self.contID.serialNumber)), 20);
+        DriverInfo.krnlDispatch.?.put("\", Name: \"");
+        DriverInfo.krnlDispatch.?.put(@as([*c]const u8, @ptrCast(&self.contID.name)));
+        DriverInfo.krnlDispatch.?.put("\" with ");
+        DriverInfo.krnlDispatch.?.putNumber(self.contID.numNamespaces, 10, false, ' ', 0);
+        DriverInfo.krnlDispatch.?.put(" namespace(s), and a maximum of ");
+        DriverInfo.krnlDispatch.?.putNumber(self.maxQueue, 10, false, ' ', 0);
+        DriverInfo.krnlDispatch.?.put(" queues\n");
+        var i: u32 = 0;
+        var first: bool = true;
+        while (i < self.contID.numNamespaces) : (i += 1) {
+            const namespace: *NVMeNamespaceID = @alignCast(@ptrCast(DriverInfo.krnlDispatch.?.staticAllocAnon(4096)));
+            if (!self.Identify(@as([*]u8, @alignCast(@ptrCast(namespace)))[0..4096], 0, i + 1)) {
+                DriverInfo.krnlDispatch.?.staticFreeAnon(@as(*void, @ptrCast(namespace)), 4096);
+            } else {
+                const nsEntry = NVMeNamespace{
+                    .id = namespace,
+                    .blockSize = @as(u64, 1) << @as(u6, @intCast(namespace.lbaFormat[namespace.fmtLbaSize & 0xf].lbaDataSize)),
+                    .blocks = namespace.lbaCapacity,
+                };
+                if (nsEntry.blocks == 0) {
+                    DriverInfo.krnlDispatch.?.staticFreeAnon(@as(*void, @ptrCast(namespace)), 4096);
+                    continue;
+                }
+                DriverInfo.krnlDispatch.?.put("Namespace #");
+                DriverInfo.krnlDispatch.?.putNumber(i + 1, 10, false, ' ', 0);
+                DriverInfo.krnlDispatch.?.put(": ");
+                DriverInfo.krnlDispatch.?.putNumber(nsEntry.blocks, 10, false, ' ', 0);
+                DriverInfo.krnlDispatch.?.put(" blocks (");
+                DriverInfo.krnlDispatch.?.putNumber(nsEntry.blockSize, 10, false, ' ', 0);
+                DriverInfo.krnlDispatch.?.put(" bytes per block)\n");
+                if (first) {
+                    var newNs = @as([*]NVMeNamespace, @ptrCast(@alignCast(DriverInfo.krnlDispatch.?.staticAlloc(@sizeOf(NVMeNamespace)))))[0..1];
+                    newNs[0] = nsEntry;
+                    self.namespaces = newNs;
+                    first = false;
+                } else {
+                    var newNs = @as([*]NVMeNamespace, @ptrCast(@alignCast(DriverInfo.krnlDispatch.?.staticAlloc(@sizeOf(NVMeNamespace) * (self.namespaces.len + 1)))))[0 .. self.namespaces.len + 1];
+                    var j: usize = 0;
+                    while (j < self.namespaces.len) : (j += 1) {
+                        newNs[j] = self.namespaces[j];
+                    }
+                    newNs[self.namespaces.len] = nsEntry;
+                    DriverInfo.krnlDispatch.?.staticFree(@as(*void, @ptrCast(self.namespaces)), self.namespaces.len * @sizeOf(NVMeNamespace));
+                    self.namespaces = newNs;
+                }
+            }
+        }
     }
 };
 
@@ -245,7 +330,6 @@ pub fn NVMeIRQ(irq: u16) callconv(.C) void {
     var drive = driveHead;
     while (drive != null) {
         drive.?.adminQueue.completeQueue.event = true;
-        drive.?.ioQueue.completeQueue.event = true;
         drive = drive.?.next;
     }
 }
@@ -277,7 +361,6 @@ pub fn LoadDriver() callconv(.C) devlib.Status {
                     dispatch.putNumber(PCIDrvr.readBar(drive.bus, drive.slot, drive.func, 0) + 0xffff800000000000, 16, false, ' ', 0);
                     dispatch.put("\n");
                 }
-                drive.identify = @as(*NVMeNamespaceID, @alignCast(@ptrCast(dispatch.staticAllocAnon(4096))));
                 drive.regs = @ptrFromInt(PCIDrvr.readBar(drive.bus, drive.slot, drive.func, 0) + 0xffff800000000000);
                 drive.next = driveHead;
                 driveHead = drive;
