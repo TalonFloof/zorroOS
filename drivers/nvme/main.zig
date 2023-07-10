@@ -25,26 +25,6 @@ const NVMeRegisters = extern struct {
     adminQueueAttr: u32 align(1),
     adminSubQueueBase: u64 align(1),
     adminCplQueueBase: u64 align(1),
-
-    pub fn Dump(self: *volatile NVMeRegisters) void {
-        DriverInfo.krnlDispatch.?.put("Capabilities: 0x");
-        DriverInfo.krnlDispatch.?.putNumber(self.caps, 16, false, ' ', 0);
-        DriverInfo.krnlDispatch.?.put("\nVersion: 0x");
-        DriverInfo.krnlDispatch.?.putNumber(self.version, 16, false, ' ', 0);
-        DriverInfo.krnlDispatch.?.put("\nIntMask: 0x");
-        DriverInfo.krnlDispatch.?.putNumber(self.intMask, 16, false, ' ', 0);
-        DriverInfo.krnlDispatch.?.put("\nConfig: 0x");
-        DriverInfo.krnlDispatch.?.putNumber(self.config, 16, false, ' ', 0);
-        DriverInfo.krnlDispatch.?.put("\nStatus: 0x");
-        DriverInfo.krnlDispatch.?.putNumber(self.status, 16, false, ' ', 0);
-        DriverInfo.krnlDispatch.?.put("\nAdminQueueAttr: 0x");
-        DriverInfo.krnlDispatch.?.putNumber(self.adminQueueAttr, 16, false, ' ', 0);
-        DriverInfo.krnlDispatch.?.put("\nAdminSubBase: 0x");
-        DriverInfo.krnlDispatch.?.putNumber(self.adminSubQueueBase, 16, false, ' ', 0);
-        DriverInfo.krnlDispatch.?.put("\nAdminCplBase: 0x");
-        DriverInfo.krnlDispatch.?.putNumber(self.adminCplQueueBase, 16, false, ' ', 0);
-        DriverInfo.krnlDispatch.?.put("\n");
-    }
 };
 
 const NVMeQueueDesc = struct {
@@ -53,7 +33,7 @@ const NVMeQueueDesc = struct {
     index: u32,
     id: usize,
     event: bool = false,
-    doorbell: *align(1) volatile u16,
+    doorbell: *align(1) volatile u32,
 };
 
 const NVMeQueuePair = struct {
@@ -149,6 +129,7 @@ const NVMeDrive = struct {
     maxDataTransfer: u8,
 
     pub fn SubmitAndWait(self: *NVMeDrive, entry: NVMeSubmitEntry, queue: *NVMeQueuePair) NVMeCompletionEntry {
+        _ = self;
         queue.completeQueue.event = false;
         const subq = @as([*]volatile NVMeSubmitEntry, @alignCast(@ptrCast(queue.submitQueue.addr)));
         const compq = @as([*]volatile NVMeCompletionEntry, @alignCast(@ptrCast(queue.completeQueue.addr)));
@@ -158,7 +139,6 @@ const NVMeDrive = struct {
         _ = id;
         queue.submitQueue.index = (queue.submitQueue.index + 1) % @as(u32, @intCast(queue.submitQueue.entryCount));
         queue.submitQueue.doorbell.* = @intCast(queue.submitQueue.index);
-        self.regs.Dump();
         while (true) {
             while (!queue.completeQueue.event) {
                 _ = DriverInfo.krnlDispatch.?.enableDisableIRQ(true);
@@ -217,6 +197,9 @@ const NVMeDrive = struct {
         var conf = self.regs.config;
         conf &= ~@as(u32, 1); // Reset Controller
         self.regs.config = conf;
+        while ((self.regs.status & 1) == 1) {
+            std.atomic.spinLoopHint();
+        }
         // NVM Command Set
         conf &= ~@as(u32, 0b1110000);
         // 4K Page Size
@@ -227,7 +210,6 @@ const NVMeDrive = struct {
         self.regs.adminQueueAttr = (@as(u32, (4096 / @sizeOf(NVMeCompletionEntry)) - 1) << 16) | ((4096 / @sizeOf(NVMeSubmitEntry)) - 1);
         self.regs.adminCplQueueBase = @intFromPtr(DriverInfo.krnlDispatch.?.pfnAlloc(false)) - 0xffff800000000000;
         self.regs.adminSubQueueBase = @intFromPtr(DriverInfo.krnlDispatch.?.pfnAlloc(false)) - 0xffff800000000000;
-        self.regs.Dump();
         self.regs.config = self.regs.config | 1;
         while ((self.regs.status & 3) == 0) {
             std.atomic.spinLoopHint();
@@ -239,17 +221,16 @@ const NVMeDrive = struct {
         self.regs.intMaskClear = 0xffffffff;
         // NVMe Controller was successfully reset!
         self.maxQueue = (self.regs.caps & 0xFFFF) + 1;
-        self.doorbellStride = @as(u64, 1) << @as(u6, @intCast(2 + ((self.regs.caps & 0xF00000000) >> 32)));
+        self.doorbellStride = (((self.regs.caps) >> 32) & 0xf);
         self.adminQueue.submitQueue.addr = @ptrFromInt(self.regs.adminSubQueueBase + 0xffff800000000000);
         self.adminQueue.completeQueue.addr = @ptrFromInt(self.regs.adminCplQueueBase + 0xffff800000000000);
         self.adminQueue.completeQueue.entryCount = 4096 / @sizeOf(NVMeCompletionEntry);
         self.adminQueue.submitQueue.entryCount = 4096 / @sizeOf(NVMeSubmitEntry);
-        self.adminQueue.submitQueue.doorbell = @as(*align(1) volatile u16, @ptrFromInt(@intFromPtr(self.regs) + 0x1000 + (0 * 2) * self.doorbellStride));
-        self.adminQueue.completeQueue.doorbell = @as(*align(1) volatile u16, @ptrFromInt(@intFromPtr(self.regs) + 0x1000 + ((0 * 2) + 1) * self.doorbellStride));
+        self.adminQueue.submitQueue.doorbell = @as(*align(1) volatile u32, @ptrFromInt(@intFromPtr(self.regs) + 0x1000 + (0 * 2) * (@as(usize, 4) << @intCast(self.doorbellStride))));
+        self.adminQueue.completeQueue.doorbell = @as(*align(1) volatile u32, @ptrFromInt(@intFromPtr(self.regs) + 0x1000 + (0 * 2 + 1) * (@as(usize, 4) << @intCast(self.doorbellStride))));
         self.adminQueue.submitQueue.doorbell.* = 0;
         self.adminQueue.completeQueue.doorbell.* = 0;
         self.adminQueue.currentPhase = 1;
-        self.regs.Dump();
         const conAddr = @intFromPtr(DriverInfo.krnlDispatch.?.staticAllocAnon(4096));
         self.Identify(@as([*]u8, @ptrFromInt(conAddr))[0..4096], 1, 0);
         self.maxDataTransfer = @as(*u8, @ptrFromInt(conAddr + 77)).*;
@@ -261,7 +242,6 @@ var driveHead: ?*NVMeDrive = null;
 
 pub fn NVMeIRQ(irq: u16) callconv(.C) void {
     _ = irq;
-    DriverInfo.krnlDispatch.?.put("NVMe IRQ!\n");
     var drive = driveHead;
     while (drive != null) {
         drive.?.adminQueue.completeQueue.event = true;
