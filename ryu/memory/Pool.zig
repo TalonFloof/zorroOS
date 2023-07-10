@@ -145,6 +145,7 @@ pub const Pool = struct {
         }
         self.partialBucketHead = bucketHeader;
         var ret = bucketHeader.Alloc(size);
+        @memset(ret.?, 0);
         self.usedBlocks += bucketHeader.usedEntries;
         self.lock.release();
         _ = HAL.Arch.IRQEnableDisable(old);

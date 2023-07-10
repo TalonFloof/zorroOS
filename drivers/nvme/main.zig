@@ -38,6 +38,7 @@ const NVMeQueueDesc = struct {
 
 const NVMeQueuePair = struct {
     currentPhase: u1 = 1,
+    nextCommand: u16 = 0,
     submitQueue: NVMeQueueDesc = NVMeQueueDesc{},
     completeQueue: NVMeQueueDesc = NVMeQueueDesc{},
 };
@@ -57,6 +58,12 @@ const NVMeSubmitEntry = extern struct {
     metadata: u64 align(1) = 0,
     dataptr: [2]u64 align(1) = .{ 0, 0 },
     command: [6]u32 align(1) = .{ 0, 0, 0, 0, 0, 0 },
+
+    comptime {
+        if (@sizeOf(@This()) != 64) {
+            @compileError("NVMeSubmitEntry size != 64!");
+        }
+    }
 };
 
 const NVMeCompletionEntry = packed struct {
@@ -67,6 +74,12 @@ const NVMeCompletionEntry = packed struct {
     cmdID: u16 = 0,
     phase: u1 = 0,
     status: u15 = 0,
+
+    comptime {
+        if (@sizeOf(@This()) != 16) {
+            @compileError("NVMeCompletionEntry size != 16!");
+        }
+    }
 };
 
 const NVMeLBAFormat = packed struct {
@@ -142,10 +155,95 @@ const NVMeNamespaceID = extern struct {
 };
 
 const NVMeNamespace = struct {
+    drive: *NVMeDrive,
+    nsID: u32,
     id: *NVMeNamespaceID,
     blockSize: u64,
     blocks: u64,
     queue: NVMeQueuePair = NVMeQueuePair{},
+    spinlock: u8 = 0,
+
+    pub fn Read(self: *NVMeNamespace, lba: u64, buf: []u8) bool {
+        var blocksToRead = buf.len / self.blockSize;
+        var curLBA = lba;
+        var curBase: [*]u8 = buf.ptr;
+        var page = DriverInfo.krnlDispatch.?.pfnAlloc(false);
+        while (blocksToRead > 0) {
+            var command = NVMeSubmitEntry{};
+            command.d0.opcode = 0x2; // READ
+            command.namespace = self.nsID;
+            command.dataptr[0] = @intFromPtr(page) - 0xffff800000000000;
+            command.command[0] = @intCast(lba & 0xffffffff);
+            command.command[1] = @intCast((lba >> 32) & 0xffffffff);
+            command.command[2] = @intCast(@min((4096 / self.blockSize), blocksToRead) - 1);
+            const result = self.drive.SubmitAndWait(command, &self.queue);
+            if (result.status != 0) {
+                DriverInfo.krnlDispatch.?.pfnDeref(@ptrFromInt(@intFromPtr(page) - 0xffff800000000000));
+                return false;
+            }
+            std.mem.copyForwards(u8, curBase[0 .. @min((4096 / self.blockSize), blocksToRead) * self.blockSize], @as([*]u8, @alignCast(@ptrCast(page)))[0 .. @min((4096 / self.blockSize), blocksToRead) * self.blockSize]);
+            curBase = @ptrFromInt(@intFromPtr(curBase) + 4096);
+            curLBA += (4096 / self.blockSize);
+            blocksToRead -= @min((4096 / self.blockSize), blocksToRead);
+        }
+        DriverInfo.krnlDispatch.?.pfnDeref(@ptrFromInt(@intFromPtr(page) - 0xffff800000000000));
+        return true;
+    }
+
+    pub fn Init(self: *NVMeNamespace) void {
+        // Create the Completion Queue
+        self.queue.completeQueue.addr = DriverInfo.krnlDispatch.?.pfnAlloc(false);
+        self.queue.completeQueue.entryCount = 4096 / @sizeOf(NVMeCompletionEntry);
+        self.queue.completeQueue.id = self.drive.nextID;
+        self.queue.completeQueue.event = false;
+        self.queue.completeQueue.index = 0;
+        self.queue.completeQueue.doorbell = @as(*align(1) volatile u32, @ptrFromInt(@intFromPtr(self.drive.regs) + 0x1000 + (self.drive.nextID * 2 + 1) * (@as(usize, 4) << @intCast(self.drive.doorbellStride))));
+        var command: NVMeSubmitEntry = NVMeSubmitEntry{};
+        command.d0.opcode = 0x5; // CREATEIOCOMPQUEUE
+        command.dataptr[0] = @intFromPtr(self.queue.completeQueue.addr) - 0xffff800000000000;
+        command.command[0] = @as(u32, @intCast(self.drive.nextID)) | ((@as(u32, @intCast(self.queue.completeQueue.entryCount)) - 1) << 16);
+        command.command[1] = 3;
+        var result = self.drive.SubmitAndWait(command, &self.drive.adminQueue);
+        if (result.status != 0) {
+            DriverInfo.krnlDispatch.?.abort("Failed to create completion queue!");
+            return;
+        }
+        self.queue.submitQueue.addr = DriverInfo.krnlDispatch.?.pfnAlloc(false);
+        self.queue.submitQueue.entryCount = 4096 / @sizeOf(NVMeSubmitEntry);
+        self.queue.submitQueue.id = self.drive.nextID;
+        self.queue.submitQueue.event = false;
+        self.queue.submitQueue.index = 0;
+        self.queue.submitQueue.doorbell = @as(*align(1) volatile u32, @ptrFromInt(@intFromPtr(self.drive.regs) + 0x1000 + (self.drive.nextID * 2) * (@as(usize, 4) << @intCast(self.drive.doorbellStride))));
+        command = NVMeSubmitEntry{};
+        command.d0.opcode = 0x1; // CREATEIOSUBQUEUE
+        command.dataptr[0] = @intFromPtr(self.queue.submitQueue.addr) - 0xffff800000000000;
+        command.command[0] = @as(u32, @intCast(self.drive.nextID)) | ((@as(u32, @intCast(self.queue.submitQueue.entryCount)) - 1) << 16);
+        command.command[1] = 1 | (@as(u32, @intCast(self.drive.nextID)) << 16);
+        result = self.drive.SubmitAndWait(command, &self.drive.adminQueue);
+        if (result.status != 0) {
+            DriverInfo.krnlDispatch.?.abort("Failed to create submission queue!");
+            return;
+        }
+        self.drive.nextID += 1;
+        var buf = @as([*]u8, @alignCast(@ptrCast(DriverInfo.krnlDispatch.?.staticAlloc(512))))[0..512];
+        if (self.Read(1, buf)) {
+            var i: usize = 0;
+            while (i < 512) : (i += 16) {
+                DriverInfo.krnlDispatch.?.putNumber(i, 16, false, '0', 4);
+                DriverInfo.krnlDispatch.?.put(": ");
+                var j: usize = 0;
+                while (j < 16) : (j += 1) {
+                    DriverInfo.krnlDispatch.?.putNumber(buf[i + j], 16, false, '0', 2);
+                    DriverInfo.krnlDispatch.?.put(" ");
+                }
+                DriverInfo.krnlDispatch.?.put("|");
+                DriverInfo.krnlDispatch.?.putRaw(@as([*c]u8, @ptrCast(&buf[i])), 16);
+                DriverInfo.krnlDispatch.?.put("|\n");
+            }
+        } else {
+            DriverInfo.krnlDispatch.?.abort("Failed to read LBA Sector 1");
+        }
+    }
 };
 
 const NVMeDrive = struct {
@@ -154,6 +252,7 @@ const NVMeDrive = struct {
     slot: u8,
     func: u8,
     irq: u16,
+    nextID: u64 = 1,
     regs: *volatile NVMeRegisters,
     namespaces: []NVMeNamespace,
     contID: *NVMeControllerID,
@@ -165,10 +264,17 @@ const NVMeDrive = struct {
     pub fn SubmitAndWait(self: *NVMeDrive, entry: NVMeSubmitEntry, queue: *NVMeQueuePair) NVMeCompletionEntry {
         _ = self;
         queue.completeQueue.event = false;
-        const subq = @as([*]volatile NVMeSubmitEntry, @alignCast(@ptrCast(queue.submitQueue.addr)));
-        const compq = @as([*]volatile NVMeCompletionEntry, @alignCast(@ptrCast(queue.completeQueue.addr)));
+        if (@intFromPtr(queue.submitQueue.addr) == 0) {
+            DriverInfo.krnlDispatch.?.abort("Cannot submit a command to a null submission queue!");
+        }
+        const subq = @as([*]align(1) NVMeSubmitEntry, @alignCast(@ptrCast(queue.submitQueue.addr)));
+        const compq = @as([*]align(1) NVMeCompletionEntry, @alignCast(@ptrCast(queue.completeQueue.addr)));
+        if (@intFromPtr(&subq[@intCast(queue.submitQueue.index)]) == 0) {
+            DriverInfo.krnlDispatch.?.abort("Cannot submit a command to a null location!");
+        }
         subq[@intCast(queue.submitQueue.index)] = entry;
-        subq[@intCast(queue.submitQueue.index)].d0.cmdid = @intCast(queue.submitQueue.index);
+        subq[@intCast(queue.submitQueue.index)].d0.cmdid = @intCast(queue.nextCommand);
+        queue.nextCommand +%= 1;
         const id = queue.submitQueue.index;
         _ = id;
         queue.submitQueue.index = (queue.submitQueue.index + 1) % @as(u32, @intCast(queue.submitQueue.entryCount));
@@ -187,7 +293,7 @@ const NVMeDrive = struct {
                 const completion: NVMeCompletionEntry = compq[@intCast(queue.completeQueue.index)];
                 queue.completeQueue.index = (queue.completeQueue.index + 1) % @as(u32, @intCast(queue.completeQueue.entryCount));
                 if (queue.completeQueue.index == 0)
-                    queue.currentPhase = ~queue.currentPhase;
+                    queue.currentPhase = if (queue.currentPhase == 1) 0 else 1;
                 queue.completeQueue.doorbell.* = @intCast(queue.completeQueue.index);
                 return completion;
             }
@@ -245,8 +351,10 @@ const NVMeDrive = struct {
         conf &= ~@as(u32, 0b11100000000000);
         self.regs.config = conf;
         self.regs.adminQueueAttr = (@as(u32, (4096 / @sizeOf(NVMeCompletionEntry)) - 1) << 16) | ((4096 / @sizeOf(NVMeSubmitEntry)) - 1);
-        self.regs.adminCplQueueBase = @intFromPtr(DriverInfo.krnlDispatch.?.pfnAlloc(false)) - 0xffff800000000000;
-        self.regs.adminSubQueueBase = @intFromPtr(DriverInfo.krnlDispatch.?.pfnAlloc(false)) - 0xffff800000000000;
+        self.adminQueue.completeQueue.addr = DriverInfo.krnlDispatch.?.pfnAlloc(false);
+        self.adminQueue.submitQueue.addr = DriverInfo.krnlDispatch.?.pfnAlloc(false);
+        self.regs.adminCplQueueBase = @intFromPtr(self.adminQueue.completeQueue.addr) - 0xffff800000000000;
+        self.regs.adminSubQueueBase = @intFromPtr(self.adminQueue.submitQueue.addr) - 0xffff800000000000;
         self.regs.config = self.regs.config | 1;
         while ((self.regs.status & 3) == 0) {
             std.atomic.spinLoopHint();
@@ -259,8 +367,6 @@ const NVMeDrive = struct {
         // NVMe Controller was successfully reset!
         self.maxQueue = (self.regs.caps & 0xFFFF) + 1;
         self.doorbellStride = (((self.regs.caps) >> 32) & 0xf);
-        self.adminQueue.submitQueue.addr = @ptrFromInt(self.regs.adminSubQueueBase + 0xffff800000000000);
-        self.adminQueue.completeQueue.addr = @ptrFromInt(self.regs.adminCplQueueBase + 0xffff800000000000);
         self.adminQueue.completeQueue.entryCount = 4096 / @sizeOf(NVMeCompletionEntry);
         self.adminQueue.submitQueue.entryCount = 4096 / @sizeOf(NVMeSubmitEntry);
         self.adminQueue.submitQueue.doorbell = @as(*align(1) volatile u32, @ptrFromInt(@intFromPtr(self.regs) + 0x1000 + (0 * 2) * (@as(usize, 4) << @intCast(self.doorbellStride))));
@@ -280,14 +386,23 @@ const NVMeDrive = struct {
         DriverInfo.krnlDispatch.?.put(" namespace(s), and a maximum of ");
         DriverInfo.krnlDispatch.?.putNumber(self.maxQueue, 10, false, ' ', 0);
         DriverInfo.krnlDispatch.?.put(" queues\n");
+        _ = self.SubmitAndWait(NVMeSubmitEntry{
+            .d0 = NVMeSubmitDWord{
+                .opcode = 0x9,
+            },
+            .command = .{ 0x80, 0, 0, 0, 0, 0 },
+        }, &self.adminQueue);
         var i: u32 = 0;
         var first: bool = true;
+        var entries: usize = 0;
         while (i < self.contID.numNamespaces) : (i += 1) {
             const namespace: *NVMeNamespaceID = @alignCast(@ptrCast(DriverInfo.krnlDispatch.?.staticAllocAnon(4096)));
             if (!self.Identify(@as([*]u8, @alignCast(@ptrCast(namespace)))[0..4096], 0, i + 1)) {
                 DriverInfo.krnlDispatch.?.staticFreeAnon(@as(*void, @ptrCast(namespace)), 4096);
             } else {
                 const nsEntry = NVMeNamespace{
+                    .drive = self,
+                    .nsID = i + 1,
                     .id = namespace,
                     .blockSize = @as(u64, 1) << @as(u6, @intCast(namespace.lbaFormat[namespace.fmtLbaSize & 0xf].lbaDataSize)),
                     .blocks = namespace.lbaCapacity,
@@ -303,6 +418,7 @@ const NVMeDrive = struct {
                 DriverInfo.krnlDispatch.?.put(" blocks (");
                 DriverInfo.krnlDispatch.?.putNumber(nsEntry.blockSize, 10, false, ' ', 0);
                 DriverInfo.krnlDispatch.?.put(" bytes per block)\n");
+                entries += 1;
                 if (first) {
                     var newNs = @as([*]NVMeNamespace, @ptrCast(@alignCast(DriverInfo.krnlDispatch.?.staticAlloc(@sizeOf(NVMeNamespace)))))[0..1];
                     newNs[0] = nsEntry;
@@ -320,6 +436,10 @@ const NVMeDrive = struct {
                 }
             }
         }
+        i = 0;
+        while (i < entries) : (i += 1) {
+            self.namespaces[i].Init();
+        }
     }
 };
 
@@ -330,6 +450,10 @@ pub fn NVMeIRQ(irq: u16) callconv(.C) void {
     var drive = driveHead;
     while (drive != null) {
         drive.?.adminQueue.completeQueue.event = true;
+        var i: usize = 0;
+        while (i < drive.?.namespaces.len) : (i += 1) {
+            drive.?.namespaces[i].queue.completeQueue.event = true;
+        }
         drive = drive.?.next;
     }
 }
@@ -361,6 +485,7 @@ pub fn LoadDriver() callconv(.C) devlib.Status {
                     dispatch.putNumber(PCIDrvr.readBar(drive.bus, drive.slot, drive.func, 0) + 0xffff800000000000, 16, false, ' ', 0);
                     dispatch.put("\n");
                 }
+                drive.nextID = 1;
                 drive.regs = @ptrFromInt(PCIDrvr.readBar(drive.bus, drive.slot, drive.func, 0) + 0xffff800000000000);
                 drive.next = driveHead;
                 driveHead = drive;

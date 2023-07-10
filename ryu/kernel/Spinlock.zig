@@ -8,7 +8,7 @@ pub const Spinlock = enum(u8) {
 
     pub fn acquire(spinlock: *volatile Spinlock) void {
         var cycles: usize = 0;
-        while (cycles < 50000000) : (cycles += 1) {
+        while (cycles < 0xffffffff) : (cycles += 1) {
             if (@cmpxchgWeak(Spinlock, spinlock, .unaquired, .aquired, .Acquire, .Monotonic) == null) {
                 return;
             }

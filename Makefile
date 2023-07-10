@@ -12,7 +12,7 @@ build: limine-zig
 	zig build -Doptimize=ReleaseSmall; \
 	cd ../..
 	cd drivers/nvme; \
-	zig build -Doptimize=ReleaseSmall; \
+	zig build -Doptimize=Debug; \
 	cd ../..
 	cd lib; \
 	make; \
