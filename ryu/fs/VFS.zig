@@ -8,6 +8,7 @@ const std = @import("std");
 pub const DevFS = @import("DevFS.zig");
 pub const CpioFS = @import("CpioFS.zig");
 pub const MesgFS = @import("MesgFS.zig");
+pub const Disks = @import("Disks.zig");
 
 pub var rootInode: ?*Inode = null;
 

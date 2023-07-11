@@ -39,6 +39,8 @@ pub const RyuDispatch = extern struct {
     registerDevice: *const fn ([*c]const u8, *fs.Inode) callconv(.C) void,
     // Filesystem
     registerFilesystem: *const fn ([*c]const u8, *const fn (*fs.Filesystem) callconv(.C) bool, *const fn (*fs.Filesystem) callconv(.C) void) callconv(.C) void,
+    // Disks
+    registerDisk: *const fn ([*c]const u8, *allowzero void, u64, *const fn (*allowzero void, usize, *void, usize) callconv(.C) void, *const fn (*allowzero void, usize, *void, usize) callconv(.C) void) callconv(.C) void,
 };
 
 pub const RyuDriverInfo = extern struct {

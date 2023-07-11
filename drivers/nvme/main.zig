@@ -167,14 +167,15 @@ const NVMeNamespace = struct {
         var blocksToRead = buf.len / self.blockSize;
         var curLBA = lba;
         var curBase: [*]u8 = buf.ptr;
+
         var page = DriverInfo.krnlDispatch.?.pfnAlloc(false);
         while (blocksToRead > 0) {
             var command = NVMeSubmitEntry{};
             command.d0.opcode = 0x2; // READ
             command.namespace = self.nsID;
             command.dataptr[0] = @intFromPtr(page) - 0xffff800000000000;
-            command.command[0] = @intCast(lba & 0xffffffff);
-            command.command[1] = @intCast((lba >> 32) & 0xffffffff);
+            command.command[0] = @intCast(curLBA & 0xffffffff);
+            command.command[1] = @intCast((curLBA >> 32) & 0xffffffff);
             command.command[2] = @intCast(@min((4096 / self.blockSize), blocksToRead) - 1);
             const result = self.drive.SubmitAndWait(command, &self.queue);
             if (result.status != 0) {
@@ -200,8 +201,8 @@ const NVMeNamespace = struct {
             command.d0.opcode = 0x1; // WRITE
             command.namespace = self.nsID;
             command.dataptr[0] = @intFromPtr(page) - 0xffff800000000000;
-            command.command[0] = @intCast(lba & 0xffffffff);
-            command.command[1] = @intCast((lba >> 32) & 0xffffffff);
+            command.command[0] = @intCast(curLBA & 0xffffffff);
+            command.command[1] = @intCast((curLBA >> 32) & 0xffffffff);
             command.command[2] = @intCast(@min((4096 / self.blockSize), blocksToWrite) - 1);
             std.mem.copyForwards(u8, @as([*]u8, @alignCast(@ptrCast(page)))[0 .. @min((4096 / self.blockSize), blocksToWrite) * self.blockSize], curBase[0 .. @min((4096 / self.blockSize), blocksToWrite) * self.blockSize]);
             const result = self.drive.SubmitAndWait(command, &self.queue);
@@ -215,6 +216,16 @@ const NVMeNamespace = struct {
         }
         DriverInfo.krnlDispatch.?.pfnDeref(@ptrFromInt(@intFromPtr(page) - 0xffff800000000000));
         return true;
+    }
+
+    pub fn ReadDisk(private: *allowzero void, lba: usize, bufBase: *void, bufSize: usize) callconv(.C) void {
+        var self = @as(*NVMeNamespace, @alignCast(@ptrCast(private)));
+        _ = self.Read(@intCast(lba), @as([*]u8, @alignCast(@ptrCast(bufBase)))[0..bufSize]);
+    }
+
+    pub fn WriteDisk(private: *allowzero void, lba: usize, bufBase: *void, bufSize: usize) callconv(.C) void {
+        var self = @as(*NVMeNamespace, @alignCast(@ptrCast(private)));
+        _ = self.Write(@intCast(lba), @as([*]u8, @alignCast(@ptrCast(bufBase)))[0..bufSize]);
     }
 
     pub fn Init(self: *NVMeNamespace) void {
@@ -251,6 +262,16 @@ const NVMeNamespace = struct {
             DriverInfo.krnlDispatch.?.abort("Failed to create submission queue!");
             return;
         }
+        var buf: [8]u8 = [_]u8{0} ** 8;
+        buf[0] = 'n';
+        buf[1] = 'v';
+        buf[2] = 'm';
+        buf[3] = 'e';
+        buf[4] = '0' + @as(u8, @intCast(self.drive.id));
+        buf[5] = 'n';
+        buf[6] = '0' + @as(u8, @intCast(self.drive.nextID));
+        buf[7] = 0;
+        DriverInfo.krnlDispatch.?.registerDisk(@alignCast(@ptrCast(&buf)), @ptrCast(self), self.blocks, &ReadDisk, &WriteDisk);
         self.drive.nextID += 1;
     }
 };
@@ -261,6 +282,7 @@ const NVMeDrive = struct {
     slot: u8,
     func: u8,
     irq: u16,
+    id: usize,
     nextID: u64 = 1,
     regs: *volatile NVMeRegisters,
     namespaces: []NVMeNamespace,
@@ -472,6 +494,7 @@ pub fn LoadDriver() callconv(.C) devlib.Status {
         PCIDrvr = @alignCast(@ptrCast(devlib.FindDriver(&DriverInfo, "PCIDriver").?));
         dispatch.put("Searching for NVMe Drives...\n");
         var index: ?*pci.PCIDevice = PCIDrvr.getDevices();
+        var driveID: usize = 0;
         while (index) |device| {
             if (device.class == 1 and device.subclass == 8 and device.progif == 2) {
                 // We got one!
@@ -497,6 +520,8 @@ pub fn LoadDriver() callconv(.C) devlib.Status {
                 drive.nextID = 1;
                 drive.regs = @ptrFromInt(PCIDrvr.readBar(drive.bus, drive.slot, drive.func, 0) + 0xffff800000000000);
                 drive.next = driveHead;
+                drive.id = driveID;
+                driveID += 1;
                 driveHead = drive;
                 drive.Init();
             }

@@ -54,6 +54,7 @@ pub export const KDriverDispatch = devlib.RyuDispatch{
     .wakeupEvent = &DriverWakeupEvent,
     .registerDevice = &DriverRegisterDevice,
     .registerFilesystem = &DriverRegisterFilesystem,
+    .registerDisk = &DriverRegisterDisk,
 };
 
 fn DriverPut(s: [*c]const u8) callconv(.C) void {
@@ -167,4 +168,8 @@ fn DriverRegisterDevice(name: [*c]const u8, inode: *FS.Inode) callconv(.C) void 
 
 fn DriverRegisterFilesystem(name: [*c]const u8, mount: *const fn (*FS.Filesystem) callconv(.C) bool, umount: *const fn (*FS.Filesystem) callconv(.C) void) callconv(.C) void {
     FS.RegisterFilesystem(name[0..std.mem.len(name)], mount, umount);
+}
+
+fn DriverRegisterDisk(name: [*c]const u8, private: *allowzero void, blocks: u64, read: *const fn (*allowzero void, usize, *void, usize) callconv(.C) void, write: *const fn (*allowzero void, usize, *void, usize) callconv(.C) void) callconv(.C) void {
+    FS.Disks.RegisterDisk(name[0..std.mem.len(name)], private, blocks, read, write);
 }
