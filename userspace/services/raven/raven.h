@@ -38,6 +38,8 @@ extern Window cursorWin;
 extern Window* winFocus;
 extern Window* winHead;
 extern Window* winTail;
+extern Window* iconHead;
+extern Window* iconTail;
 #endif
 
 #endif

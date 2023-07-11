@@ -11,6 +11,12 @@
 		"height": 32,
 		"bpp": 1
 	},
+	"Emblem/zorroOS": {
+		"file": "Emblem/zorroOS.data",
+		"width": 16,
+		"height": 12,
+		"bpp": 1
+    },
 	"File/Archive": {
 		"file": "File/Archive.data",
 		"width": 32,

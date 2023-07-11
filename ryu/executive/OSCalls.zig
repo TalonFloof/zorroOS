@@ -497,14 +497,30 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                     const team = HAL.Arch.GetHCB().activeThread.?.team;
                     const destTeamID = @as(i64, @bitCast(@as(u64, @intCast(regs.GetReg(1)))));
                     const cArgs = @as([*:null]?[*:0]const u8, @ptrFromInt(regs.GetReg(2)));
-                    const args = cArgs[0..std.mem.len(cArgs)];
+                    const args: []?[*:0]const u8 = cArgs[0..std.mem.len(cArgs)];
                     if (team.teamID == destTeamID) {
                         regs.SetReg(0, @as(u64, @bitCast(@as(i64, @intCast(-38)))));
                     } else {
                         if (Executive.Team.GetTeamByID(destTeamID)) |destTeam| {
                             if (@intFromPtr(destTeam.mainThread) == 0) {
                                 if (Executive.Team.LoadELFImage(args[0].?[0..std.mem.len(args[0].?)], destTeam)) |entry| {
-                                    _ = Executive.Thread.NewThread(destTeam, @as([*]u8, @ptrCast(@constCast("Main Thread")))[0..11], entry, 0x9ff8, 10);
+                                    // Now load the arguments
+                                    var argStrPage = Memory.PFN.AllocatePage(.Active, true, 0).?.ptr;
+                                    var argPtrPage = Memory.PFN.AllocatePage(.Active, true, 0).?.ptr;
+                                    var addr: usize = Memory.Paging.FindFreeSpace(destTeam.addressSpace, 0x1000, 0x2000).?;
+                                    var i: usize = 0;
+                                    var offset: usize = 0;
+                                    while (i < args.len) : (i += 1) {
+                                        const len = std.mem.len(args[i].?) + 1;
+                                        @memcpy(argStrPage[offset .. offset + len], args[i].?[0..len]);
+                                        @as([*]usize, @alignCast(@ptrCast(argPtrPage)))[i] = (addr + 0x1000 + offset);
+                                        offset += len;
+                                    }
+                                    _ = Memory.Paging.MapPage(destTeam.addressSpace, addr, Memory.Paging.AccessRead | Memory.Paging.AccessWrite, @intFromPtr(argPtrPage) - 0xffff800000000000);
+                                    _ = Memory.Paging.MapPage(destTeam.addressSpace, addr + 0x1000, Memory.Paging.AccessRead | Memory.Paging.AccessWrite, @intFromPtr(argStrPage) - 0xffff800000000000);
+                                    const thread = Executive.Thread.NewThread(destTeam, @as([*]u8, @ptrCast(@constCast("Main Thread")))[0..11], entry, 0x9ff8, 10);
+                                    thread.context.SetReg(1, args.len);
+                                    thread.context.SetReg(2, @intCast(addr));
                                     regs.SetReg(0, 0);
                                 } else {
                                     regs.SetReg(0, @as(u64, @bitCast(@as(i64, @intCast(-2)))));

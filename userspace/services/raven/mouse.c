@@ -10,6 +10,8 @@ bool lButton = false;
 int winX = 0;
 int winY = 0;
 Window* winDrag = NULL;
+Window* iconSelect = NULL;
+Window* iconDrag = NULL;
 
 void invertPixel(int x, int y) {
     if(x >= 0 && x < fbInfo.width && y >= 0 && y < fbInfo.height) {
@@ -81,13 +83,32 @@ void MouseThread() {
                 }
                 Redraw(oldX,oldY,cursorWin.w,cursorWin.h);
                 Redraw(cursorWin.x,cursorWin.y,cursorWin.w,cursorWin.h);
+                if(iconSelect != NULL && (buttons & 1) == 1) {
+                    iconDrag = iconSelect;
+                    iconSelect = NULL;
+                    winX = cursorWin.x - iconDrag->x;
+                    winY = cursorWin.y - iconDrag->y;
+                    renderInvertOutline(cursorWin.x - winX, cursorWin.y - winY, 32, 32);
+                } else if(iconDrag != NULL) {
+                    Redraw(oldX - winX, oldY - winY, 32, 32);
+                    renderInvertOutline(cursorWin.x - winX, cursorWin.y - winY, 32, 32);
+                }
                 if (winDrag != NULL) {
                     renderInvertOutline(oldX - winX, oldY - winY, winDrag->w, winDrag->h);
                     renderInvertOutline(cursorWin.x - winX, cursorWin.y - winY, winDrag->w, winDrag->h);
                 }
             }
             if ((buttons & 1) == 0 && lButton) {
-                if(winDrag != NULL) {
+                if(iconDrag != NULL) {
+                    int oldX = iconDrag->x;
+                    int oldY = iconDrag->y;
+                    iconDrag->x = cursorWin.x - winX;
+                    iconDrag->y = cursorWin.y - winY;
+                    Redraw(oldX,oldY,iconDrag->w,iconDrag->h);
+                    Redraw(iconDrag->x,iconDrag->y,iconDrag->w,iconDrag->h);
+                    iconSelect = iconDrag;
+                    iconDrag = NULL;
+                } else  if(winDrag != NULL) {
                     int oldX = winDrag->x;
                     int oldY = winDrag->y;
                     winDrag->x = cursorWin.x - winX;
@@ -149,6 +170,36 @@ void MouseThread() {
                     winFocus = NULL;
                 }
                 SpinlockRelease(&windowLock);
+                if(!clicked) {
+                    win = iconHead;
+                    while(win != NULL) {
+                        if(cursorWin.x >= win->x && cursorWin.x <= win->x+win->w && cursorWin.y >= win->y && cursorWin.y <= win->y+32) {
+                            if(iconSelect != NULL) {
+                                uint32_t* temp = iconSelect->frontBuf;
+                                iconSelect->frontBuf = iconSelect->backBuf;
+                                iconSelect->backBuf = temp;
+                                Redraw(iconSelect->x,iconSelect->y,iconSelect->w,iconSelect->h);
+                            }
+                            uint32_t* temp = win->frontBuf;
+                            win->frontBuf = win->backBuf;
+                            win->backBuf = temp;
+                            Redraw(win->x,win->y,win->w,win->h);
+                            iconSelect = win;
+                            clicked = true;
+                            break;
+                        }
+                        win = win->next;
+                    }
+                }
+                if(!clicked) {
+                    if(iconSelect != NULL) {
+                        uint32_t* temp = iconSelect->frontBuf;
+                        iconSelect->frontBuf = iconSelect->backBuf;
+                        iconSelect->backBuf = temp;
+                        Redraw(iconSelect->x,iconSelect->y,iconSelect->w,iconSelect->h);
+                    }
+                    iconSelect = NULL;
+                }
             }
             lButton = (buttons & 1) != 0;
         } else {

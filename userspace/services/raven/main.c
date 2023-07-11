@@ -23,6 +23,8 @@ MQueue* msgQueue = NULL;
 Window* winHead = NULL;
 Window* winTail = NULL;
 Window* winFocus = NULL;
+Window* iconHead = NULL;
+Window* iconTail = NULL;
 char windowLock = 0;
 uint64_t nextWinID = 1;
 const uint32_t cursorBuf[10*16] = {
@@ -123,6 +125,16 @@ void Redraw(int x, int y, int w, int h) {
           }
         }
         if(win == &backgroundWin) {
+            if(iconHead != NULL) {
+                win = iconHead;
+            } else {
+                if(winHead == NULL) {
+                    win = &cursorWin;
+                } else {
+                win = winHead;
+                }
+            }
+        } else if(win == iconTail) {
             if(winHead == NULL) {
                 win = &cursorWin;
             } else {
@@ -178,6 +190,42 @@ Window* GetWindowByID(int64_t id) {
     return NULL;
 }
 
+void* iconPack;
+PSFHeader* unifont;
+
+Window* AddIcon(int x, int y, const char* icon, const char* emblem, uint32_t emblemColor, const char* name) {
+    Window* ic = malloc(sizeof(Window));
+    ic->x = x;
+    ic->y = y;
+    ic->w = 8*strlen(name);
+    ic->h = 32+16;
+    ic->backBuf = malloc(ic->w*ic->h*4);
+    ic->frontBuf = malloc(ic->w*ic->h*4);
+    ic->prev = iconTail;
+    if(iconTail != NULL) {
+        iconTail->next = ic;
+    }
+    ic->next = NULL;
+    iconTail = ic;
+    if(iconHead == NULL)
+        iconHead = ic;
+    GraphicsContext* gfx = Graphics_NewContext(ic->frontBuf,ic->w,ic->h);
+    Graphics_RenderIcon(gfx,iconPack,icon,(ic->w/2)-16,0,32,32,0xffbcd7e8);
+    if(emblem != NULL) {
+        Graphics_RenderIcon(gfx,iconPack,emblem,(ic->w/2)-16,32-12,16,12,emblemColor);
+    }
+    Graphics_RenderString(gfx,0,32,0xffffffff,unifont,1,name);
+    gfx->buf = ic->backBuf;
+    Graphics_RenderIcon(gfx,iconPack,icon,(ic->w/2)-16,0,32,32,0xff000000 | BlendPixel(0xbcd7e8,0x80000000));
+    if(emblem != NULL) {
+        Graphics_RenderIcon(gfx,iconPack,emblem,(ic->w/2)-16,32-12,16,12,0xff000000 | BlendPixel(emblemColor & 0xffffff,0x80000000));
+    }
+    Graphics_DrawRect(gfx,0,32,ic->w,16,0x80000000);
+    Graphics_RenderString(gfx,0,32,0xffffffff,unifont,1,name);
+    free(gfx);
+    return icon;
+}
+
 void LoadBackground(const char* name) {
     qoi_desc desc;
     void* bgImage = qoi_read(name,&desc,4);
@@ -193,8 +241,12 @@ void LoadBackground(const char* name) {
     Redraw(0,0,fbInfo.width,fbInfo.height);
 }
 
-int main() {
+int main(int argc, const char* argv[]) {
     msgQueue = MQueue_Bind("/dev/mqueue/Raven");
+    iconPack = Graphics_LoadIconPack("/System/Icons/IconPack");
+    unifont = Graphics_LoadFont("/System/Fonts/unifont.psf");
+    AddIcon(32,32,"Device/HardDrive","Emblem/zorroOS",0xff3a8cd1,"Root");
+    AddIcon(72,32,"User/Trash",NULL,0,"Trash");
     OpenedFile fbFile;
     if(Open("/dev/fb0",O_RDWR,&fbFile) < 0) {
         RyuLog("Failed to open /dev/fb0!\n");
