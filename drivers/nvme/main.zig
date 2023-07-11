@@ -190,6 +190,33 @@ const NVMeNamespace = struct {
         return true;
     }
 
+    pub fn Write(self: *NVMeNamespace, lba: u64, buf: []u8) bool {
+        var blocksToWrite = buf.len / self.blockSize;
+        var curLBA = lba;
+        var curBase: [*]u8 = buf.ptr;
+        var page = DriverInfo.krnlDispatch.?.pfnAlloc(false);
+        while (blocksToWrite > 0) {
+            var command = NVMeSubmitEntry{};
+            command.d0.opcode = 0x1; // WRITE
+            command.namespace = self.nsID;
+            command.dataptr[0] = @intFromPtr(page) - 0xffff800000000000;
+            command.command[0] = @intCast(lba & 0xffffffff);
+            command.command[1] = @intCast((lba >> 32) & 0xffffffff);
+            command.command[2] = @intCast(@min((4096 / self.blockSize), blocksToWrite) - 1);
+            std.mem.copyForwards(u8, @as([*]u8, @alignCast(@ptrCast(page)))[0 .. @min((4096 / self.blockSize), blocksToWrite) * self.blockSize], curBase[0 .. @min((4096 / self.blockSize), blocksToWrite) * self.blockSize]);
+            const result = self.drive.SubmitAndWait(command, &self.queue);
+            if (result.status != 0) {
+                DriverInfo.krnlDispatch.?.pfnDeref(@ptrFromInt(@intFromPtr(page) - 0xffff800000000000));
+                return false;
+            }
+            curBase = @ptrFromInt(@intFromPtr(curBase) + 4096);
+            curLBA += (4096 / self.blockSize);
+            blocksToWrite -= @min((4096 / self.blockSize), blocksToWrite);
+        }
+        DriverInfo.krnlDispatch.?.pfnDeref(@ptrFromInt(@intFromPtr(page) - 0xffff800000000000));
+        return true;
+    }
+
     pub fn Init(self: *NVMeNamespace) void {
         // Create the Completion Queue
         self.queue.completeQueue.addr = DriverInfo.krnlDispatch.?.pfnAlloc(false);
@@ -225,24 +252,6 @@ const NVMeNamespace = struct {
             return;
         }
         self.drive.nextID += 1;
-        var buf = @as([*]u8, @alignCast(@ptrCast(DriverInfo.krnlDispatch.?.staticAlloc(512))))[0..512];
-        if (self.Read(1, buf)) {
-            var i: usize = 0;
-            while (i < 512) : (i += 16) {
-                DriverInfo.krnlDispatch.?.putNumber(i, 16, false, '0', 4);
-                DriverInfo.krnlDispatch.?.put(": ");
-                var j: usize = 0;
-                while (j < 16) : (j += 1) {
-                    DriverInfo.krnlDispatch.?.putNumber(buf[i + j], 16, false, '0', 2);
-                    DriverInfo.krnlDispatch.?.put(" ");
-                }
-                DriverInfo.krnlDispatch.?.put("|");
-                DriverInfo.krnlDispatch.?.putRaw(@as([*c]u8, @ptrCast(&buf[i])), 16);
-                DriverInfo.krnlDispatch.?.put("|\n");
-            }
-        } else {
-            DriverInfo.krnlDispatch.?.abort("Failed to read LBA Sector 1");
-        }
     }
 };
 
