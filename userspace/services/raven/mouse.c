@@ -84,11 +84,13 @@ void MouseThread() {
                 Redraw(oldX,oldY,cursorWin.w,cursorWin.h);
                 Redraw(cursorWin.x,cursorWin.y,cursorWin.w,cursorWin.h);
                 if(iconSelect != NULL && (buttons & 1) == 1) {
-                    iconDrag = iconSelect;
-                    iconSelect = NULL;
-                    winX = cursorWin.x - iconDrag->x;
-                    winY = cursorWin.y - iconDrag->y;
-                    renderInvertOutline(cursorWin.x - winX, cursorWin.y - winY, 32, 32);
+                    if(cursorWin.x >= iconSelect->x && cursorWin.x <= iconSelect->x+iconSelect->w && cursorWin.y >= iconSelect->y && cursorWin.y <= iconSelect->y+iconSelect->h) {
+                        iconDrag = iconSelect;
+                        iconSelect = NULL;
+                        winX = cursorWin.x - iconDrag->x;
+                        winY = cursorWin.y - iconDrag->y;
+                        renderInvertOutline(cursorWin.x - winX, cursorWin.y - winY, 32, 32);
+                    }
                 } else if(iconDrag != NULL) {
                     Redraw(oldX - winX, oldY - winY, 32, 32);
                     renderInvertOutline(cursorWin.x - winX, cursorWin.y - winY, 32, 32);
