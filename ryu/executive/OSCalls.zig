@@ -542,6 +542,9 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                     regs.SetReg(0, @as(u64, @intCast(newThread.threadID)));
                     _ = HAL.Arch.IRQEnableDisable(old);
                 },
+                .RenameThread => { // void RenameThread(ThreadID_t id, const char* newName);
+
+                },
                 .Eep => { // void Eep(int us)
                     var deadline = HAL.Arch.GetCurrentTimestamp();
                     const ns = deadline[1] + (@as(i64, @intCast(regs.GetReg(1))) * 1000);

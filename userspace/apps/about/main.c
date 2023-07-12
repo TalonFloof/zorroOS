@@ -6,6 +6,7 @@
 #include <System/Thread.h>
 #include <Raven/Widgets/Button.h>
 #include <Raven/Widgets/Image.h>
+#include <Raven/Widgets/Label.h>
 #include <Media/QOI.h>
 #include <Media/Image.h>
 
@@ -23,5 +24,7 @@ int main(int argc, char* argv[]) {
     Image_ScaleNearest((uint32_t*)tempImage,aboutImage,aboutDesc.width,aboutDesc.height,150,328);
     free(tempImage);
     NewImageWidget(win,1,32,150,328,aboutImage);
+    NewLabelWidget(win,159,48,"zorroOS",LABEL_EXTRA_LARGE);
+    NewLabelWidget(win,159,88,"Aurora",LABEL_LARGE);
     UIRun(session,win,"About zorroOS",NULL);
 }
