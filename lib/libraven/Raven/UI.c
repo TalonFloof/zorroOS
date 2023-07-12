@@ -7,7 +7,16 @@ PSFHeader* RavenKNXT;
 PSFHeader* RavenUnifont;
 void* RavenIconPack;
 
-void UIDrawBaseWindow(GraphicsContext* gfx, const char* title, const char* bg) {
+void UIRedrawWidgets(RavenSession* session, ClientWindow* win, GraphicsContext* gfx) {
+    UIWidget* widget = win->widgetHead;
+    while(widget != NULL) {
+        widget->Redraw(widget,session,win,gfx);
+        RavenFlipArea(session,win,widget->x,widget->y,widget->w,widget->h);
+        widget = widget->next;
+    }
+}
+
+void UIDrawBaseWindow(RavenSession* session, ClientWindow* win, GraphicsContext* gfx, const char* title, const char* bg) {
     Graphics_DrawRect(gfx,0,0,gfx->w,gfx->h,0xff09090b);
     if(bg != NULL) {
         Graphics_RenderIcon(gfx,RavenIconPack,bg,gfx->w-192,gfx->h-192,256,256,0xff121214);
@@ -15,6 +24,7 @@ void UIDrawBaseWindow(GraphicsContext* gfx, const char* title, const char* bg) {
             Graphics_DrawRect(gfx,gfx->w-192,i,256,1,0xff09090b);
         }
     }
+    UIRedrawWidgets(session,win,gfx);
     Graphics_DrawRect(gfx,0,0,gfx->w,32,0xe018181b);
     Graphics_DrawRect(gfx,0,0,32,32,0xe027272a);
     Graphics_DrawRectOutline(gfx,0,0,gfx->w,gfx->h,0xff27272a);
@@ -76,23 +86,13 @@ void UIDrawRoundedBox(GraphicsContext* gfx, int x, int y, int w, int h, uint32_t
     Graphics_DrawRect(gfx,x+w-3,y+h-3,1,1,color);
 }
 
-void UIRedrawWidgets(RavenSession* session, ClientWindow* win, GraphicsContext* gfx) {
-    UIWidget* widget = win->widgetHead;
-    while(widget != NULL) {
-        widget->Redraw(widget,session,win,gfx);
-        RavenFlipArea(session,win,widget->x,widget->y,widget->w,widget->h);
-        widget = widget->next;
-    }
-}
-
 void UIRun(RavenSession* session, ClientWindow* win, const char* title, const char* bg) {
     RavenKNXT = Graphics_LoadFont("/System/Fonts/knxt.psf");
     RavenUnifont = Graphics_LoadFont("/System/Fonts/unifont.psf");
     RavenIconPack = Graphics_LoadIconPack("/System/Icons/IconPack");
     GraphicsContext* gfx = Graphics_NewContext(win->backBuf,win->w,win->h);
-    UIDrawBaseWindow(gfx,title,bg);
+    UIDrawBaseWindow(session,win,gfx,title,bg);
     RavenFlipArea(session,win,0,0,win->w,win->h);
-    UIRedrawWidgets(session,win,gfx);
     while(1) {
         RavenEvent* event = RavenGetEvent(session);
         if(event->type == RAVEN_MOUSE_PRESSED || event->type == RAVEN_MOUSE_RELEASED) {
