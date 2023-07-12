@@ -5,6 +5,7 @@
 
 PSFHeader* RavenKNXT;
 PSFHeader* RavenUnifont;
+PSFHeader* RavenTerminus;
 void* RavenIconPack;
 
 void UIRedrawWidgets(RavenSession* session, ClientWindow* win, GraphicsContext* gfx) {
@@ -25,8 +26,8 @@ void UIDrawBaseWindow(RavenSession* session, ClientWindow* win, GraphicsContext*
         }
     }
     UIRedrawWidgets(session,win,gfx);
-    Graphics_DrawRect(gfx,0,0,gfx->w,32,0xe018181b);
-    Graphics_DrawRect(gfx,0,0,32,32,0xe027272a);
+    Graphics_DrawRect(gfx,0,0,gfx->w,32,0xff18181b);
+    //Graphics_DrawRect(gfx,0,0,32,32,0xff27272a);
     Graphics_DrawRectOutline(gfx,0,0,gfx->w,gfx->h,0xff27272a);
     Graphics_DrawRect(gfx,0,32,gfx->w,1,0xff27272a);
 
@@ -89,6 +90,7 @@ void UIDrawRoundedBox(GraphicsContext* gfx, int x, int y, int w, int h, uint32_t
 void UIRun(RavenSession* session, ClientWindow* win, const char* title, const char* bg) {
     RavenKNXT = Graphics_LoadFont("/System/Fonts/knxt.psf");
     RavenUnifont = Graphics_LoadFont("/System/Fonts/unifont.psf");
+    RavenTerminus = Graphics_LoadFont("/System/Fonts/terminus.psf");
     RavenIconPack = Graphics_LoadIconPack("/System/Icons/IconPack");
     GraphicsContext* gfx = Graphics_NewContext(win->backBuf,win->w,win->h);
     UIDrawBaseWindow(session,win,gfx,title,bg);
@@ -113,6 +115,7 @@ void UIRun(RavenSession* session, ClientWindow* win, const char* title, const ch
 
 int64_t UIAddWidget(ClientWindow* win, void* widget) {
     int64_t id = win->nextWidgetID++;
+    ((UIWidget*)widget)->next = NULL;
     ((UIWidget*)widget)->id = id;
     if(win->widgetTail != NULL) {
         ((UIWidget*)win->widgetTail)->next = widget;

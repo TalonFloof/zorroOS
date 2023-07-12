@@ -4,9 +4,7 @@
 
 **zorroOS** is a hobby operating system written in Zig, currently targeting x86_64 PCs.
 
-![They say that a picture is worth a thousand words, this picture on the other hand is only worth, like, two words](docs/InstallScreen.png)
-![Because you know everyone wants to see a loading screen (spoiler: they don't)](docs/KernelLoading.png)
-![It looks cool, that's the only reason I included this screenshot](docs/KernelDebugger.png)
+![They say that a picture is worth a thousand words, this picture on the other hand is only worth, like, two words](docs/Desktop.png)
 
 ## Building
 

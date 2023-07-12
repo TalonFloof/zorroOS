@@ -18,7 +18,7 @@ int main() {
         RyuLog("Unable to open window!\n");
         return 0;
     }
-    NewButtonWidget(win,(320-64),480-149,16,50,"Try","Device/CD",&TryZorroOS);
-    NewButtonWidget(win,(320-64)+64,480-149,0,50,"Install","File/Archive",NULL);
+    NewButtonWidget(win,(320-64),480-149,16,50,0,"Try","Device/CD",&TryZorroOS);
+    NewButtonWidget(win,(320-64)+64,480-149,0,50,0,"Install","File/Archive",NULL);
     UIRun(session,win,"zorroOS Installer","File/Archive");
 }

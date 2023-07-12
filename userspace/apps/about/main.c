@@ -7,8 +7,14 @@
 #include <Raven/Widgets/Button.h>
 #include <Raven/Widgets/Image.h>
 #include <Raven/Widgets/Label.h>
+#include <Raven/Widgets/Badge.h>
 #include <Media/QOI.h>
 #include <Media/Image.h>
+
+void ExitAbout(RavenSession* session, ClientWindow* win, int64_t id) {
+    CloseRavenSession(session);
+    Exit(0);
+}
 
 int main(int argc, char* argv[]) {
     RavenSession* session = NewRavenSession();
@@ -18,13 +24,13 @@ int main(int argc, char* argv[]) {
         return 0;
     }
     qoi_desc aboutDesc;
-    void* tempImage = qoi_read("/System/Icons/zorroOS Stylized Banner.qoi",&aboutDesc,4);
-    Image_ABGRToARGB((uint32_t*)tempImage,aboutDesc.width*aboutDesc.height);
-    void* aboutImage = malloc(150*328*4);
-    Image_ScaleNearest((uint32_t*)tempImage,aboutImage,aboutDesc.width,aboutDesc.height,150,328);
-    free(tempImage);
-    NewImageWidget(win,1,32,150,328,aboutImage);
-    NewLabelWidget(win,159,48,"zorroOS",LABEL_EXTRA_LARGE);
-    NewLabelWidget(win,159,88,"Aurora",LABEL_LARGE);
+    void* aboutImage = qoi_read("/System/Icons/zorroOS Stylized Banner.qoi",&aboutDesc,4);
+    Image_ABGRToARGB((uint32_t*)aboutImage,aboutDesc.width*aboutDesc.height);
+    NewImageWidget(win,1,32,240,328,aboutImage);
+    NewLabelWidget(win,248,48,"zorroOS",LABEL_EXTRA_LARGE);
+    NewBadgeWidget(win,382,57,"Aurora",0);
+    NewLabelWidget(win,248,90,"Copyright (C) 2020-2023",LABEL_NORMAL);
+    NewLabelWidget(win,248,90+24,"TalonFox and contributers",LABEL_NORMAL);
+    NewButtonWidget(win,490,320,8,8,1,"Got it",NULL,&ExitAbout);
     UIRun(session,win,"About zorroOS",NULL);
 }

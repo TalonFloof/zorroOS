@@ -11,6 +11,7 @@ extern void* RavenIconPack;
 typedef struct {
     char pressed;
     ButtonEventHandler onClick;
+    int colorType;
     int hMargin;
     int vMargin;
     const char* text;
@@ -20,16 +21,20 @@ typedef struct {
 static void ButtonRedraw(void* self, RavenSession* session, ClientWindow* win, GraphicsContext* gfx) {
     UIWidget* widget = (UIWidget*)self;
     UIButtonPrivateData* private = (UIButtonPrivateData*)widget->privateData;
-    UIDrawRoundedBox(gfx,widget->x,widget->y,widget->w,widget->h,private->pressed ? 0xff27272a : 0xff18181b);
+    if(private->colorType == 1) {
+        UIDrawRoundedBox(gfx,widget->x,widget->y,widget->w,widget->h,private->pressed ? 0xff2563eb : 0xff1d4ed8);
+    } else if(private->colorType == 0) {
+        UIDrawRoundedBox(gfx,widget->x,widget->y,widget->w,widget->h,private->pressed ? 0xff27272a : 0xff18181b);
+    }
     int innerW = widget->w-(private->hMargin*2);
     int innerH = widget->h-(private->vMargin*2);
     int innerX = widget->x+((widget->w/2)-(innerW/2));
     int innerY = widget->y+((widget->h/2)-(innerH/2));
     if(private->icon != NULL) {
-        Graphics_RenderIcon(gfx,RavenIconPack,private->icon,(widget->x+(widget->w/2))-16,innerY,32,32,0xffcbcbcf);
-        Graphics_RenderCenteredString(gfx,widget->x+(widget->w/2),innerY+32,0xffcbcbcf,RavenUnifont,1,private->text);
+        Graphics_RenderIcon(gfx,RavenIconPack,private->icon,(widget->x+(widget->w/2))-16,innerY,32,32,0xffe9e9ea);
+        Graphics_RenderCenteredString(gfx,widget->x+(widget->w/2),innerY+32,0xffe9e9ea,RavenUnifont,1,private->text);
     } else {
-        Graphics_RenderCenteredString(gfx,widget->x+(widget->w/2),innerY,0xffcbcbcf,RavenUnifont,1,private->text);
+        Graphics_RenderCenteredString(gfx,widget->x+(widget->w/2),innerY,0xffe9e9ea,RavenUnifont,1,private->text);
     }
 }
 
@@ -52,7 +57,7 @@ static void ButtonEvent(void* self, RavenSession* session, ClientWindow* win, Gr
     }
 }
 
-int64_t NewButtonWidget(ClientWindow* win, int x, int y, int hMargin, int vMargin, const char* text, const char* icon, ButtonEventHandler* onClick) {
+int64_t NewButtonWidget(ClientWindow* win, int x, int y, int hMargin, int vMargin, int colorType, const char* text, const char* icon, ButtonEventHandler* onClick) {
     if(hMargin < 4)
         hMargin = 4;
     if(vMargin < 4)
@@ -72,6 +77,7 @@ int64_t NewButtonWidget(ClientWindow* win, int x, int y, int hMargin, int vMargi
     private->icon = icon;
     private->text = text;
     private->onClick = onClick;
+    private->colorType = colorType;
     widget->Redraw = &ButtonRedraw;
     widget->Event = &ButtonEvent;
     return UIAddWidget(win,widget);
