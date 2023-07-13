@@ -24,11 +24,15 @@ typedef struct {
     int64_t shmID;
     uint32_t* backBuf;
     uint32_t* frontBuf;
+    void* creator;
     int64_t owner;
 } Window;
 
 void Redraw(int x, int y, int w, int h);
 void MoveWinToFront(Window* win);
+void invertPixel(int x, int y);
+void renderInvertOutline(int x, int y, int w, int h);
+void DoBoxAnimation(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2, char expand);
 
 #ifndef _RAVEN_IMPL
 extern MQueue* msgQueue;

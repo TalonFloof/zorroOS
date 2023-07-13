@@ -5,3 +5,6 @@ build:
 	cd about; \
 	make build; \
 	cd ..
+	cd hunter; \
+	make build; \
+	cd ..

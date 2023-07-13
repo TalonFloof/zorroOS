@@ -25,7 +25,7 @@ static void LabelRedraw(void* self, RavenSession* session, ClientWindow* win, Gr
     }
 }
 
-int64_t NewLabelWidget(ClientWindow* win, int x, int y, const char* text, int scale) {
+int64_t NewLabelWidget(ClientWindow* win, int dest, int x, int y, const char* text, int scale) {
     UIWidget* widget = (UIWidget*)malloc(sizeof(UIWidget));
     UILabelPrivateData* private = malloc(sizeof(UILabelPrivateData));
     widget->privateData = private;
@@ -47,5 +47,5 @@ int64_t NewLabelWidget(ClientWindow* win, int x, int y, const char* text, int sc
     private->text = text;
     private->scale = scale;
     widget->Redraw = &LabelRedraw;
-    return UIAddWidget(win,widget);
+    return UIAddWidget(win,widget,dest);
 }

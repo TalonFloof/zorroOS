@@ -66,6 +66,7 @@ typedef struct {
 
 typedef struct {
     RavenEventType type;
+    int64_t id;
     union {
         RavenKeyEvent key;
         RavenMouseEvent mouse;
@@ -94,6 +95,8 @@ typedef struct {
     uint32_t* backBuf;
     void* widgetHead;
     void* widgetTail;
+    void* toolbarHead;
+    void* toolbarTail;
     int64_t nextWidgetID;
 } ClientWindow;
 

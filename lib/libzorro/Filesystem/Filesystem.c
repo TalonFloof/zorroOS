@@ -46,3 +46,7 @@ int64_t Open(const char* path, int mode, OpenedFile* file) {
 int64_t Create(const char* path, int mode) {
     return (int64_t)Syscall(0x10008,(uintptr_t)path,mode,0,0,0,0);
 }
+
+int64_t ChDir(const char* path) {
+    return (int64_t)Syscall(0x10013,(uintptr_t)path,0,0,0,0,0);
+}

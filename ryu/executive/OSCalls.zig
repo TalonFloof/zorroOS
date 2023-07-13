@@ -68,6 +68,7 @@ const RyuFuncs = enum(u16) {
 
 const DirEntry = extern struct {
     inodeID: i64,
+    mode: i32,
     nameLen: u8,
     name: [1]u8,
 };
@@ -167,6 +168,7 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                                 const name = @as([*]const u8, @ptrCast(&entry.name))[0..(std.mem.len(@as([*c]const u8, @ptrCast(&entry.name))) + 1)];
                                 const dirEnt = @as(*DirEntry, @ptrFromInt(@as(usize, @intCast(regs.GetReg(3)))));
                                 dirEnt.inodeID = entry.stat.ID;
+                                dirEnt.mode = entry.stat.mode;
                                 dirEnt.nameLen = @as(u8, @intCast((name.len - 1) & 0xFF));
                                 @memcpy(@as([*]u8, @ptrFromInt(@intFromPtr(&dirEnt.name)))[0..name.len], name);
                                 regs.SetReg(0, @as(u64, @intCast((@sizeOf(DirEntry) - @sizeOf([1]u8)) + name.len)));

@@ -26,11 +26,11 @@ int main(int argc, char* argv[]) {
     qoi_desc aboutDesc;
     void* aboutImage = qoi_read("/System/Icons/zorroOS Stylized Banner.qoi",&aboutDesc,4);
     Image_ABGRToARGB((uint32_t*)aboutImage,aboutDesc.width*aboutDesc.height);
-    NewImageWidget(win,1,32,240,328,aboutImage);
-    NewLabelWidget(win,248,48,"zorroOS",LABEL_EXTRA_LARGE);
-    NewBadgeWidget(win,382,57,"Aurora",0);
-    NewLabelWidget(win,248,90,"Copyright (C) 2020-2023",LABEL_NORMAL);
-    NewLabelWidget(win,248,90+24,"TalonFox and contributers",LABEL_NORMAL);
-    NewButtonWidget(win,490,320,8,8,1,"Got it",NULL,&ExitAbout);
+    NewImageWidget(win,DEST_WIDGETS,1,32,240,328,aboutImage);
+    NewLabelWidget(win,DEST_WIDGETS,248,48,"zorroOS",LABEL_EXTRA_LARGE);
+    NewBadgeWidget(win,DEST_WIDGETS,382,57,"Aurora",0);
+    NewLabelWidget(win,DEST_WIDGETS,248,90,"Copyright (C) 2020-2023",LABEL_NORMAL);
+    NewLabelWidget(win,DEST_WIDGETS,248,90+24,"TalonFox and contributers",LABEL_NORMAL);
+    NewButtonWidget(win,DEST_WIDGETS,490,320,8,8,1,"Got it",NULL,&ExitAbout);
     UIRun(session,win,"About zorroOS",NULL);
 }

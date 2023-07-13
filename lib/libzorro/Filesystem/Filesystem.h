@@ -32,6 +32,7 @@ typedef int64_t off64_t;
 
 typedef struct {
     int64_t inodeID;
+    int32_t mode;
     unsigned char nameLen;
     char name[256];
 } DirEntry;
@@ -49,5 +50,6 @@ typedef struct {
 
 int64_t Open(const char* path, int mode, OpenedFile* file);
 int64_t Create(const char* path, int mode);
+int64_t ChDir(const char* path);
 
 #endif

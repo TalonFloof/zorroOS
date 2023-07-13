@@ -3,6 +3,6 @@
 #include "../Raven.h"
 #include "../UI.h"
 
-int64_t NewBadgeWidget(ClientWindow* win, int x, int y, const char* text, int badgeType);
+int64_t NewBadgeWidget(ClientWindow* win, int dest, int x, int y, const char* text, int badgeType);
 
 #endif

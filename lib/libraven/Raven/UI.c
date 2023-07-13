@@ -1,7 +1,9 @@
 #include "Raven.h"
 #include <Media/Graphics.h>
 #include <Common/Alloc.h>
+#include <System/Thread.h>
 #include "Widget.h"
+#include "UI.h"
 
 PSFHeader* RavenKNXT;
 PSFHeader* RavenUnifont;
@@ -17,6 +19,19 @@ void UIRedrawWidgets(RavenSession* session, ClientWindow* win, GraphicsContext* 
     }
 }
 
+void UIRedrawToolbarWidgets(RavenSession* session, ClientWindow* win, GraphicsContext* gfx) {
+    UIWidget* widget = win->toolbarHead;
+    int x = 2;
+    while(widget != NULL) {
+        widget->x = x;
+        widget->y = 48-(widget->h/2);
+        widget->Redraw(widget,session,win,gfx);
+        RavenFlipArea(session,win,widget->x,widget->y,widget->w,widget->h);
+        x += widget->w + 2;
+        widget = widget->next;
+    }
+}
+
 void UIDrawBaseWindow(RavenSession* session, ClientWindow* win, GraphicsContext* gfx, const char* title, const char* bg) {
     Graphics_DrawRect(gfx,0,0,gfx->w,gfx->h,0xff09090b);
     if(bg != NULL) {
@@ -26,10 +41,15 @@ void UIDrawBaseWindow(RavenSession* session, ClientWindow* win, GraphicsContext*
         }
     }
     UIRedrawWidgets(session,win,gfx);
-    Graphics_DrawRect(gfx,0,0,gfx->w,32,0xff18181b);
-    //Graphics_DrawRect(gfx,0,0,32,32,0xff27272a);
+    if(win->toolbarHead != NULL) {
+        Graphics_DrawRect(gfx,0,0,gfx->w,64,0xf018181b);
+        Graphics_DrawRect(gfx,0,64,gfx->w,1,0xff27272a);
+        UIRedrawToolbarWidgets(session,win,gfx);
+    } else {
+        Graphics_DrawRect(gfx,0,0,gfx->w,32,0xf018181b);
+        Graphics_DrawRect(gfx,0,32,gfx->w,1,0xff27272a);
+    }
     Graphics_DrawRectOutline(gfx,0,0,gfx->w,gfx->h,0xff27272a);
-    Graphics_DrawRect(gfx,0,32,gfx->w,1,0xff27272a);
 
     Graphics_DrawRect(gfx,0,0,5,1,0x00000000);
     Graphics_DrawRect(gfx,0,0,1,5,0x00000000);
@@ -59,6 +79,7 @@ void UIDrawBaseWindow(RavenSession* session, ClientWindow* win, GraphicsContext*
     Graphics_DrawRect(gfx,gfx->w-2,gfx->h-5,1,2,0xff27272a);
     Graphics_DrawRect(gfx,gfx->w-5,gfx->h-2,2,1,0xff27272a);
 
+    Graphics_RenderIcon(gfx,RavenIconPack,"Window/Close",16-5,16-(9/2),16,9,0xffcbcbcf);
     Graphics_RenderString(gfx,32+4,16-(RavenKNXT->height/2),0xffcbcbcf,RavenKNXT,1,title);
 }
 
@@ -97,6 +118,10 @@ void UIRun(RavenSession* session, ClientWindow* win, const char* title, const ch
     RavenFlipArea(session,win,0,0,win->w,win->h);
     while(1) {
         RavenEvent* event = RavenGetEvent(session);
+        if(event->type == RAVEN_MOUSE_PRESSED && event->mouse.x < 32 && event->mouse.y < 32) { // Temporary
+            CloseRavenSession(session);
+            Exit(0);
+        }
         if(event->type == RAVEN_MOUSE_PRESSED || event->type == RAVEN_MOUSE_RELEASED) {
             UIWidget* widget = win->widgetHead;
             while(widget != NULL) {
@@ -113,17 +138,28 @@ void UIRun(RavenSession* session, ClientWindow* win, const char* title, const ch
     free(gfx);
 }
 
-int64_t UIAddWidget(ClientWindow* win, void* widget) {
+int64_t UIAddWidget(ClientWindow* win, void* widget, int dest) {
     int64_t id = win->nextWidgetID++;
     ((UIWidget*)widget)->next = NULL;
     ((UIWidget*)widget)->id = id;
-    if(win->widgetTail != NULL) {
-        ((UIWidget*)win->widgetTail)->next = widget;
-    }
-    ((UIWidget*)widget)->prev = win->widgetTail;
-    win->widgetTail = widget;
-    if(win->widgetHead == NULL) {
-        win->widgetHead = widget;
+    if(dest == DEST_WIDGETS) {
+        if(win->widgetTail != NULL) {
+            ((UIWidget*)win->widgetTail)->next = widget;
+        }
+        ((UIWidget*)widget)->prev = win->widgetTail;
+        win->widgetTail = widget;
+        if(win->widgetHead == NULL) {
+            win->widgetHead = widget;
+        }
+    } else if(dest == DEST_TOOLBAR) {
+        if(win->toolbarTail != NULL) {
+            ((UIWidget*)win->toolbarTail)->next = widget;
+        }
+        ((UIWidget*)widget)->prev = win->toolbarTail;
+        win->toolbarTail = widget;
+        if(win->toolbarHead == NULL) {
+            win->toolbarHead = widget;
+        }
     }
     return id;
 }

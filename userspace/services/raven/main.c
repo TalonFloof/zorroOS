@@ -176,6 +176,9 @@ void MoveWinToFront(Window* win) {
     win->prev = winTail;
     win->next = NULL;
     winTail = win;
+    if(winHead == NULL) {
+        winHead = win;
+    }
     SpinlockRelease(&windowLock);
 }
 
@@ -188,6 +191,62 @@ Window* GetWindowByID(int64_t id) {
         index = index->prev;
     }
     return NULL;
+}
+
+void invertPixel(int x, int y) {
+    if(x >= 0 && x < fbInfo.width && y >= 0 && y < fbInfo.height) {
+        fbInfo.addr[(y*(fbInfo.pitch/(fbInfo.bpp/8)))+x] = ~fbInfo.addr[(y*(fbInfo.pitch/(fbInfo.bpp/8)))+x];
+    }
+}
+
+void renderInvertOutline(int x, int y, int w, int h) {
+    for(int i=x+5; i < x+(w-5); i++) {
+        invertPixel(i,y);
+        invertPixel(i,y+(h-1));
+    }
+    for(int i=y+5; i < y+(h-5); i++) {
+        invertPixel(x,i);
+        invertPixel(x+(w-1),i);
+    }
+    // Top Left
+    invertPixel(x+3,y+1);
+    invertPixel(x+4,y+1);
+    invertPixel(x+2,y+2);
+    invertPixel(x+1,y+3);
+    invertPixel(x+1,y+4);
+    // Top Right
+    invertPixel((x+w)-5,y+1);
+    invertPixel((x+w)-4,y+1);
+    invertPixel((x+w)-3,y+2);
+    invertPixel((x+w)-2,y+3);
+    invertPixel((x+w)-2,y+4);
+    // Bottom Left
+    invertPixel(x+3,(y+h)-2);
+    invertPixel(x+4,(y+h)-2);
+    invertPixel(x+2,(y+h)-3);
+    invertPixel(x+1,(y+h)-4);
+    invertPixel(x+1,(y+h)-5);
+    // Bottom Right
+    invertPixel((x+w)-5,(y+h)-2);
+    invertPixel((x+w)-4,(y+h)-2);
+    invertPixel((x+w)-3,(y+h)-3);
+    invertPixel((x+w)-2,(y+h)-4);
+    invertPixel((x+w)-2,(y+h)-5);
+}
+
+void DoBoxAnimation(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2, char expand) {
+    for(int i=0; i < 32; i++) {
+        int x = (x1 * (32 - i) + x2 * i) >> 5;
+        int y = (y1 * (32 - i) + y2 * i) >> 5;
+        int w = (w1 * (32 - i) + w2 * i) >> 5;
+        int h = (h1 * (32 - i) + h2 * i) >> 5;
+        renderInvertOutline(x,y,w,h);
+        if(expand)
+            Eep(50000/(i+1));
+        else
+            Eep(50000/(32-i));
+        renderInvertOutline(x,y,w,h);
+    }
 }
 
 void* iconPack;
@@ -246,7 +305,7 @@ int main(int argc, const char* argv[]) {
     iconPack = Graphics_LoadIconPack("/System/Icons/IconPack");
     unifont = Graphics_LoadFont("/System/Fonts/unifont.psf");
     AddIcon(32,32,"Device/HardDrive","Emblem/zorroOS",0xff3a8cd1,"Root");
-    AddIcon(72,32,"User/Trash",NULL,0,"Trash");
+    //AddIcon(72,32,"User/Trash",NULL,0,"Trash");
     OpenedFile fbFile;
     if(Open("/dev/fb0",O_RDWR,&fbFile) < 0) {
         RyuLog("Failed to open /dev/fb0!\n");
@@ -277,6 +336,7 @@ int main(int argc, const char* argv[]) {
                             winFocus = NULL;
                         }
                         void* prev = win->prev;
+                        void* creator = win->creator;
                         int x = win->x;
                         int y = win->y;
                         int w = win->w;
@@ -299,6 +359,10 @@ int main(int argc, const char* argv[]) {
                         free(win);
                         SpinlockRelease(&windowLock);
                         Redraw(x,y,w,h);
+                        if(creator != NULL) {
+                            Window* cwin = (Window*)creator;
+                            DoBoxAnimation(x,y,w,h,cwin->x,cwin->y,cwin->w,cwin->h,0);
+                        }
                         SpinlockAcquire(&windowLock);
                         win = prev;
                     } else {
@@ -326,6 +390,7 @@ int main(int argc, const char* argv[]) {
                 win->shmID = NewSharedMemory((win->w*win->h)*4);
                 win->backBuf = MapSharedMemory(win->shmID);
                 win->frontBuf = malloc((win->w*win->h)*4);
+                win->creator = iconHead;
                 winTail = win;
                 if(winHead == NULL) {
                     winHead = win;

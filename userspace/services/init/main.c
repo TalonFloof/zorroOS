@@ -12,9 +12,6 @@ int main() {
     RyuLog("Starting Desktop...\n");
     TeamID desktopTeam = NewTeam("Desktop Service");
     LoadExecImage(desktopTeam,(const char*[]){"/bin/desktop",NULL},NULL);
-    RyuLog("Starting About App...\n");
-    TeamID welcomeApp = NewTeam("About App");
-    LoadExecImage(welcomeApp,(const char*[]){"/bin/about",NULL},NULL);
     //while(1) {
 
     //}

@@ -8,6 +8,6 @@
 #define LABEL_LARGE 2
 #define LABEL_EXTRA_LARGE 3
 
-int64_t NewLabelWidget(ClientWindow* win, int x, int y, const char* text, int scale);
+int64_t NewLabelWidget(ClientWindow* win, int dest, int x, int y, const char* text, int scale);
 
 #endif

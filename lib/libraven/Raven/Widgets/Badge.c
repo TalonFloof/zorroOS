@@ -56,7 +56,7 @@ static void BadgeRedraw(void* self, RavenSession* session, ClientWindow* win, Gr
     Graphics_RenderString(gfx,widget->x+8,widget->y+((22/2)-6),0xff5897e4,RavenTerminus,1,private->text);
 }
 
-int64_t NewBadgeWidget(ClientWindow* win, int x, int y, const char* text, int badgeType) {
+int64_t NewBadgeWidget(ClientWindow* win, int dest, int x, int y, const char* text, int badgeType) {
     UIWidget* widget = (UIWidget*)malloc(sizeof(UIWidget));
     UIBadgePrivateData* private = malloc(sizeof(UIBadgePrivateData));
     widget->privateData = private;
@@ -68,5 +68,5 @@ int64_t NewBadgeWidget(ClientWindow* win, int x, int y, const char* text, int ba
     private->text = text;
     private->badgeType = badgeType;
     widget->Redraw = &BadgeRedraw;
-    return UIAddWidget(win,widget);
+    return UIAddWidget(win,widget,dest);
 }

@@ -3,6 +3,8 @@
 #include <Filesystem/Filesystem.h>
 #include <Common/Spinlock.h>
 #include <Filesystem/MQueue.h>
+#include <System/Team.h>
+#include <Common/Alloc.h>
 #include "raven.h"
 #include <stdbool.h>
 
@@ -12,47 +14,6 @@ int winY = 0;
 Window* winDrag = NULL;
 Window* iconSelect = NULL;
 Window* iconDrag = NULL;
-
-void invertPixel(int x, int y) {
-    if(x >= 0 && x < fbInfo.width && y >= 0 && y < fbInfo.height) {
-        fbInfo.addr[(y*(fbInfo.pitch/(fbInfo.bpp/8)))+x] = ~fbInfo.addr[(y*(fbInfo.pitch/(fbInfo.bpp/8)))+x];
-    }
-}
-
-void renderInvertOutline(int x, int y, int w, int h) {
-    for(int i=x+5; i < x+(w-5); i++) {
-        invertPixel(i,y);
-        invertPixel(i,y+(h-1));
-    }
-    for(int i=y+5; i < y+(h-5); i++) {
-        invertPixel(x,i);
-        invertPixel(x+(w-1),i);
-    }
-    // Top Left
-    invertPixel(x+3,y+1);
-    invertPixel(x+4,y+1);
-    invertPixel(x+2,y+2);
-    invertPixel(x+1,y+3);
-    invertPixel(x+1,y+4);
-    // Top Right
-    invertPixel((x+w)-5,y+1);
-    invertPixel((x+w)-4,y+1);
-    invertPixel((x+w)-3,y+2);
-    invertPixel((x+w)-2,y+3);
-    invertPixel((x+w)-2,y+4);
-    // Bottom Left
-    invertPixel(x+3,(y+h)-2);
-    invertPixel(x+4,(y+h)-2);
-    invertPixel(x+2,(y+h)-3);
-    invertPixel(x+1,(y+h)-4);
-    invertPixel(x+1,(y+h)-5);
-    // Bottom Right
-    invertPixel((x+w)-5,(y+h)-2);
-    invertPixel((x+w)-4,(y+h)-2);
-    invertPixel((x+w)-3,(y+h)-3);
-    invertPixel((x+w)-2,(y+h)-4);
-    invertPixel((x+w)-2,(y+h)-5);
-}
 
 void MouseThread() {
     OpenedFile mouseFile;
@@ -106,9 +67,12 @@ void MouseThread() {
                     int oldY = iconDrag->y;
                     iconDrag->x = cursorWin.x - winX;
                     iconDrag->y = cursorWin.y - winY;
+                    uint32_t* temp = iconDrag->frontBuf;
+                    iconDrag->frontBuf = iconDrag->backBuf;
+                    iconDrag->backBuf = temp;
                     Redraw(oldX,oldY,iconDrag->w,iconDrag->h);
                     Redraw(iconDrag->x,iconDrag->y,iconDrag->w,iconDrag->h);
-                    iconSelect = iconDrag;
+                    iconSelect = NULL;
                     iconDrag = NULL;
                 } else  if(winDrag != NULL) {
                     int oldX = winDrag->x;
@@ -138,7 +102,7 @@ void MouseThread() {
                 Window* win = winTail;
                 bool clicked = false;
                 while(win != NULL) {
-                    if(cursorWin.x >= win->x && cursorWin.x < win->x+win->w && cursorWin.y >= win->y && cursorWin.y < win->y+32 && !(win->flags & FLAG_NOMOVE)) {
+                    if(cursorWin.x >= win->x+32 && cursorWin.x < win->x+win->w && cursorWin.y >= win->y && cursorWin.y < win->y+32 && !(win->flags & FLAG_NOMOVE)) {
                         winDrag = win;
                         winX = cursorWin.x - win->x;
                         winY = cursorWin.y - win->y;
@@ -155,14 +119,13 @@ void MouseThread() {
                                 SpinlockAcquire(&windowLock);
                             }
                             winFocus = win;
-                        } else {
-                            RavenEvent event;
-                            event.type = RAVEN_MOUSE_PRESSED;
-                            event.mouse.x = cursorWin.x-win->x;
-                            event.mouse.y = cursorWin.y-win->y;
-                            event.mouse.buttons = 1;
-                            MQueue_SendToClient(msgQueue,win->owner,&event,sizeof(RavenEvent));
                         }
+                        RavenEvent event;
+                        event.type = RAVEN_MOUSE_PRESSED;
+                        event.mouse.x = cursorWin.x-win->x;
+                        event.mouse.y = cursorWin.y-win->y;
+                        event.mouse.buttons = 1;
+                        MQueue_SendToClient(msgQueue,win->owner,&event,sizeof(RavenEvent));
                         clicked = true;
                         break;
                     }
@@ -176,17 +139,33 @@ void MouseThread() {
                     win = iconHead;
                     while(win != NULL) {
                         if(cursorWin.x >= win->x && cursorWin.x <= win->x+win->w && cursorWin.y >= win->y && cursorWin.y <= win->y+32) {
-                            if(iconSelect != NULL) {
+                            if(iconSelect == win) {
+                                DoBoxAnimation(win->x+((win->w/2)-16),win->y,32,32,(fbInfo.width/2)-(560/2),(fbInfo.height/2)-(360/2),560,360,1);
+                                TeamID hunterTeam = NewTeam("Hunter");
+                                const char** args = malloc(3 * sizeof(uintptr_t));
+                                args[0] = "/bin/hunter";
+                                args[1] = "/";
+                                args[2] = NULL;
+                                LoadExecImage(hunterTeam, args, NULL);
+                                free(args);
                                 uint32_t* temp = iconSelect->frontBuf;
                                 iconSelect->frontBuf = iconSelect->backBuf;
                                 iconSelect->backBuf = temp;
-                                Redraw(iconSelect->x,iconSelect->y,iconSelect->w,iconSelect->h);
+                                Redraw(iconSelect->x, iconSelect->y, iconSelect->w, iconSelect->h);
+                                iconSelect = NULL;
+                            } else {
+                                if(iconSelect != NULL) {
+                                    uint32_t* temp = iconSelect->frontBuf;
+                                    iconSelect->frontBuf = iconSelect->backBuf;
+                                    iconSelect->backBuf = temp;
+                                    Redraw(iconSelect->x,iconSelect->y,iconSelect->w,iconSelect->h);
+                                }
+                                uint32_t* temp = win->frontBuf;
+                                win->frontBuf = win->backBuf;
+                                win->backBuf = temp;
+                                Redraw(win->x,win->y,win->w,win->h);
+                                iconSelect = win;
                             }
-                            uint32_t* temp = win->frontBuf;
-                            win->frontBuf = win->backBuf;
-                            win->backBuf = temp;
-                            Redraw(win->x,win->y,win->w,win->h);
-                            iconSelect = win;
                             clicked = true;
                             break;
                         }
