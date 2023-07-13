@@ -13,12 +13,13 @@ void TryZorroOS(RavenSession* session, ClientWindow* win, int64_t id) {
 
 int main() {
     RavenSession* session = NewRavenSession();
-    ClientWindow* win = NewRavenWindow(session,640,480,0);
+    ClientWindow* win = NewRavenWindow(session,640,480,FLAG_ACRYLIC,0);
     if(win == NULL) {
         RyuLog("Unable to open window!\n");
         return 0;
     }
     NewButtonWidget(win,DEST_WIDGETS,(320-64),480-149,16,50,0,"Try","Device/CD",&TryZorroOS);
     NewButtonWidget(win,DEST_WIDGETS,(320-64)+64,480-149,0,50,0,"Install","File/Archive",NULL);
-    UIRun(session,win,"zorroOS Installer","File/Archive");
+    UIAddWindow(session,win,"zorroOS Installer","File/Archive");
+    UIRun(session);
 }

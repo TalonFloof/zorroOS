@@ -16,12 +16,13 @@ void CloseRavenSession(RavenSession* session) {
     free(session);
 }
 
-ClientWindow* NewRavenWindow(RavenSession* s, int w, int h, int flags) {
+ClientWindow* NewRavenWindow(RavenSession* s, int w, int h, int flags, int64_t creator) {
     RavenPacket packet;
     packet.type = RAVEN_CREATE_WINDOW;
     packet.create.w = w;
     packet.create.h = h;
     packet.create.flags = flags;
+    packet.create.creator = creator;
     MQueue_SendToServer(s->raven,&packet,sizeof(RavenPacket));
     size_t size;
     RavenCreateWindowResponse* response = MQueue_RecieveFromServer(s->raven,&size);
@@ -38,7 +39,11 @@ ClientWindow* NewRavenWindow(RavenSession* s, int w, int h, int flags) {
     win->nextWidgetID = 1;
     win->widgetHead = NULL;
     win->widgetTail = NULL;
+    win->toolbarHead = NULL;
+    win->toolbarTail = NULL;
     win->flags = flags;
+    win->prev = NULL;
+    win->next = NULL;
     free(response);
     return win;
 }
@@ -50,6 +55,15 @@ void RavenMoveWindow(RavenSession* s, ClientWindow* win, int x, int y) {
     packet.move.x = x;
     packet.move.y = y;
     MQueue_SendToServer(s->raven,&packet,sizeof(RavenPacket));
+}
+
+void RavenDestroyWindow(RavenSession* s, ClientWindow* win) {
+    RavenPacket packet;
+    packet.type = RAVEN_DESTROY_WINDOW;
+    packet.move.id = win->id;
+    MQueue_SendToServer(s->raven,&packet,sizeof(RavenPacket));
+    MUnMap(win->backBuf,win->w*win->h*4);
+    free(win);
 }
 
 void RavenFlipArea(RavenSession* s, ClientWindow* win, int x, int y, int w, int h) {

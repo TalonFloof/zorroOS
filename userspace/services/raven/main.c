@@ -336,7 +336,7 @@ int main(int argc, const char* argv[]) {
                             winFocus = NULL;
                         }
                         void* prev = win->prev;
-                        void* creator = win->creator;
+                        int64_t creator = win->creator;
                         int x = win->x;
                         int y = win->y;
                         int w = win->w;
@@ -359,10 +359,6 @@ int main(int argc, const char* argv[]) {
                         free(win);
                         SpinlockRelease(&windowLock);
                         Redraw(x,y,w,h);
-                        if(creator != NULL) {
-                            Window* cwin = (Window*)creator;
-                            DoBoxAnimation(x,y,w,h,cwin->x,cwin->y,cwin->w,cwin->h,0);
-                        }
                         SpinlockAcquire(&windowLock);
                         win = prev;
                     } else {
@@ -390,7 +386,7 @@ int main(int argc, const char* argv[]) {
                 win->shmID = NewSharedMemory((win->w*win->h)*4);
                 win->backBuf = MapSharedMemory(win->shmID);
                 win->frontBuf = malloc((win->w*win->h)*4);
-                win->creator = iconHead;
+                win->creator = packet->create.creator;
                 winTail = win;
                 if(winHead == NULL) {
                     winHead = win;
@@ -400,7 +396,51 @@ int main(int argc, const char* argv[]) {
                 response.backBuf = win->shmID;
                 MQueue_SendToClient(msgQueue,teamID,&response,sizeof(RavenCreateWindowResponse));
                 SpinlockRelease(&windowLock);
+                if(packet->create.creator != 0) {
+                    Window* cwin = GetWindowByID(packet->create.creator);
+                    if(cwin != NULL) {
+                        DoBoxAnimation(cwin->x,cwin->y,cwin->w,cwin->h,win->x,win->y,win->w,win->h,1);
+                    }
+                }
                 Redraw(win->x,win->y,win->w,win->h);
+                break;
+            }
+            case RAVEN_DESTROY_WINDOW: {
+                SpinlockAcquire(&windowLock);
+                Window* win = GetWindowByID(packet->move.id);
+                if(win == winFocus) {
+                    winFocus = NULL;
+                }
+                void* prev = win->prev;
+                int64_t creator = win->creator;
+                int x = win->x;
+                int y = win->y;
+                int w = win->w;
+                int h = win->h;
+                if(win->prev != NULL) {
+                    ((Window*)win->prev)->next = win->next;
+                }
+                if(win->next != NULL) {
+                    ((Window*)win->next)->prev = win->prev;
+                }
+                if(win == winTail) {
+                    winTail = win->prev;
+                }
+                if(win == winHead) {
+                    winHead = win->next;
+                }
+                free(win->frontBuf);
+                MUnMap(win->backBuf,(win->w*win->h)*4);
+                DestroySharedMemory(win->shmID);
+                free(win);
+                SpinlockRelease(&windowLock);
+                Redraw(x,y,w,h);
+                if(creator != 0) {
+                    Window* cwin = GetWindowByID(creator);
+                    if(cwin != NULL) {
+                        DoBoxAnimation(x,y,w,h,cwin->x,cwin->y,cwin->w,cwin->h,0);
+                    }
+                }
                 break;
             }
             case RAVEN_MOVE_WINDOW: {

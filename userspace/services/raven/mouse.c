@@ -91,6 +91,7 @@ void MouseThread() {
                     if(cursorWin.x >= winFocus->x && cursorWin.x <= winFocus->x+winFocus->w && cursorWin.y >= winFocus->y && cursorWin.y <= winFocus->y+winFocus->h) {
                         RavenEvent event;
                         event.type = RAVEN_MOUSE_RELEASED;
+                        event.id = winFocus->id;
                         event.mouse.x = cursorWin.x-winFocus->x;
                         event.mouse.y = cursorWin.y-winFocus->y;
                         event.mouse.buttons = 0;
@@ -122,6 +123,7 @@ void MouseThread() {
                         }
                         RavenEvent event;
                         event.type = RAVEN_MOUSE_PRESSED;
+                        event.id = winFocus->id;
                         event.mouse.x = cursorWin.x-win->x;
                         event.mouse.y = cursorWin.y-win->y;
                         event.mouse.buttons = 1;

@@ -24,7 +24,7 @@ typedef struct {
     int64_t shmID;
     uint32_t* backBuf;
     uint32_t* frontBuf;
-    void* creator;
+    int64_t creator;
     int64_t owner;
 } Window;
 

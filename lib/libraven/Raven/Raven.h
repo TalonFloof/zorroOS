@@ -27,6 +27,7 @@ typedef struct {
     int flags;
     int w;
     int h;
+    int64_t creator;
 } RavenCreateWindow;
 
 typedef struct {
@@ -87,6 +88,8 @@ typedef struct {
 } RavenSession;
 
 typedef struct {
+    void* prev;
+    void* next;
     int64_t id;
     int w;
     int h;
@@ -97,6 +100,7 @@ typedef struct {
     void* widgetTail;
     void* toolbarHead;
     void* toolbarTail;
+    GraphicsContext* gfx;
     int64_t nextWidgetID;
 } ClientWindow;
 
@@ -107,8 +111,9 @@ typedef struct {
 
 RavenSession* NewRavenSession();
 void CloseRavenSession(RavenSession* session);
-ClientWindow* NewRavenWindow(RavenSession* s, int w, int h, int flags);
+ClientWindow* NewRavenWindow(RavenSession* s, int w, int h, int flags, int64_t creator);
 void RavenMoveWindow(RavenSession* s, ClientWindow* win, int x, int y);
+void RavenDestroyWindow(RavenSession* s, ClientWindow* win);
 void RavenGetResolution(RavenSession* s, int* w, int* h);
 void RavenFlipArea(RavenSession* s, ClientWindow* win, int x, int y, int w, int h);
 RavenEvent* RavenGetEvent(RavenSession* s);

@@ -26,7 +26,7 @@ int main() {
     session = NewRavenSession();
     int w, h;
     RavenGetResolution(session,&w,&h);
-    win = NewRavenWindow(session,w,32,FLAG_NOMOVE);
+    win = NewRavenWindow(session,w,32,FLAG_NOMOVE,0);
     RavenMoveWindow(session,win,0,0);
     gfx = Graphics_NewContext(win->backBuf,win->w,win->h);
     knxt = Graphics_LoadFont("/System/Fonts/knxt.psf");

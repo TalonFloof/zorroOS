@@ -18,7 +18,7 @@ void ExitAbout(RavenSession* session, ClientWindow* win, int64_t id) {
 
 int main(int argc, char* argv[]) {
     RavenSession* session = NewRavenSession();
-    ClientWindow* win = NewRavenWindow(session,560,360,0);
+    ClientWindow* win = NewRavenWindow(session,560,360,FLAG_ACRYLIC,0);
     if(win == NULL) {
         RyuLog("Unable to open window!\n");
         return 0;
@@ -32,5 +32,6 @@ int main(int argc, char* argv[]) {
     NewLabelWidget(win,DEST_WIDGETS,248,90,"Copyright (C) 2020-2023",LABEL_NORMAL);
     NewLabelWidget(win,DEST_WIDGETS,248,90+24,"TalonFox and contributers",LABEL_NORMAL);
     NewButtonWidget(win,DEST_WIDGETS,490,320,8,8,1,"Got it",NULL,&ExitAbout);
-    UIRun(session,win,"About zorroOS",NULL);
+    UIAddWindow(session,win,"About zorroOS",NULL);
+    UIRun(session);
 }

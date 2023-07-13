@@ -10,6 +10,20 @@ PSFHeader* RavenUnifont;
 PSFHeader* RavenTerminus;
 void* RavenIconPack;
 
+ClientWindow* winHead = NULL;
+ClientWindow* winTail = NULL;
+
+ClientWindow* UIGetWindow(int64_t id) {
+    ClientWindow* win = winHead;
+    while(win != NULL) {
+        if(win->id == id) {
+            return win;
+        }
+        win = win->next;
+    }
+    return NULL;
+}
+
 void UIRedrawWidgets(RavenSession* session, ClientWindow* win, GraphicsContext* gfx) {
     UIWidget* widget = win->widgetHead;
     while(widget != NULL) {
@@ -108,26 +122,73 @@ void UIDrawRoundedBox(GraphicsContext* gfx, int x, int y, int w, int h, uint32_t
     Graphics_DrawRect(gfx,x+w-3,y+h-3,1,1,color);
 }
 
-void UIRun(RavenSession* session, ClientWindow* win, const char* title, const char* bg) {
-    RavenKNXT = Graphics_LoadFont("/System/Fonts/knxt.psf");
-    RavenUnifont = Graphics_LoadFont("/System/Fonts/unifont.psf");
-    RavenTerminus = Graphics_LoadFont("/System/Fonts/terminus.psf");
-    RavenIconPack = Graphics_LoadIconPack("/System/Icons/IconPack");
+void UIAddWindow(RavenSession* session, ClientWindow* win, const char* title, const char* bg) {
+    if(RavenKNXT == NULL) {
+        RavenKNXT = Graphics_LoadFont("/System/Fonts/knxt.psf");
+        RavenUnifont = Graphics_LoadFont("/System/Fonts/unifont.psf");
+        RavenTerminus = Graphics_LoadFont("/System/Fonts/terminus.psf");
+        RavenIconPack = Graphics_LoadIconPack("/System/Icons/IconPack");
+    }
+    if(winTail != NULL) {
+        winTail->next = win;
+    }
+    win->prev = winTail;
+    winTail = win;
+    win->next = NULL;
+    if(winHead == NULL) {
+        winHead = win;
+    }
     GraphicsContext* gfx = Graphics_NewContext(win->backBuf,win->w,win->h);
     UIDrawBaseWindow(session,win,gfx,title,bg);
     RavenFlipArea(session,win,0,0,win->w,win->h);
+}
+
+void UIRun(RavenSession* session) {
     while(1) {
         RavenEvent* event = RavenGetEvent(session);
         if(event->type == RAVEN_MOUSE_PRESSED && event->mouse.x < 32 && event->mouse.y < 32) { // Temporary
-            CloseRavenSession(session);
-            Exit(0);
-        }
-        if(event->type == RAVEN_MOUSE_PRESSED || event->type == RAVEN_MOUSE_RELEASED) {
+            ClientWindow* win = UIGetWindow(event->id);
+            if(winHead == win && winTail == win) {
+                CloseRavenSession(session);
+                Exit(0);
+            } else {
+                if(win->prev != NULL) {
+                    ((ClientWindow*)win->prev)->next = win->next;
+                } else {
+                    winHead = win->next;
+                }
+                if(win->next != NULL) {
+                    ((ClientWindow*)win->next)->prev = win->prev;
+                } else {
+                    winTail = win->prev;
+                }
+                UIWidget* widget = win->widgetHead;
+                while(widget != NULL) {
+                    if(widget->privateData) {
+                        free(widget->privateData);
+                    }
+                    void* next = widget->next;
+                    free(widget);
+                    widget = next;
+                }
+                widget = win->toolbarHead;
+                while(widget != NULL) {
+                    if(widget->privateData) {
+                        free(widget->privateData);
+                    }
+                    void* next = widget->next;
+                    free(widget);
+                    widget = next;
+                }
+                RavenDestroyWindow(session,win);
+            }
+        } else if(event->type == RAVEN_MOUSE_PRESSED || event->type == RAVEN_MOUSE_RELEASED) {
+            ClientWindow* win = UIGetWindow(event->id);
             UIWidget* widget = win->widgetHead;
             while(widget != NULL) {
                 if(widget->Event != NULL) {
                     if(event->mouse.x >= widget->x && event->mouse.x < widget->x+widget->w && event->mouse.y >= widget->y && event->mouse.y < widget->y+widget->h) {
-                        widget->Event(widget,session,win,gfx,event);
+                        widget->Event(widget,session,win,win->gfx,event);
                     }
                 }
                 widget = widget->next;
@@ -135,7 +196,6 @@ void UIRun(RavenSession* session, ClientWindow* win, const char* title, const ch
         }
         free(event);
     }
-    free(gfx);
 }
 
 int64_t UIAddWidget(ClientWindow* win, void* widget, int dest) {
