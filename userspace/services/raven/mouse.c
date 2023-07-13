@@ -142,7 +142,6 @@ void MouseThread() {
                     while(win != NULL) {
                         if(cursorWin.x >= win->x && cursorWin.x <= win->x+win->w && cursorWin.y >= win->y && cursorWin.y <= win->y+32) {
                             if(iconSelect == win) {
-                                DoBoxAnimation(win->x+((win->w/2)-16),win->y,32,32,(fbInfo.width/2)-(560/2),(fbInfo.height/2)-(360/2),560,360,1);
                                 TeamID hunterTeam = NewTeam("Hunter");
                                 const char** args = malloc(3 * sizeof(uintptr_t));
                                 args[0] = "/bin/hunter";

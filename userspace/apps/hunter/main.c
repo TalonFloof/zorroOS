@@ -7,6 +7,7 @@
 #include <Raven/Widgets/Label.h>
 #include <Raven/Widgets/Button.h>
 #include <System/Thread.h>
+#include <System/Team.h>
 
 typedef struct {
     OpenedFile dir;
@@ -26,7 +27,7 @@ static void FileBrowserRedraw(void* self, RavenSession* session, ClientWindow* w
     while(private->dir.ReadDir(&private->dir,i,&entry)) {
         int x = (560 / 8)*(i % 8);
         int y = 65+(48*(i/8));
-        Graphics_RenderIcon(gfx,RavenIconPack,((entry.mode & 0770000) == 0040000) ? "File/Directory" : "File/Generic",x+(((560/8)/2)-16),y,32,32,0xffbcd7e8);
+        Graphics_RenderIcon(gfx,RavenIconPack,((entry.mode & 0770000) == 0040000) ? "File/Directory" : (((entry.mode & 07) == 07) ? "Object/Object" : "File/Generic"),x+(((560/8)/2)-16),y,32,32,0xffbcd7e8);
         Graphics_RenderCenteredString(gfx,x+((560/8)/2),y+32,0xffbcd7e8,RavenTerminus,1,(char *)&entry.name);
         i++;
     }
@@ -39,10 +40,10 @@ static void FileBrowserEvent(void* self, RavenSession* session, ClientWindow* wi
         int i = 0;
         DirEntry entry;
         while(private->dir.ReadDir(&private->dir,i,&entry)) {
-            if((entry.mode & 0770000) == 0040000) {
-                int x = (560 / 8)*(i % 8);
-                int y = 65+(48*(i/8));
-                if(event->mouse.x >= x && event->mouse.x <= x+(560 / 8) && event->mouse.y >= y && event->mouse.y <= y+48) {
+            int x = (560 / 8)*(i % 8);
+            int y = 65+(48*(i/8));
+            if(event->mouse.x >= x && event->mouse.x <= x+(560 / 8) && event->mouse.y >= y && event->mouse.y <= y+48) {
+                if((entry.mode & 0770000) == 0040000) {
                     ClientWindow* w = NewRavenWindow(session,560,360,FLAG_ACRYLIC,win->id);
                     NewIconButtonWidget(w,DEST_TOOLBAR,0,0,16,13,"Action/Left",NULL);
                     NewIconButtonWidget(w,DEST_TOOLBAR,0,0,16,13,"Action/Right",NULL);
@@ -56,8 +57,18 @@ static void FileBrowserEvent(void* self, RavenSession* session, ClientWindow* wi
                     UIAddWidget(w,CreateFileBrowser(path),DEST_WIDGETS);
                     free(path);
                     UIAddWindow(session,w,(const char*)&entry.name,NULL);
-                    break;
+                } else if((entry.mode & 07) == 07) {
+                    int len = strlen((const char*)private->path);
+                    int fullLen = len+strlen((const char*)&entry.name);
+                    char* path = malloc(fullLen+1);
+                    memcpy(path,(const char*)private->path,len);
+                    memcpy(path+len,(const char*)&entry.name,entry.nameLen+1);
+                    TeamID team = NewTeam((const char*)&entry.name);
+                    const char* args[] = {path,NULL};
+                    LoadExecImage(team,args,NULL);
+                    free(path);
                 }
+                break;
             }
             i++;
         }

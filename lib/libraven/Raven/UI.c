@@ -133,12 +133,13 @@ void UIAddWindow(RavenSession* session, ClientWindow* win, const char* title, co
         winTail->next = win;
     }
     win->prev = winTail;
-    winTail = win;
     win->next = NULL;
+    winTail = win;
     if(winHead == NULL) {
         winHead = win;
     }
     GraphicsContext* gfx = Graphics_NewContext(win->backBuf,win->w,win->h);
+    win->gfx = gfx;
     UIDrawBaseWindow(session,win,gfx,title,bg);
     RavenFlipArea(session,win,0,0,win->w,win->h);
 }
