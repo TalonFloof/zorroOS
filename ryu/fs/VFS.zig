@@ -57,6 +57,7 @@ pub fn NewDirInode(name: []const u8) *Inode {
     @memset(@as([*]u8, @ptrFromInt(@intFromPtr(&inode.name)))[0..256], 0);
     @memcpy(@as([*]u8, @ptrFromInt(@intFromPtr(&inode.name))), name);
     inode.parent = rootInode;
+    inode.isVirtual = true;
     inode.children = null;
     inode.stat.ID = 2;
     inode.stat.uid = 1;
