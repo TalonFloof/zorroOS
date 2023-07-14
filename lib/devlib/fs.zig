@@ -37,6 +37,7 @@ pub const Inode = extern struct {
     stat: Metadata = Metadata{ .ID = 0 },
     private: *allowzero void = @as(*allowzero void, @ptrFromInt(0)),
     parent: ?*Inode = null,
+    hybridChildren: ?*Inode = null,
     children: ?*Inode = null,
     prevSibling: ?*Inode = null,
     nextSibling: ?*Inode = null,

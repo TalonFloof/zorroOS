@@ -37,6 +37,17 @@ pub fn AddInodeToParent(i: *Inode) void {
     i.parent.?.virtualChildren += 1;
 }
 
+pub fn AddHybridInodeToParent(i: *Inode) void {
+    i.prevSibling = null;
+    if (i.parent.?.hybridChildren) |head| {
+        head.prevSibling = i;
+        i.nextSibling = head;
+    } else {
+        i.nextSibling = null;
+    }
+    i.parent.?.hybridChildren = i;
+}
+
 pub fn RemoveInodeFromParent(i: *Inode) void {
     if (i.prevSibling) |prev| {
         prev.nextSibling = i.nextSibling;
@@ -51,6 +62,19 @@ pub fn RemoveInodeFromParent(i: *Inode) void {
     i.parent = null;
 }
 
+pub fn RemoveHybridInodeFromParent(i: *Inode) void {
+    if (i.prevSibling) |prev| {
+        prev.nextSibling = i.nextSibling;
+    }
+    if (i.nextSibling) |next| {
+        next.prevSibling = i.prevSibling;
+    }
+    if (@intFromPtr(i.parent.?.hybridChildren) == @intFromPtr(i)) {
+        i.parent.?.hybridChildren = i.nextSibling;
+    }
+    i.parent = null;
+}
+
 pub fn NewDirInode(name: []const u8) *Inode {
     @as(*Spinlock, @ptrCast(&rootInode.?.lock)).acquire();
     var inode: *Inode = @as(*Inode, @ptrCast(@alignCast(Memory.Pool.PagedPool.Alloc(@sizeOf(Inode)).?.ptr)));
@@ -59,6 +83,7 @@ pub fn NewDirInode(name: []const u8) *Inode {
     inode.parent = rootInode;
     inode.isVirtual = true;
     inode.children = null;
+    inode.hybridChildren = null;
     inode.stat.ID = 2;
     inode.stat.uid = 1;
     inode.stat.gid = 1;
@@ -106,17 +131,23 @@ pub fn ReadDir(i: *Inode, off: usize) ?DirEntry {
 }
 
 pub fn FindDir(i: *Inode, name: []const u8) ?*Inode {
-    var ent: ?*Inode = i.children;
+    var ent: ?*Inode = i.hybridChildren;
     while (ent) |e| {
         const str: [*c]const u8 = @as([*c]const u8, @ptrCast(&e.name));
         if (std.mem.eql(u8, name, str[0..std.mem.len(str)])) {
-            break;
+            return ent;
         }
         ent = e.nextSibling;
     }
-    if (ent != null) {
-        return ent;
-    } else if (i.finddir != null) {
+    ent = i.children;
+    while (ent) |e| {
+        const str: [*c]const u8 = @as([*c]const u8, @ptrCast(&e.name));
+        if (std.mem.eql(u8, name, str[0..std.mem.len(str)])) {
+            return ent;
+        }
+        ent = e.nextSibling;
+    }
+    if (i.finddir != null) {
         return i.finddir.?(i, @ptrCast(name.ptr));
     } else {
         return null;
@@ -145,8 +176,7 @@ pub fn DerefInode(i: *Inode) void {
         if (i.parent != null) {
             const parent = i.parent.?;
             @as(*Spinlock, @ptrCast(&parent.lock)).acquire();
-            parent.virtualChildren += 1;
-            RemoveInodeFromParent(i);
+            RemoveHybridInodeFromParent(i);
             @as(*Spinlock, @ptrCast(&parent.lock)).release();
             DerefInode(parent);
         }
@@ -186,8 +216,7 @@ pub fn GetInode(path: []const u8, base: *Inode, isMounting: bool) ?*Inode {
                     if (!curNode.?.isVirtual) {
                         curNode.?.parent = oldNode;
                         @as(*Spinlock, @ptrCast(&oldNode.lock)).acquire();
-                        AddInodeToParent(curNode.?);
-                        oldNode.virtualChildren -= 1;
+                        AddHybridInodeToParent(curNode.?);
                         @as(*Spinlock, @ptrCast(&oldNode.lock)).release();
                     }
                 }
@@ -265,6 +294,7 @@ pub fn Init() void {
     rootInode.?.stat.nlinks = 1;
     rootInode.?.stat.mode = 0o0040755;
     rootInode.?.children = null;
+    rootInode.?.hybridChildren = null;
     rootInode.?.nextSibling = null;
     rootInode.?.prevSibling = null;
     rootInode.?.isVirtual = true;
