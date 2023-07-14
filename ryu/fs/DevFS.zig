@@ -39,6 +39,7 @@ var zeroFile: FS.Inode = FS.Inode{
     .stat = FS.Metadata{
         .mode = 0o0020666, // wut da heck, its dat number
     },
+    .isVirtual = true,
     .read = &ReadZero,
     .write = &ReadWriteNull,
 };
@@ -47,6 +48,7 @@ var nullFile: FS.Inode = FS.Inode{
     .stat = FS.Metadata{
         .mode = 0o0020666, // wut da heck, its dat number
     },
+    .isVirtual = true,
     .read = &ReadWriteNull,
     .write = &ReadWriteNull,
 };
@@ -57,7 +59,6 @@ pub fn Mount(fs: *FS.Filesystem) callconv(.C) bool {
         return false;
     }
     fs.root.mountPoint = fs;
-    fs.root.hasReadEntries = true;
     fs.root.stat.ID = 1;
     fs.root.stat.mode = 0o0040555;
     return true;

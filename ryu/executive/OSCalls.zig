@@ -3,6 +3,7 @@ const FS = @import("root").FS;
 const Executive = @import("root").Executive;
 const Memory = @import("root").Memory;
 const Spinlock = @import("root").Spinlock;
+const DirEntry = @import("devlib").fs.DirEntry;
 const std = @import("std");
 
 const CallCategory = enum(u16) {
@@ -64,13 +65,6 @@ const RyuFuncs = enum(u16) {
     ShmAllocate = 4,
     ShmMap = 5,
     ShmFree = 6,
-};
-
-const DirEntry = extern struct {
-    inodeID: i64,
-    mode: i32,
-    nameLen: u8,
-    name: [1]u8,
 };
 
 pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
@@ -171,7 +165,7 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                                 dirEnt.mode = entry.stat.mode;
                                 dirEnt.nameLen = @as(u8, @intCast((name.len - 1) & 0xFF));
                                 @memcpy(@as([*]u8, @ptrFromInt(@intFromPtr(&dirEnt.name)))[0..name.len], name);
-                                regs.SetReg(0, @as(u64, @intCast((@sizeOf(DirEntry) - @sizeOf([1]u8)) + name.len)));
+                                regs.SetReg(0, @as(u64, @intCast((@sizeOf(DirEntry) - @sizeOf([256]u8)) + name.len)));
                             } else {
                                 regs.SetReg(0, 0);
                             }

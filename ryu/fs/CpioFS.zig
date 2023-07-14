@@ -94,7 +94,6 @@ pub fn Create(inode: *FS.Inode, name: [*c]const u8, mode: usize) callconv(.C) is
     var in: *FS.Inode = @as(*FS.Inode, @ptrCast(@alignCast(Memory.Pool.PagedPool.Alloc(@sizeOf(FS.Inode)).?.ptr)));
     @memset(@as([*]u8, @ptrFromInt(@intFromPtr(&in.name)))[0..256], 0);
     @memcpy(@as([*]u8, @ptrFromInt(@intFromPtr(&in.name)))[0..len], name[0..len]);
-    in.hasReadEntries = true;
     in.stat.ID = id;
     in.stat.nlinks = 1;
     in.stat.uid = 1;
@@ -108,6 +107,7 @@ pub fn Create(inode: *FS.Inode, name: [*c]const u8, mode: usize) callconv(.C) is
     in.stat.mtime = time[0];
     in.stat.reserved2 = @bitCast(time[1]);
     in.stat.atime = time[0];
+    in.isVirtual = true;
     in.mountOwner = inode.mountOwner;
     in.parent = inode;
     in.create = &Create;

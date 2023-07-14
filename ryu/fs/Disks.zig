@@ -64,6 +64,7 @@ const Disk = struct {
                     self.firstPartition = partition;
                     var inode = @as(*FS.Inode, @alignCast(@ptrCast(Memory.Pool.StaticPool.Alloc(@sizeOf(FS.Inode)).?.ptr)));
                     inode.private = @ptrCast(partition);
+                    inode.isVirtual = true;
                     inode.read = &ReadPartition;
                     inode.write = &WritePartition;
                     inode.unlink = &UnlinkPartition;
@@ -170,6 +171,7 @@ pub fn RegisterDisk(
     inode.stat.size = @intCast(blocks);
     inode.stat.mode = 0o0060660;
     inode.stat.nlinks = 1;
+    inode.isVirtual = true;
     inode.read = &ReadDisk;
     inode.write = &WriteDisk;
     inode.ioctl = &IOCtlDisk;

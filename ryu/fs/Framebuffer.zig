@@ -61,6 +61,7 @@ var fbFile = FS.Inode{
     .stat = FS.Metadata{
         .mode = 0o0020660,
     },
+    .isVirtual = true,
     .map = FBMap,
     .ioctl = FBIOCtl,
 };

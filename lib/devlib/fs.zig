@@ -17,9 +17,17 @@ pub const Metadata = extern struct {
     blocks: i64 = 0,
 };
 
+pub const DirEntry = extern struct {
+    inodeID: i64 = 0,
+    mode: i32 = 0,
+    nameLen: u8 = 0,
+    name: [256]u8 = [_]u8{0} ** 256,
+};
+
 pub const Filesystem = extern struct {
     root: *Inode,
     dev: ?*Inode,
+    private: *allowzero void,
     mount: *const fn (*Filesystem) callconv(.C) bool,
     umount: *const fn (*Filesystem) callconv(.C) void,
 };
@@ -32,15 +40,18 @@ pub const Inode = extern struct {
     children: ?*Inode = null,
     prevSibling: ?*Inode = null,
     nextSibling: ?*Inode = null,
-    hasReadEntries: bool = false,
     mountOwner: ?*Filesystem = null,
     mountPoint: ?*Filesystem = null,
+    isVirtual: bool = false,
+    virtualChildren: usize = 0,
+    refs: usize = 0,
     lock: u8 = 0,
 
     open: ?*const fn (*Inode, usize) callconv(.C) isize = null,
     close: ?*const fn (*Inode) callconv(.C) void = null,
     read: ?*const fn (*Inode, isize, *void, isize) callconv(.C) isize = null,
-    readdir: ?*const fn (*Inode, bool) callconv(.C) isize = null, // is called when we need to refresh the list of children
+    readdir: ?*const fn (*Inode, usize, *DirEntry) callconv(.C) isize = null,
+    finddir: ?*const fn (*Inode, [*c]const u8) callconv(.C) ?*Inode = null,
     write: ?*const fn (*Inode, isize, *void, isize) callconv(.C) isize = null,
     trunc: ?*const fn (*Inode, isize) callconv(.C) isize = null,
     unlink: ?*const fn (*Inode) callconv(.C) isize = null,

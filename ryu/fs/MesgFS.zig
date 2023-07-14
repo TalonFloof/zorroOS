@@ -36,6 +36,7 @@ var mesgFSRoot: FS.Inode = FS.Inode{
     .stat = FS.Metadata{
         .mode = 0o0040777,
     },
+    .isVirtual = true,
     .create = &Create,
 };
 
@@ -221,7 +222,6 @@ pub fn Create(inode: *FS.Inode, name: [*c]const u8, mode: usize) callconv(.C) is
     var in: *FS.Inode = @as(*FS.Inode, @ptrCast(@alignCast(Memory.Pool.PagedPool.Alloc(@sizeOf(FS.Inode)).?.ptr)));
     @memset(@as([*]u8, @ptrCast(&in.name))[0..256], 0);
     @memcpy(@as([*]u8, @ptrCast(&in.name))[0..len], name[0..len]);
-    in.hasReadEntries = true;
     in.stat.ID = id;
     in.stat.nlinks = 1;
     in.stat.uid = 1;
@@ -236,6 +236,7 @@ pub fn Create(inode: *FS.Inode, name: [*c]const u8, mode: usize) callconv(.C) is
     in.stat.atime = time[0];
     in.stat.reserved3 = @bitCast(time[1]);
     in.mountOwner = inode.mountOwner;
+    in.isVirtual = true;
     in.parent = inode;
     in.lock = 0;
     in.open = &Open;

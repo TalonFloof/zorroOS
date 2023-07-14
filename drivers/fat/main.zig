@@ -10,9 +10,13 @@ pub export var DriverInfo = devlib.RyuDriverInfo{
     .unloadFn = &UnloadDriver,
 };
 
-pub fn LoadDriver() callconv(.C) devlib.Status {}
+pub fn LoadDriver() callconv(.C) devlib.Status {
+    return .Okay;
+}
 
-pub fn UnloadDriver() callconv(.C) devlib.Status {}
+pub fn UnloadDriver() callconv(.C) devlib.Status {
+    return .Okay;
+}
 
 pub fn panic(msg: []const u8, stacktrace: ?*std.builtin.StackTrace, wat: ?usize) noreturn {
     _ = wat;

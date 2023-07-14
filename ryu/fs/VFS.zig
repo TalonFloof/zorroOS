@@ -2,6 +2,7 @@ const Memory = @import("root").Memory;
 pub const Inode = @import("devlib").fs.Inode;
 pub const Metadata = @import("devlib").fs.Metadata;
 pub const Filesystem = @import("devlib").fs.Filesystem;
+pub const DirEntry = @import("devlib").fs.DirEntry;
 const Spinlock = @import("root").Spinlock;
 const HAL = @import("root").HAL;
 const std = @import("std");
@@ -33,6 +34,7 @@ pub fn AddInodeToParent(i: *Inode) void {
         i.nextSibling = null;
     }
     i.parent.?.children = i;
+    i.parent.?.virtualChildren += 1;
 }
 
 pub fn RemoveInodeFromParent(i: *Inode) void {
@@ -45,6 +47,7 @@ pub fn RemoveInodeFromParent(i: *Inode) void {
     if (@intFromPtr(i.parent.?.children) == @intFromPtr(i)) {
         i.parent.?.children = i.nextSibling;
     }
+    i.parent.?.virtualChildren -= 1;
     i.parent = null;
 }
 
@@ -72,42 +75,36 @@ pub fn NewDirInode(name: []const u8) *Inode {
     return inode;
 }
 
-pub fn ReadDir(i: *Inode, off: usize) ?*Inode {
+pub fn ReadDir(i: *Inode, off: usize) ?DirEntry {
     @as(*Spinlock, @ptrCast(&i.lock)).acquire();
-    if (!i.hasReadEntries) {
-        if (i.readdir) |readdir| {
-            if (i.parent == null) {
-                _ = readdir(i, false);
-            } else {
-                _ = readdir(i, true);
-            }
-            i.hasReadEntries = true;
+    var ent: DirEntry = DirEntry{};
+    if (off < i.virtualChildren) {
+        var vnode = i.children;
+        var ind: usize = 0;
+        while (ind < off) : (ind += 1) {
+            vnode = vnode.?.nextSibling;
         }
-    }
-    var ind: usize = 0;
-    var ent: ?*Inode = i.children;
-    while (ind < off) : (ind += 1) {
-        if (ent == null) {
+        ent.inodeID = vnode.?.stat.ID;
+        ent.mode = vnode.?.stat.mode;
+        ent.nameLen = std.mem.len(@as([*c]const u8, @ptrCast(&vnode.?.name)));
+        ent.name = vnode.?.name;
+        @as(*Spinlock, @ptrCast(&i.lock)).release();
+        return ent;
+    } else {
+        if (i.readdir) |readdir| {
+            var result: isize = readdir(i, off, &ent);
             @as(*Spinlock, @ptrCast(&i.lock)).release();
+            if (result > 0) {
+                return ent;
+            }
             return null;
         }
-        ent = ent.?.nextSibling;
+        @as(*Spinlock, @ptrCast(&i.lock)).release();
+        return null;
     }
-    @as(*Spinlock, @ptrCast(&i.lock)).release();
-    return ent;
 }
 
 pub fn FindDir(i: *Inode, name: []const u8) ?*Inode {
-    if (!i.hasReadEntries) {
-        if (i.readdir) |readdir| {
-            if (i.parent == null) {
-                _ = readdir(i, false);
-            } else {
-                _ = readdir(i, true);
-            }
-            i.hasReadEntries = true;
-        }
-    }
     var ent: ?*Inode = i.children;
     while (ent) |e| {
         const str: [*c]const u8 = @as([*c]const u8, @ptrCast(&e.name));
@@ -116,7 +113,13 @@ pub fn FindDir(i: *Inode, name: []const u8) ?*Inode {
         }
         ent = e.nextSibling;
     }
-    return ent;
+    if (ent != null) {
+        return ent;
+    } else if (rootInode.?.finddir != null) {
+        return rootInode.?.finddir(rootInode.?, name);
+    } else {
+        return null;
+    }
 }
 
 pub fn GetInode(path: []const u8, base: *Inode) ?*Inode {
@@ -199,6 +202,7 @@ pub fn Init() void {
     rootInode.?.children = null;
     rootInode.?.nextSibling = null;
     rootInode.?.prevSibling = null;
+    rootInode.?.isVirtual = true;
     _ = NewDirInode("dev");
     DevFS.Init();
     MesgFS.Init();

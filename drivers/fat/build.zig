@@ -28,11 +28,6 @@ pub fn build(b: *Builder) !void {
         .source_file = .{ .path = "../../lib/devlib/devlib.zig" },
         .dependencies = &.{},
     });
-    const pci = b.createModule(.{
-        .source_file = .{ .path = "../pci/pci.zig" },
-        .dependencies = &.{},
-    });
-    _ = pci;
     driver.code_model = std.builtin.CodeModel.large;
     driver.addModule("devlib", devlib);
     driver.override_dest_dir = .{ .custom = "../../out/" };
