@@ -3,7 +3,6 @@ const FS = @import("root").FS;
 const Executive = @import("root").Executive;
 const Memory = @import("root").Memory;
 const Spinlock = @import("root").Spinlock;
-const DirEntry = @import("devlib").fs.DirEntry;
 const std = @import("std");
 
 const CallCategory = enum(u16) {
@@ -77,8 +76,9 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                 .Open => { // FileDesc_t Open(*const char name, int mode)
                     const path = @as([*]const u8, @ptrFromInt(regs.GetReg(1)))[0..std.mem.len(@as([*c]const u8, @ptrFromInt(regs.GetReg(1))))];
                     const team = HAL.Arch.GetHCB().activeThread.?.team;
-                    if (FS.GetInode(path, team.cwd.?)) |inode| {
+                    if (FS.GetInode(path, team.cwd.?, false)) |inode| {
                         const old = HAL.Arch.IRQEnableDisable(false);
+                        FS.RefInode(inode);
                         const node = @as(*Executive.Team.FileDescriptor, @ptrFromInt(@intFromPtr(Memory.Pool.PagedPool.Alloc(@sizeOf(Executive.Team.FileDescriptor)).?.ptr)));
                         node.inode = inode;
                         node.offset = 0;
@@ -111,6 +111,7 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                             close(node.inode);
                             @as(*Spinlock, @ptrCast(&node.inode.lock)).release();
                         }
+                        FS.DerefInode(node.inode);
                         regs.SetReg(0, 0);
                         team.fdLock.acquire();
                         Memory.Pool.PagedPool.Free(@as([*]u8, @ptrFromInt(@intFromPtr(node)))[0..@sizeOf(Executive.Team.FileDescriptor)]);
@@ -159,13 +160,12 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                         const inode: *FS.Inode = node.inode;
                         if ((inode.stat.mode & 0o0770000) == 0o0040000) {
                             if (FS.ReadDir(inode, @as(usize, @intCast(regs.GetReg(2))))) |entry| {
-                                const name = @as([*]const u8, @ptrCast(&entry.name))[0..(std.mem.len(@as([*c]const u8, @ptrCast(&entry.name))) + 1)];
-                                const dirEnt = @as(*DirEntry, @ptrFromInt(@as(usize, @intCast(regs.GetReg(3)))));
-                                dirEnt.inodeID = entry.stat.ID;
-                                dirEnt.mode = entry.stat.mode;
-                                dirEnt.nameLen = @as(u8, @intCast((name.len - 1) & 0xFF));
-                                @memcpy(@as([*]u8, @ptrFromInt(@intFromPtr(&dirEnt.name)))[0..name.len], name);
-                                regs.SetReg(0, @as(u64, @intCast((@sizeOf(DirEntry) - @sizeOf([256]u8)) + name.len)));
+                                const dirEnt = @as(*FS.DirEntry, @ptrFromInt(@as(usize, @intCast(regs.GetReg(3)))));
+                                dirEnt.inodeID = entry.inodeID;
+                                dirEnt.mode = entry.mode;
+                                dirEnt.nameLen = entry.nameLen;
+                                dirEnt.name = entry.name;
+                                regs.SetReg(0, @as(u64, @intCast((@sizeOf(FS.DirEntry) - @sizeOf([256]u8)) + dirEnt.nameLen)));
                             } else {
                                 regs.SetReg(0, 0);
                             }
@@ -282,7 +282,7 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                     var parent: ?*FS.Inode = FS.rootInode;
                     if (lastSep != null) {
                         const old = HAL.Arch.IRQEnableDisable(false);
-                        parent = FS.GetInode(path[0..lastSep.?], parent.?);
+                        parent = FS.GetInode(path[0..lastSep.?], parent.?, false);
                         _ = HAL.Arch.IRQEnableDisable(old);
                     }
                     if (parent == null) {
@@ -291,9 +291,11 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                     }
                     if (parent.?.create) |create| {
                         const old = HAL.Arch.IRQEnableDisable(false);
+                        FS.RefInode(parent.?);
                         @as(*Spinlock, @ptrCast(&parent.?.lock)).acquire();
                         regs.SetReg(0, @as(u64, @bitCast(@as(i64, @intCast(create(parent.?, @as([*c]const u8, @ptrCast(name.ptr)), @as(usize, @intCast(regs.GetReg(3)))))))));
                         @as(*Spinlock, @ptrCast(&parent.?.lock)).release();
+                        FS.DerefInode(parent.?);
                         _ = HAL.Arch.IRQEnableDisable(old);
                     } else {
                         regs.SetReg(0, @as(u64, @bitCast(@as(i64, @intCast(-38)))));
@@ -302,16 +304,18 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                 .Unlink => { // Status_t Unlink(const char* path)
                     const path = @as([*]const u8, @ptrFromInt(regs.GetReg(1)))[0..std.mem.len(@as([*c]const u8, @ptrFromInt(regs.GetReg(1))))];
                     const old = HAL.Arch.IRQEnableDisable(false);
-                    if (FS.GetInode(path, FS.rootInode.?)) |inode| {
+                    if (FS.GetInode(path, FS.rootInode.?, false)) |inode| {
                         _ = HAL.Arch.IRQEnableDisable(old);
                         if (inode.unlink) |unlink| {
                             const o = HAL.Arch.IRQEnableDisable(false);
+                            FS.RefInode(inode);
                             @as(*Spinlock, @ptrCast(&inode.lock)).acquire();
                             const ret: isize = unlink(inode);
                             regs.SetReg(0, @as(u64, @bitCast(@as(i64, @intCast(ret)))));
                             if (ret != 0) {
                                 @as(*Spinlock, @ptrCast(&inode.lock)).release();
                             }
+                            FS.DerefInode(inode);
                             _ = HAL.Arch.IRQEnableDisable(o);
                         } else {
                             regs.SetReg(0, @as(u64, @bitCast(@as(i64, @intCast(-38)))));
@@ -324,8 +328,10 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                 .Stat => { // Status_t Stat(const char* path, stat_t* ptr)
                     const path = @as([*]const u8, @ptrFromInt(regs.GetReg(1)))[0..std.mem.len(@as([*c]const u8, @ptrFromInt(regs.GetReg(1))))];
                     const old = HAL.Arch.IRQEnableDisable(false);
-                    if (FS.GetInode(path, FS.rootInode.?)) |inode| {
+                    if (FS.GetInode(path, FS.rootInode.?, false)) |inode| {
+                        FS.RefInode(inode);
                         @as(*FS.Metadata, @ptrFromInt(regs.GetReg(2))).* = inode.stat;
+                        FS.DerefInode(inode);
                         _ = HAL.Arch.IRQEnableDisable(old);
                         regs.SetReg(0, 0);
                     } else {
@@ -454,8 +460,12 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                     const team = HAL.Arch.GetHCB().activeThread.?.team;
                     const path = @as([*]const u8, @ptrFromInt(regs.GetReg(1)))[0..std.mem.len(@as([*c]const u8, @ptrFromInt(regs.GetReg(1))))];
                     const old = HAL.Arch.IRQEnableDisable(false);
-                    if (FS.GetInode(path, FS.rootInode.?)) |inode| {
+                    if (FS.GetInode(path, FS.rootInode.?, false)) |inode| {
                         if ((inode.stat.mode & 0o0770000) == 0o0040000) {
+                            if (team.cwd != null) {
+                                FS.DerefInode(team.cwd.?);
+                            }
+                            FS.RefInode(inode);
                             team.cwd = inode;
                             regs.SetReg(0, 0);
                         } else {

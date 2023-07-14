@@ -86,7 +86,7 @@ pub fn ReadDir(i: *Inode, off: usize) ?DirEntry {
         }
         ent.inodeID = vnode.?.stat.ID;
         ent.mode = vnode.?.stat.mode;
-        ent.nameLen = std.mem.len(@as([*c]const u8, @ptrCast(&vnode.?.name)));
+        ent.nameLen = @intCast(std.mem.len(@as([*c]const u8, @ptrCast(&vnode.?.name))));
         ent.name = vnode.?.name;
         @as(*Spinlock, @ptrCast(&i.lock)).release();
         return ent;
@@ -115,31 +115,95 @@ pub fn FindDir(i: *Inode, name: []const u8) ?*Inode {
     }
     if (ent != null) {
         return ent;
-    } else if (rootInode.?.finddir != null) {
-        return rootInode.?.finddir(rootInode.?, name);
+    } else if (i.finddir != null) {
+        return i.finddir.?(i, @ptrCast(name.ptr));
     } else {
         return null;
     }
 }
 
-pub fn GetInode(path: []const u8, base: *Inode) ?*Inode {
+pub fn RefInode(i: *Inode) void {
+    if (i.isVirtual) {
+        return;
+    }
+    @as(*Spinlock, @ptrCast(&i.lock)).acquire();
+    i.refs += 1;
+    @as(*Spinlock, @ptrCast(&i.lock)).release();
+}
+
+pub fn DerefInode(i: *Inode) void {
+    if (i.isVirtual) {
+        return;
+    }
+    @as(*Spinlock, @ptrCast(&i.lock)).acquire();
+    if (i.refs <= 1) {
+        i.refs = 0;
+        if (i.destroy != null) {
+            i.destroy.?(i);
+        }
+        if (i.parent != null) {
+            const parent = i.parent.?;
+            @as(*Spinlock, @ptrCast(&parent.lock)).acquire();
+            parent.virtualChildren += 1;
+            RemoveInodeFromParent(i);
+            @as(*Spinlock, @ptrCast(&parent.lock)).release();
+            DerefInode(parent);
+        }
+        Memory.Pool.PagedPool.Free(@as([*]u8, @ptrCast(@alignCast(i)))[0..@sizeOf(Inode)]);
+        return;
+    } else {
+        i.refs -= 1;
+    }
+    @as(*Spinlock, @ptrCast(&i.lock)).release();
+}
+
+pub fn GetInode(path: []const u8, base: *Inode, isMounting: bool) ?*Inode {
     var curNode: ?*Inode = if (std.mem.startsWith(u8, path, "/")) rootInode else base;
+    RefInode(curNode.?);
     var iter = std.mem.split(u8, path, "/");
     while (iter.next()) |name| {
         if (std.mem.eql(u8, name, "..")) {
+            var old = curNode.?;
             curNode = curNode.?.parent;
+            if (!isMounting) {
+                DerefInode(old);
+            }
         } else if (name.len == 0 or std.mem.eql(u8, name, ".")) {
             continue;
         } else {
             const lock = @as(*Spinlock, @ptrCast(&curNode.?.lock));
+            var oldNode = curNode.?;
             const old = HAL.Arch.IRQEnableDisable(false);
             lock.acquire();
             curNode = FindDir(curNode.?, name);
             lock.release();
+            if (curNode != null) {
+                RefInode(curNode.?);
+            }
+            if (isMounting) {
+                if (curNode != null) {
+                    if (!curNode.?.isVirtual) {
+                        curNode.?.parent = oldNode;
+                        @as(*Spinlock, @ptrCast(&oldNode.lock)).acquire();
+                        AddInodeToParent(curNode.?);
+                        oldNode.virtualChildren -= 1;
+                        @as(*Spinlock, @ptrCast(&oldNode.lock)).release();
+                    }
+                }
+            } else {
+                DerefInode(oldNode);
+            }
             _ = HAL.Arch.IRQEnableDisable(old);
         }
         if (curNode == null) {
             break;
+        }
+    }
+    if (curNode != null and !isMounting) {
+        if (!curNode.?.isVirtual) {
+            @as(*Spinlock, @ptrCast(&curNode.?.lock)).acquire();
+            curNode.?.refs -= 1;
+            @as(*Spinlock, @ptrCast(&curNode.?.lock)).release();
         }
     }
     return curNode;

@@ -59,4 +59,6 @@ pub const Inode = extern struct {
     create: ?*const fn (*Inode, [*c]const u8, usize) callconv(.C) isize = null,
     map: ?*const fn (*Inode, isize, *allowzero void, usize) callconv(.C) isize = null,
     unmap: ?*const fn (*Inode, *allowzero void, usize) callconv(.C) isize = null,
+
+    destroy: ?*const fn (*Inode) callconv(.C) void = null, // Called when a physical inode is about to be destroyed
 };

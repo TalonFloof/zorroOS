@@ -101,11 +101,13 @@ pub fn AdoptTeam(team: *Team, dropTeam: bool) void { // Transfers a team's paren
 
 pub fn LoadELFImage(path: []const u8, team: *Team) ?usize {
     const old = HAL.Arch.IRQEnableDisable(false);
-    if (FS.GetInode(path, FS.rootInode.?)) |inode| {
+    if (FS.GetInode(path, FS.rootInode.?, false)) |inode| {
+        FS.RefInode(inode);
         @as(*Spinlock, @ptrCast(&inode.lock)).acquire();
         var buf: []u8 = Memory.Pool.PagedPool.Alloc(@as(usize, @intCast(inode.stat.size))).?;
         _ = inode.read.?(inode, 0, @as(*void, @ptrFromInt(@intFromPtr(buf.ptr))), @as(isize, @intCast(buf.len)));
         @as(*Spinlock, @ptrCast(&inode.lock)).release();
+        FS.DerefInode(inode);
         const entry: ?usize = ELF.LoadELF(@as(*void, @ptrCast(buf.ptr)), .Normal, team.addressSpace) catch {
             @panic("Failed to load ELF Image!");
         };
