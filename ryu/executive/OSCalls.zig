@@ -76,7 +76,7 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                 .Open => { // FileDesc_t Open(*const char name, int mode)
                     const path = @as([*]const u8, @ptrFromInt(regs.GetReg(1)))[0..std.mem.len(@as([*c]const u8, @ptrFromInt(regs.GetReg(1))))];
                     const team = HAL.Arch.GetHCB().activeThread.?.team;
-                    if (FS.GetInode(path, team.cwd.?, false)) |inode| {
+                    if (FS.GetInode(path, team.cwd.?)) |inode| {
                         const old = HAL.Arch.IRQEnableDisable(false);
                         FS.RefInode(inode);
                         const node = @as(*Executive.Team.FileDescriptor, @ptrFromInt(@intFromPtr(Memory.Pool.PagedPool.Alloc(@sizeOf(Executive.Team.FileDescriptor)).?.ptr)));
@@ -282,7 +282,7 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                     var parent: ?*FS.Inode = FS.rootInode;
                     if (lastSep != null) {
                         const old = HAL.Arch.IRQEnableDisable(false);
-                        parent = FS.GetInode(path[0..lastSep.?], parent.?, false);
+                        parent = FS.GetInode(path[0..lastSep.?], parent.?);
                         _ = HAL.Arch.IRQEnableDisable(old);
                     }
                     if (parent == null) {
@@ -304,7 +304,7 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                 .Unlink => { // Status_t Unlink(const char* path)
                     const path = @as([*]const u8, @ptrFromInt(regs.GetReg(1)))[0..std.mem.len(@as([*c]const u8, @ptrFromInt(regs.GetReg(1))))];
                     const old = HAL.Arch.IRQEnableDisable(false);
-                    if (FS.GetInode(path, FS.rootInode.?, false)) |inode| {
+                    if (FS.GetInode(path, FS.rootInode.?)) |inode| {
                         _ = HAL.Arch.IRQEnableDisable(old);
                         if (inode.unlink) |unlink| {
                             const o = HAL.Arch.IRQEnableDisable(false);
@@ -328,7 +328,7 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                 .Stat => { // Status_t Stat(const char* path, stat_t* ptr)
                     const path = @as([*]const u8, @ptrFromInt(regs.GetReg(1)))[0..std.mem.len(@as([*c]const u8, @ptrFromInt(regs.GetReg(1))))];
                     const old = HAL.Arch.IRQEnableDisable(false);
-                    if (FS.GetInode(path, FS.rootInode.?, false)) |inode| {
+                    if (FS.GetInode(path, FS.rootInode.?)) |inode| {
                         FS.RefInode(inode);
                         @as(*FS.Metadata, @ptrFromInt(regs.GetReg(2))).* = inode.stat;
                         FS.DerefInode(inode);
@@ -460,7 +460,7 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                     const team = HAL.Arch.GetHCB().activeThread.?.team;
                     const path = @as([*]const u8, @ptrFromInt(regs.GetReg(1)))[0..std.mem.len(@as([*c]const u8, @ptrFromInt(regs.GetReg(1))))];
                     const old = HAL.Arch.IRQEnableDisable(false);
-                    if (FS.GetInode(path, FS.rootInode.?, false)) |inode| {
+                    if (FS.GetInode(path, FS.rootInode.?)) |inode| {
                         if ((inode.stat.mode & 0o0770000) == 0o0040000) {
                             if (team.cwd != null) {
                                 FS.DerefInode(team.cwd.?);

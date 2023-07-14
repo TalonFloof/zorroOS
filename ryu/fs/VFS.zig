@@ -37,15 +37,15 @@ pub fn AddInodeToParent(i: *Inode) void {
     i.parent.?.virtualChildren += 1;
 }
 
-pub fn AddHybridInodeToParent(i: *Inode) void {
+pub fn AddPhysicalInodeToParent(i: *Inode) void {
     i.prevSibling = null;
-    if (i.parent.?.hybridChildren) |head| {
+    if (i.parent.?.physChildren) |head| {
         head.prevSibling = i;
         i.nextSibling = head;
     } else {
         i.nextSibling = null;
     }
-    i.parent.?.hybridChildren = i;
+    i.parent.?.physChildren = i;
 }
 
 pub fn RemoveInodeFromParent(i: *Inode) void {
@@ -62,15 +62,15 @@ pub fn RemoveInodeFromParent(i: *Inode) void {
     i.parent = null;
 }
 
-pub fn RemoveHybridInodeFromParent(i: *Inode) void {
+pub fn RemovePhysicalInodeFromParent(i: *Inode) void {
     if (i.prevSibling) |prev| {
         prev.nextSibling = i.nextSibling;
     }
     if (i.nextSibling) |next| {
         next.prevSibling = i.prevSibling;
     }
-    if (@intFromPtr(i.parent.?.hybridChildren) == @intFromPtr(i)) {
-        i.parent.?.hybridChildren = i.nextSibling;
+    if (@intFromPtr(i.parent.?.physChildren) == @intFromPtr(i)) {
+        i.parent.?.physChildren = i.nextSibling;
     }
     i.parent = null;
 }
@@ -83,7 +83,7 @@ pub fn NewDirInode(name: []const u8) *Inode {
     inode.parent = rootInode;
     inode.isVirtual = true;
     inode.children = null;
-    inode.hybridChildren = null;
+    inode.physChildren = null;
     inode.stat.ID = 2;
     inode.stat.uid = 1;
     inode.stat.gid = 1;
@@ -131,7 +131,7 @@ pub fn ReadDir(i: *Inode, off: usize) ?DirEntry {
 }
 
 pub fn FindDir(i: *Inode, name: []const u8) ?*Inode {
-    var ent: ?*Inode = i.hybridChildren;
+    var ent: ?*Inode = i.physChildren;
     while (ent) |e| {
         const str: [*c]const u8 = @as([*c]const u8, @ptrCast(&e.name));
         if (std.mem.eql(u8, name, str[0..std.mem.len(str)])) {
@@ -176,7 +176,7 @@ pub fn DerefInode(i: *Inode) void {
         if (i.parent != null) {
             const parent = i.parent.?;
             @as(*Spinlock, @ptrCast(&parent.lock)).acquire();
-            RemoveHybridInodeFromParent(i);
+            RemovePhysicalInodeFromParent(i);
             @as(*Spinlock, @ptrCast(&parent.lock)).release();
             DerefInode(parent);
         }
@@ -188,7 +188,7 @@ pub fn DerefInode(i: *Inode) void {
     @as(*Spinlock, @ptrCast(&i.lock)).release();
 }
 
-pub fn GetInode(path: []const u8, base: *Inode, isMounting: bool) ?*Inode {
+pub fn GetInode(path: []const u8, base: *Inode) ?*Inode {
     var curNode: ?*Inode = if (std.mem.startsWith(u8, path, "/")) rootInode else base;
     RefInode(curNode.?);
     var iter = std.mem.split(u8, path, "/");
@@ -196,9 +196,7 @@ pub fn GetInode(path: []const u8, base: *Inode, isMounting: bool) ?*Inode {
         if (std.mem.eql(u8, name, "..")) {
             var old = curNode.?;
             curNode = curNode.?.parent;
-            if (!isMounting) {
-                DerefInode(old);
-            }
+            DerefInode(old);
         } else if (name.len == 0 or std.mem.eql(u8, name, ".")) {
             continue;
         } else {
@@ -210,18 +208,12 @@ pub fn GetInode(path: []const u8, base: *Inode, isMounting: bool) ?*Inode {
             lock.release();
             if (curNode != null) {
                 RefInode(curNode.?);
-            }
-            if (isMounting) {
-                if (curNode != null) {
-                    if (!curNode.?.isVirtual) {
-                        curNode.?.parent = oldNode;
-                        @as(*Spinlock, @ptrCast(&oldNode.lock)).acquire();
-                        AddHybridInodeToParent(curNode.?);
-                        @as(*Spinlock, @ptrCast(&oldNode.lock)).release();
-                    }
+                if (!curNode.?.isVirtual) {
+                    curNode.?.parent = oldNode;
+                    @as(*Spinlock, @ptrCast(&oldNode.lock)).acquire();
+                    AddPhysicalInodeToParent(curNode.?);
+                    @as(*Spinlock, @ptrCast(&oldNode.lock)).release();
                 }
-            } else {
-                DerefInode(oldNode);
             }
             _ = HAL.Arch.IRQEnableDisable(old);
         }
@@ -229,7 +221,7 @@ pub fn GetInode(path: []const u8, base: *Inode, isMounting: bool) ?*Inode {
             break;
         }
     }
-    if (curNode != null and !isMounting) {
+    if (curNode != null) {
         if (!curNode.?.isVirtual) {
             @as(*Spinlock, @ptrCast(&curNode.?.lock)).acquire();
             curNode.?.refs -= 1;
@@ -294,7 +286,7 @@ pub fn Init() void {
     rootInode.?.stat.nlinks = 1;
     rootInode.?.stat.mode = 0o0040755;
     rootInode.?.children = null;
-    rootInode.?.hybridChildren = null;
+    rootInode.?.physChildren = null;
     rootInode.?.nextSibling = null;
     rootInode.?.prevSibling = null;
     rootInode.?.isVirtual = true;

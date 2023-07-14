@@ -70,6 +70,7 @@ pub fn GetTeamByID(id: i64) ?*Team {
 
 pub fn DestroyFileDescriptor(k: i64, v: **FileDescriptor) void {
     _ = k;
+    FS.DerefInode(v.*.inode);
     Memory.Pool.PagedPool.Free(@as([*]u8, @ptrFromInt(@intFromPtr(v.*)))[0..@sizeOf(FileDescriptor)]);
 }
 
@@ -101,7 +102,7 @@ pub fn AdoptTeam(team: *Team, dropTeam: bool) void { // Transfers a team's paren
 
 pub fn LoadELFImage(path: []const u8, team: *Team) ?usize {
     const old = HAL.Arch.IRQEnableDisable(false);
-    if (FS.GetInode(path, FS.rootInode.?, false)) |inode| {
+    if (FS.GetInode(path, FS.rootInode.?)) |inode| {
         FS.RefInode(inode);
         @as(*Spinlock, @ptrCast(&inode.lock)).acquire();
         var buf: []u8 = Memory.Pool.PagedPool.Alloc(@as(usize, @intCast(inode.stat.size))).?;

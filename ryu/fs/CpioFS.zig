@@ -178,13 +178,13 @@ pub fn Init(image: []u8) void {
                     @as(*Spinlock, @ptrCast(&node.lock)).acquire();
                     _ = node.create.?(node, @as([*c]const u8, @ptrCast(&cName)), @as(usize, @intCast(header.mode)));
                     @as(*Spinlock, @ptrCast(&node.lock)).release();
-                    const n = FS.GetInode(name, node, false).?;
+                    const n = FS.GetInode(name, node).?;
                     @as(*Spinlock, @ptrCast(&n.lock)).acquire();
                     _ = n.write.?(n, 0, @as(*void, @ptrFromInt(@intFromPtr(data.ptr))), @as(isize, @intCast(data.len)));
                     @as(*Spinlock, @ptrCast(&n.lock)).release();
                 }
             } else {
-                if (FS.GetInode(name, node, false)) |n| {
+                if (FS.GetInode(name, node)) |n| {
                     node = n;
                 } else {
                     var cName: [256]u8 = [_]u8{0} ** 256;
@@ -192,7 +192,7 @@ pub fn Init(image: []u8) void {
                     @as(*Spinlock, @ptrCast(&node.lock)).acquire();
                     _ = node.create.?(node, @as([*c]const u8, @ptrCast(&cName)), 0o0040755);
                     @as(*Spinlock, @ptrCast(&node.lock)).release();
-                    node = FS.GetInode(name, node, false).?;
+                    node = FS.GetInode(name, node).?;
                 }
             }
             index += 1;

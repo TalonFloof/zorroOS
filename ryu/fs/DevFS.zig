@@ -7,9 +7,10 @@ const Framebuffer = @import("Framebuffer.zig");
 var nextDevID: i64 = 2;
 
 pub fn RegisterDevice(name: []const u8, inode: *FS.Inode) void {
-    var devNode = FS.GetInode("/dev", FS.rootInode.?, false).?;
+    var devNode = FS.GetInode("/dev", FS.rootInode.?).?;
     inode.parent = devNode;
     inode.mountOwner = devNode.mountPoint;
+    inode.isVirtual = true;
     inode.stat.ID = @atomicRmw(i64, &nextDevID, .Add, 1, .Monotonic);
     @memset(inode.name[0..256], 0);
     @memcpy(inode.name[0..name.len], name);
@@ -70,7 +71,7 @@ pub fn UMount(fs: *FS.Filesystem) callconv(.C) void {
 
 pub fn Init() void {
     FS.RegisterFilesystem("devfs", &Mount, &UMount);
-    if (!FS.Mount(FS.GetInode("/dev", FS.rootInode.?, false).?, null, "devfs")) {
+    if (!FS.Mount(FS.GetInode("/dev", FS.rootInode.?).?, null, "devfs")) {
         HAL.Crash.Crash(.RyuKernelInitializationFailure, .{ 0x2001, 0, 0, 0 }, null);
     }
     RegisterDevice("null", &nullFile);

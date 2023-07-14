@@ -1,18 +1,21 @@
 build: limine-zig
 	nasm -f elf64 ryu/hal/x86_64/_lowlevel.s -o ryu/_lowlevel.o; \
 	cd ryu; \
-	zig build -Doptimize=Debug; \
-	rm -f -r zig-cache _lowlevel.o; \
+	zig build -Doptimize=ReleaseSafe; \
+	rm -f -r _lowlevel.o; \
 	cd ..
 	mkdir -p drivers/out
 	cd drivers/ps2; \
-	zig build -Doptimize=ReleaseSmall; \
+	zig build -Doptimize=ReleaseSafe; \
 	cd ../..
 	cd drivers/pci; \
-	zig build -Doptimize=ReleaseSmall; \
+	zig build -Doptimize=ReleaseSafe; \
 	cd ../..
 	cd drivers/nvme; \
 	zig build -Doptimize=ReleaseSafe; \
+	cd ../..
+	cd drivers/fat; \
+	zig build -Doptimize=Debug; \
 	cd ../..
 	cd lib; \
 	make; \
