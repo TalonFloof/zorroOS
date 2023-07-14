@@ -24,11 +24,13 @@ ClientWindow* NewRavenWindow(RavenSession* s, int w, int h, int flags, int64_t c
     packet.create.flags = flags;
     packet.create.creator = creator;
     MQueue_SendToServer(s->raven,&packet,sizeof(RavenPacket));
-    size_t size;
-    RavenCreateWindowResponse* response = MQueue_RecieveFromServer(s->raven,&size);
-    if(size < sizeof(RavenCreateWindowResponse)) {
-        free(response);
-        return NULL;
+    size_t size = 0;
+    RavenCreateWindowResponse* response;
+    while(size != sizeof(RavenCreateWindowResponse)) {
+        response = MQueue_RecieveFromServer(s->raven,&size);
+        if(size != sizeof(RavenCreateWindowResponse)) {
+            free(response);
+        }
     }
     ClientWindow* win = malloc(sizeof(ClientWindow));
     win->id = response->id;

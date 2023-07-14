@@ -68,6 +68,7 @@ typedef struct {
 typedef struct {
     RavenEventType type;
     int64_t id;
+    uint8_t padding; // To prevent it from having the same size as a CreateWindowResponse
     union {
         RavenKeyEvent key;
         RavenMouseEvent mouse;
