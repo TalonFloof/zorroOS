@@ -51,5 +51,6 @@ typedef struct {
 int64_t Open(const char* path, int mode, OpenedFile* file);
 int64_t Create(const char* path, int mode);
 int64_t ChDir(const char* path);
+int64_t Mount(const char* device, const char* dest, const char* fsID);
 
 #endif

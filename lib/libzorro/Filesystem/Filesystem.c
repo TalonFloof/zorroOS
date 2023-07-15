@@ -50,3 +50,7 @@ int64_t Create(const char* path, int mode) {
 int64_t ChDir(const char* path) {
     return (int64_t)Syscall(0x10013,(uintptr_t)path,0,0,0,0,0);
 }
+
+int64_t Mount(const char* device, const char* dest, const char* fsID) {
+    return (int64_t)Syscall(0x10016,(uintptr_t)device,(uintptr_t)dest,(uintptr_t)fsID,0,0,0);
+}

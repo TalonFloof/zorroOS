@@ -460,7 +460,7 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                     const team = HAL.Arch.GetHCB().activeThread.?.team;
                     const path = @as([*]const u8, @ptrFromInt(regs.GetReg(1)))[0..std.mem.len(@as([*c]const u8, @ptrFromInt(regs.GetReg(1))))];
                     const old = HAL.Arch.IRQEnableDisable(false);
-                    if (FS.GetInode(path, FS.rootInode.?)) |inode| {
+                    if (FS.GetInode(path, team.cwd.?)) |inode| {
                         if ((inode.stat.mode & 0o0770000) == 0o0040000) {
                             if (team.cwd != null) {
                                 FS.DerefInode(team.cwd.?);
@@ -475,6 +475,22 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                         regs.SetReg(0, @as(u64, @bitCast(@as(i64, @intCast(-2)))));
                     }
                     _ = HAL.Arch.IRQEnableDisable(old);
+                },
+                .Mount => { // Status_t Mount(const char* device, const char* dest, const char* fsID)
+                    const team = HAL.Arch.GetHCB().activeThread.?.team;
+                    const device = @as([*]const u8, @ptrFromInt(regs.GetReg(1)))[0..std.mem.len(@as([*c]const u8, @ptrFromInt(regs.GetReg(1))))];
+                    const dest = @as([*]const u8, @ptrFromInt(regs.GetReg(2)))[0..std.mem.len(@as([*c]const u8, @ptrFromInt(regs.GetReg(2))))];
+                    const fsID = @as([*]const u8, @ptrFromInt(regs.GetReg(3)))[0..std.mem.len(@as([*c]const u8, @ptrFromInt(regs.GetReg(3))))];
+                    const deviceNode = FS.GetInode(device, team.cwd.?);
+                    if (FS.GetInode(dest, team.cwd.?)) |destNode| {
+                        if (FS.Mount(destNode, deviceNode, fsID)) {
+                            regs.SetReg(0, 0);
+                        } else {
+                            regs.SetReg(0, @bitCast(@as(i64, -1)));
+                        }
+                    } else {
+                        regs.SetReg(0, @as(u64, @bitCast(@as(i64, @intCast(-2)))));
+                    }
                 },
                 else => {
                     regs.SetReg(0, @as(u64, @bitCast(@as(i64, @intCast(-4096)))));
