@@ -148,7 +148,7 @@ pub fn FindDir(i: *Inode, name: []const u8) ?*Inode {
         ent = e.nextSibling;
     }
     if (i.finddir != null) {
-        return i.finddir.?(i, @ptrCast(name.ptr));
+        return i.finddir.?(i, @ptrCast(name.ptr), name.len);
     } else {
         return null;
     }
@@ -160,7 +160,6 @@ pub fn RefInode(i: *Inode) void {
     }
     @as(*Spinlock, @ptrCast(&i.lock)).acquire();
     i.refs += 1;
-    HAL.Console.Put("Reference {}\n", .{i.refs});
     @as(*Spinlock, @ptrCast(&i.lock)).release();
 }
 
@@ -170,7 +169,6 @@ pub fn DerefInode(i: *Inode) void {
     }
     @as(*Spinlock, @ptrCast(&i.lock)).acquire();
     if (i.refs <= 1) {
-        HAL.Console.Put("Destroy\n", .{});
         i.refs = 0;
         if (i.destroy != null) {
             i.destroy.?(i);
@@ -182,11 +180,17 @@ pub fn DerefInode(i: *Inode) void {
             @as(*Spinlock, @ptrCast(&parent.lock)).release();
             DerefInode(parent);
         }
+        if (i.physChildren != null) {
+            var entry = i.physChildren;
+            while (entry != null) {
+                entry.?.parent = null;
+                entry = entry.?.nextSibling;
+            }
+        }
         Memory.Pool.PagedPool.Free(@as([*]u8, @ptrCast(@alignCast(i)))[0..@sizeOf(Inode)]);
         return;
     } else {
         i.refs -= 1;
-        HAL.Console.Put("Dereference {}\n", .{i.refs});
     }
     @as(*Spinlock, @ptrCast(&i.lock)).release();
 }
@@ -211,7 +215,7 @@ pub fn GetInode(path: []const u8, base: *Inode) ?*Inode {
             lock.release();
             if (curNode != null) {
                 RefInode(curNode.?);
-                if (!curNode.?.isVirtual) {
+                if (!curNode.?.isVirtual and curNode.?.parent == null) {
                     curNode.?.parent = oldNode;
                     @as(*Spinlock, @ptrCast(&oldNode.lock)).acquire();
                     AddPhysicalInodeToParent(curNode.?);

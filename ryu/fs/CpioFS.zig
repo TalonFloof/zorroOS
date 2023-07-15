@@ -108,6 +108,10 @@ pub fn Create(inode: *FS.Inode, name: [*c]const u8, mode: usize) callconv(.C) is
     in.stat.reserved2 = @bitCast(time[1]);
     in.stat.atime = time[0];
     in.isVirtual = true;
+    in.physChildren = null;
+    in.children = null;
+    in.nextSibling = null;
+    in.prevSibling = null;
     in.mountOwner = inode.mountOwner;
     in.parent = inode;
     in.create = &Create;

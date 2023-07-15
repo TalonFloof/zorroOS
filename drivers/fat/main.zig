@@ -129,6 +129,10 @@ pub fn NextCluster(vol: *Volume, cluster: u32) u32 {
     @panic("Undefined FAT Type!");
 }
 
+pub fn Destroy(inode: *devlib.fs.Inode) callconv(.C) void {
+    DriverInfo.krnlDispatch.?.pagedFree(@ptrCast(inode.private), @sizeOf(FileEntry));
+}
+
 pub fn ReadDir(inode: *devlib.fs.Inode, offset: usize, entry: *devlib.fs.DirEntry) callconv(.C) isize {
     const file: *FileEntry = @alignCast(@ptrCast(inode.private));
     const superblock: *Superblock16 = &file.vol.superblock.superBlk16;
@@ -182,6 +186,74 @@ pub fn ReadDir(inode: *devlib.fs.Inode, offset: usize, entry: *devlib.fs.DirEntr
     return 0;
 }
 
+pub fn FindDir(inode: *devlib.fs.Inode, name: [*c]const u8, nameLen: usize) callconv(.C) ?*devlib.fs.Inode {
+    const file: *FileEntry = @alignCast(@ptrCast(inode.private));
+    const superblock: *Superblock16 = &file.vol.superblock.superBlk16;
+    var buffer = @as([*]u8, @alignCast(@ptrCast(DriverInfo.krnlDispatch.?.pagedAllocAnon(@as(usize, @intCast(superblock.sectorsPerCluster)) * @as(usize, @intCast(superblock.bytesPerSector))))))[0..(@as(usize, @intCast(superblock.sectorsPerCluster)) * @as(usize, @intCast(superblock.bytesPerSector)))];
+    defer DriverInfo.krnlDispatch.?.pagedFreeAnon(@ptrCast(buffer.ptr), buffer.len); // Honestly i forgot that zig can defer X3
+    var currentCluster: u32 = file.firstCluster;
+    while (currentCluster < file.vol.chainTerminate) {
+        if (file.vol.fs.dev.?.read.?(file.vol.fs.dev.?, @intCast(file.vol.sectorOffset + (currentCluster * @as(u32, @intCast(superblock.sectorsPerCluster)))), @ptrCast(buffer.ptr), @intCast(superblock.sectorsPerCluster)) < superblock.sectorsPerCluster) {
+            DriverInfo.krnlDispatch.?.abort("Failed to read cluster while preforming FindDir!\n");
+            return null;
+        }
+        var i: usize = 0;
+        while (i < ((@as(usize, superblock.sectorsPerCluster) * @as(usize, superblock.bytesPerSector)) / @sizeOf(FATDirectoryEntry))) : (i += 1) {
+            const ent = @as(*FATDirectoryEntry, @ptrCast(@alignCast(&buffer[i * @sizeOf(FATDirectoryEntry)])));
+            if (ent.name[0] == 0xe5 or ent.attributes == 0x0f or (ent.attributes & 8) != 0) {
+                continue;
+            }
+            if (ent.name[0] == 0) {
+                return null;
+            }
+            if (ent.name[0] == '.' and (ent.name[1] == '.' or ent.name[1] == ' ') and ent.name[2] == ' ') {
+                continue;
+            }
+            const hasExt = ent.name[8] != ' ' or ent.name[9] != ' ' or ent.name[10] != ' ';
+            var n: [13]u8 = [_]u8{0} ** 13;
+            var nLen: usize = 0;
+            var j: usize = 0;
+            while (j < 11) : (j += 1) {
+                if (j == 8 and hasExt) {
+                    n[nLen] = '.';
+                    nLen += 1;
+                }
+                if (ent.name[j] != ' ') {
+                    n[nLen] = ent.name[j];
+                    nLen += 1;
+                }
+            }
+            if (std.mem.eql(u8, n[0..nLen], @as([*]const u8, @ptrCast(name))[0..nameLen])) {
+                var newNode = @as(*devlib.fs.Inode, @alignCast(@ptrCast(DriverInfo.krnlDispatch.?.pagedAlloc(@sizeOf(devlib.fs.Inode)))));
+                var entry = @as(*FileEntry, @ptrCast(@alignCast(DriverInfo.krnlDispatch.?.pagedAlloc(@sizeOf(FileEntry)))));
+                entry.vol = file.vol;
+                entry.firstCluster = @as(u32, ent.firstClusterLow) | (@as(u32, ent.firstClusterHigh) << 16);
+                std.mem.copyForwards(u8, newNode.name[0 .. nLen + 1], n[0 .. nLen + 1]);
+                newNode.private = @ptrCast(@alignCast(entry));
+                newNode.readdir = &ReadDir;
+                newNode.finddir = &FindDir;
+                newNode.destroy = &Destroy;
+                newNode.isVirtual = false;
+                newNode.children = null;
+                newNode.physChildren = null;
+                newNode.nextSibling = null;
+                newNode.prevSibling = null;
+                newNode.parent = null;
+                newNode.stat.mode = if ((ent.attributes & 0x10) != 0) 0o0040775 else 0o0000775;
+                newNode.stat.ID = 0xffffffff;
+                newNode.stat.size = @intCast(ent.fileSizeBytes);
+                newNode.stat.uid = 1;
+                newNode.stat.gid = 1;
+                newNode.stat.nlinks = 1;
+                newNode.refs = 0;
+                return newNode;
+            }
+        }
+        currentCluster = NextCluster(file.vol, currentCluster);
+    }
+    return null;
+}
+
 pub fn Mount(fs: *devlib.fs.Filesystem) callconv(.C) bool {
     if (fs.dev == null) {
         DriverInfo.krnlDispatch.?.put("Partition was null!\n");
@@ -229,6 +301,8 @@ pub fn Mount(fs: *devlib.fs.Filesystem) callconv(.C) bool {
     fs.root.mountPoint = fs;
     fs.root.private = @ptrCast(entry);
     fs.root.readdir = &ReadDir;
+    fs.root.finddir = &FindDir;
+    fs.root.destroy = &Destroy;
     return true;
 }
 

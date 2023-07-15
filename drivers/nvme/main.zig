@@ -164,10 +164,11 @@ const NVMeNamespace = struct {
     spinlock: u8 = 0,
 
     pub fn Read(self: *NVMeNamespace, lba: u64, buf: []u8) bool {
+        DriverInfo.krnlDispatch.?.acquireSpinlock(&self.spinlock);
+        defer DriverInfo.krnlDispatch.?.releaseSpinlock(&self.spinlock);
         var blocksToRead = buf.len / self.blockSize;
         var curLBA = lba;
         var curBase: [*]u8 = buf.ptr;
-
         var page = DriverInfo.krnlDispatch.?.pfnAlloc(false);
         while (blocksToRead > 0) {
             var command = NVMeSubmitEntry{};
@@ -192,6 +193,8 @@ const NVMeNamespace = struct {
     }
 
     pub fn Write(self: *NVMeNamespace, lba: u64, buf: []u8) bool {
+        DriverInfo.krnlDispatch.?.acquireSpinlock(&self.spinlock);
+        defer DriverInfo.krnlDispatch.?.releaseSpinlock(&self.spinlock);
         var blocksToWrite = buf.len / self.blockSize;
         var curLBA = lba;
         var curBase: [*]u8 = buf.ptr;
