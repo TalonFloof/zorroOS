@@ -160,6 +160,7 @@ pub fn RefInode(i: *Inode) void {
     }
     @as(*Spinlock, @ptrCast(&i.lock)).acquire();
     i.refs += 1;
+    HAL.Console.Put("Reference {}\n", .{i.refs});
     @as(*Spinlock, @ptrCast(&i.lock)).release();
 }
 
@@ -169,6 +170,7 @@ pub fn DerefInode(i: *Inode) void {
     }
     @as(*Spinlock, @ptrCast(&i.lock)).acquire();
     if (i.refs <= 1) {
+        HAL.Console.Put("Destroy\n", .{});
         i.refs = 0;
         if (i.destroy != null) {
             i.destroy.?(i);
@@ -184,6 +186,7 @@ pub fn DerefInode(i: *Inode) void {
         return;
     } else {
         i.refs -= 1;
+        HAL.Console.Put("Dereference {}\n", .{i.refs});
     }
     @as(*Spinlock, @ptrCast(&i.lock)).release();
 }
