@@ -475,6 +475,11 @@ int main(int argc, const char* argv[]) {
                 Redraw(win->x+packet->flipBuffer.x,win->y+packet->flipBuffer.y,packet->flipBuffer.w,packet->flipBuffer.h);
                 break;
             }
+            case RAVEN_SET_BACKGROUND: {
+                const char* path = (const char*)(((uintptr_t)packet)+4);
+                LoadBackground(path);
+                break;
+            }
             default: {
                 break;
             }

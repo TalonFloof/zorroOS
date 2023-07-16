@@ -12,6 +12,7 @@ typedef enum {
     RAVEN_MOVE_WINDOW,
     RAVEN_GET_RESOLUTION,
     RAVEN_DESTROY_WINDOW,
+    RAVEN_SET_BACKGROUND,
     RAVEN_FLIP_BUFFER,
 } RavenPacketType;
 
@@ -83,6 +84,7 @@ typedef struct {
         RavenFlipBuffer flipBuffer;
     };
 } RavenPacket;
+
 ///////////////////////////////////////////////////////////
 typedef struct {
     MQueue* raven;
