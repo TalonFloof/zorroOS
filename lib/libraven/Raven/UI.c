@@ -2,6 +2,7 @@
 #include <Media/Graphics.h>
 #include <Common/Alloc.h>
 #include <System/Thread.h>
+#include <Common/String.h>
 #include "Widget.h"
 #include "UI.h"
 
@@ -259,4 +260,18 @@ void UIRemoveWidgets(ClientWindow* win) {
     }
     win->toolbarHead = NULL;
     win->toolbarTail = NULL;
+}
+
+#include "Widgets/Button.h"
+#include "Widgets/Label.h"
+#include "Widgets/Badge.h"
+
+void UIAbout(RavenSession* session, ClientWindow* parent, const char* name, const char* icon, const char* version, const char* copyright, const char* author) {
+    ClientWindow* aboutWin = NewRavenWindow(session,320,320,FLAG_ACRYLIC,parent->id);
+    NewIconButtonWidget(aboutWin,DEST_WIDGETS,128,48,64,64,icon,NULL);
+    NewLabelWidget(aboutWin,DEST_WIDGETS,(320/2)-((strlen(name)*16)/2),114,name,LABEL_MORE_LARGE);
+    NewBadgeWidget(aboutWin,DEST_WIDGETS,(320/2)-(((strlen(version)*6)+16)/2),114+33,version,0);
+    NewLabelWidget(aboutWin,DEST_WIDGETS,(320/2)-((strlen(copyright)*8)/2),114+65,copyright,LABEL_NORMAL);
+    NewLabelWidget(aboutWin,DEST_WIDGETS,(320/2)-((strlen(author)*8)/2),114+65+16,author,LABEL_NORMAL);
+    UIAddWindow(session,aboutWin,"About",NULL);
 }

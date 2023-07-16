@@ -19,6 +19,10 @@ extern void* RavenTerminus;
 
 UIWidget* CreateFileBrowser(const char* path);
 
+static void AboutDialog(RavenSession* session, ClientWindow* win, uint64_t id) {
+    UIAbout(session,win,"Hunter","User/Administrator","0.1.0","Copyright (C) 2023","TalonFox and contributors");
+}
+
 static void FileBrowserRedraw(void* self, RavenSession* session, ClientWindow* win, GraphicsContext* gfx) {
     UIWidget* widget = (UIWidget*)self;
     FileBrowserPrivate* private = (FileBrowserPrivate*)widget->privateData;
@@ -47,6 +51,7 @@ static void FileBrowserEvent(void* self, RavenSession* session, ClientWindow* wi
                     ClientWindow* w = NewRavenWindow(session,560,360,FLAG_ACRYLIC,win->id);
                     NewIconButtonWidget(w,DEST_TOOLBAR,0,0,16,13,"Action/Left",NULL);
                     NewIconButtonWidget(w,DEST_TOOLBAR,0,0,16,13,"Action/Right",NULL);
+                    NewIconButtonWidget(w,DEST_TOOLBAR,0,0,16,16,"Action/About",&AboutDialog);
                     int len = strlen((const char*)private->path);
                     int fullLen = len+strlen((const char*)&entry.name);
                     char* path = malloc(fullLen+2);
@@ -99,6 +104,7 @@ int main(int argc, const char* argv[]) {
     }
     NewIconButtonWidget(win,DEST_TOOLBAR,0,0,16,13,"Action/Left",NULL);
     NewIconButtonWidget(win,DEST_TOOLBAR,0,0,16,13,"Action/Right",NULL);
+    NewIconButtonWidget(win,DEST_TOOLBAR,0,0,16,16,"Action/About",&AboutDialog);
     UIAddWidget(win,CreateFileBrowser(argc == 2 ? argv[1] : "/"),DEST_WIDGETS);
     UIAddWindow(session,win,"Root",NULL);
     UIRun(session);
