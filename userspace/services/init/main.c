@@ -12,7 +12,6 @@ int main() {
     RyuLog("Starting Desktop...\n");
     TeamID desktopTeam = NewTeam("Desktop Service");
     LoadExecImage(desktopTeam,(const char*[]){"/bin/desktop",NULL},NULL);
-    Mount("/dev/nvme0n1p0","/mnt","fat");
     //while(1) {
 
     //}

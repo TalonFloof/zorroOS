@@ -322,7 +322,7 @@ int main(int argc, const char* argv[]) {
     uintptr_t kbdThr = NewThread("Raven Keyboard Thread",&KeyboardThread,(void*)(((uintptr_t)kbdStack)+0x8000));
     void* mouseStack = MMap(NULL,0x8000,3,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
     uintptr_t mouseThr = NewThread("Raven Mouse Thread",&MouseThread,(void*)(((uintptr_t)mouseStack)+0x8000));
-    LoadBackground("/System/Wallpapers/Mountain.qoi");
+    LoadBackground("/System/Wallpapers/Rain.qoi");
     while(1) {
         int64_t teamID;
         RavenPacket* packet = MQueue_RecieveFromClient(msgQueue,&teamID,NULL);

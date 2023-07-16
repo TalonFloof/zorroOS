@@ -7,8 +7,10 @@
 
 void UIDrawRoundedBox(GraphicsContext* gfx, int x, int y, int w, int h, uint32_t color);
 void UIAddWindow(RavenSession* session, ClientWindow* win, const char* title, const char* bg);
+void UIDrawBaseWindow(RavenSession* session, ClientWindow* win, GraphicsContext* gfx, const char* title, const char* bg);
 void UIRun(RavenSession* session);
 void UIRedrawWidgets(RavenSession* session, ClientWindow* win, GraphicsContext* gfx);
 int64_t UIAddWidget(ClientWindow* win, void* widget, int dest);
+void UIRemoveWidgets(ClientWindow* win);
 
 #endif

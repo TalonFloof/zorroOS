@@ -8,3 +8,6 @@ build:
 	cd hunter; \
 	make build; \
 	cd ..
+	cd settings; \
+	make build; \
+	cd ..

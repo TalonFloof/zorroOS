@@ -11,6 +11,12 @@
 		"height": 13,
 		"bpp": 1
 	},
+	"App/Settings": {
+		"file": "App/Settings.data",
+		"width": 32,
+		"height": 32,
+		"bpp": 1
+	},
 	"Device/CD": {
 		"file": "Device/CD.data",
         "width": 32,

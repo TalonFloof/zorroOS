@@ -50,6 +50,22 @@ static void ButtonRedraw(void* self, RavenSession* session, ClientWindow* win, G
     }
 }
 
+static void IconButtonEvent(void* self, RavenSession* session, ClientWindow* win, GraphicsContext* gfx, RavenEvent* event) {
+    UIWidget* widget = (UIWidget*)self;
+    UIIconButtonPrivateData* private = (UIIconButtonPrivateData*)widget->privateData;
+    if(event->type == RAVEN_MOUSE_PRESSED) {
+        private->pressed = 1;
+    } else if(event->type == RAVEN_MOUSE_RELEASED) {
+        int orig = private->pressed;
+        private->pressed = 0;
+        if(orig) {
+            if(private->onClick != NULL) {
+                private->onClick(session,win,widget->id);
+            }
+        }
+    }
+}
+
 static void ButtonEvent(void* self, RavenSession* session, ClientWindow* win, GraphicsContext* gfx, RavenEvent* event) {
     UIWidget* widget = (UIWidget*)self;
     UIButtonPrivateData* private = (UIButtonPrivateData*)widget->privateData;
@@ -58,14 +74,15 @@ static void ButtonEvent(void* self, RavenSession* session, ClientWindow* win, Gr
         widget->Redraw(self,session,win,gfx);
         RavenFlipArea(session,win,widget->x,widget->y,widget->w,widget->h);
     } else if(event->type == RAVEN_MOUSE_RELEASED) {
-        if(private->pressed) {
+        int orig = private->pressed;
+        private->pressed = 0;
+        widget->Redraw(self,session,win,gfx);
+        RavenFlipArea(session,win,widget->x,widget->y,widget->w,widget->h);
+        if(orig) {
             if(private->onClick != NULL) {
                 private->onClick(session,win,widget->id);
             }
         }
-        private->pressed = 0;
-        widget->Redraw(self,session,win,gfx);
-        RavenFlipArea(session,win,widget->x,widget->y,widget->w,widget->h);
     }
 }
 
@@ -107,6 +124,6 @@ int64_t NewIconButtonWidget(ClientWindow* win, int dest, int x, int y, int w, in
     private->icon = icon;
     private->onClick = onClick;
     widget->Redraw = &IconButtonRedraw;
-    widget->Event = &ButtonEvent;
+    widget->Event = &IconButtonEvent;
     return UIAddWidget(win,widget,dest);
 }

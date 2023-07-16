@@ -190,6 +190,17 @@ void UIRun(RavenSession* session) {
                 if(widget->Event != NULL) {
                     if(event->mouse.x >= widget->x && event->mouse.x < widget->x+widget->w && event->mouse.y >= widget->y && event->mouse.y < widget->y+widget->h) {
                         widget->Event(widget,session,win,win->gfx,event);
+                        break;
+                    }
+                }
+                widget = widget->next;
+            }
+            widget = win->toolbarHead;
+            while(widget != NULL) {
+                if(widget->Event != NULL) {
+                    if(event->mouse.x >= widget->x && event->mouse.x < widget->x+widget->w && event->mouse.y >= widget->y && event->mouse.y < widget->y+widget->h) {
+                        widget->Event(widget,session,win,win->gfx,event);
+                        break;
                     }
                 }
                 widget = widget->next;
@@ -223,4 +234,29 @@ int64_t UIAddWidget(ClientWindow* win, void* widget, int dest) {
         }
     }
     return id;
+}
+
+void UIRemoveWidgets(ClientWindow* win) {
+    UIWidget* widget = win->widgetHead;
+    while(widget != NULL) {
+        if(widget->privateData) {
+            free(widget->privateData);
+        }
+        void* next = widget->next;
+        free(widget);
+        widget = next;
+    }
+    win->widgetHead = NULL;
+    win->widgetTail = NULL;
+    widget = win->toolbarHead;
+    while(widget != NULL) {
+        if(widget->privateData) {
+            free(widget->privateData);
+        }
+        void* next = widget->next;
+        free(widget);
+        widget = next;
+    }
+    win->toolbarHead = NULL;
+    win->toolbarTail = NULL;
 }
