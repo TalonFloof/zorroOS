@@ -9,6 +9,7 @@
 #include <Media/Image.h>
 #include <Media/StackBlur.h>
 #include <Common/Spinlock.h>
+#include <Raven/UI.h>
 #include "kbd.h"
 #include "mouse.h"
 #define _RAVEN_IMPL
@@ -23,8 +24,6 @@ MQueue* msgQueue = NULL;
 Window* winHead = NULL;
 Window* winTail = NULL;
 Window* winFocus = NULL;
-Window* iconHead = NULL;
-Window* iconTail = NULL;
 char windowLock = 0;
 uint64_t nextWinID = 1;
 const uint32_t cursorBuf[10*16] = {
@@ -54,6 +53,20 @@ Window backgroundWin = (Window){
     .w = 0,
     .h = 0,
     .flags = FLAG_NOMOVE | FLAG_OPAQUE,
+    .shmID = 0,
+    .backBuf = NULL,
+    .frontBuf = NULL,
+    .owner = 0,
+};
+Window dockWin = (Window){
+    .prev = NULL,
+    .next = NULL,
+    .id = 0,
+    .x = 0,
+    .y = 0,
+    .w = 0,
+    .h = 0,
+    .flags = FLAG_NOMOVE,
     .shmID = 0,
     .backBuf = NULL,
     .frontBuf = NULL,
@@ -125,23 +138,15 @@ void Redraw(int x, int y, int w, int h) {
           }
         }
         if(win == &backgroundWin) {
-            if(iconHead != NULL) {
-                win = iconHead;
-            } else {
-                if(winHead == NULL) {
-                    win = &cursorWin;
-                } else {
-                win = winHead;
-                }
-            }
-        } else if(win == iconTail) {
             if(winHead == NULL) {
-                win = &cursorWin;
+                win = &dockWin;
             } else {
                 win = winHead;
             }
-        } else if(win == winTail) {
+        } else if(win == &dockWin) {
             win = &cursorWin;
+        } else if(win == winTail) {
+            win = &dockWin;
         } else {
             win = win->next;
         }
@@ -252,37 +257,48 @@ void DoBoxAnimation(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int 
 void* iconPack;
 PSFHeader* unifont;
 
-Window* AddIcon(int x, int y, const char* icon, const char* emblem, uint32_t emblemColor, const char* name) {
-    Window* ic = malloc(sizeof(Window));
-    ic->x = x;
-    ic->y = y;
-    ic->w = 8*strlen(name);
-    ic->h = 32+16;
-    ic->backBuf = malloc(ic->w*ic->h*4);
-    ic->frontBuf = malloc(ic->w*ic->h*4);
-    ic->prev = iconTail;
-    if(iconTail != NULL) {
-        iconTail->next = ic;
+DockItem* dockHead = NULL;
+DockItem* dockTail = NULL;
+int dockItems = 0;
+
+void RedrawDock() {
+    if(dockWin.frontBuf != NULL) {
+        free(dockWin.frontBuf);
     }
-    ic->next = NULL;
-    iconTail = ic;
-    if(iconHead == NULL)
-        iconHead = ic;
-    GraphicsContext* gfx = Graphics_NewContext(ic->frontBuf,ic->w,ic->h);
-    Graphics_RenderIcon(gfx,iconPack,icon,(ic->w/2)-16,0,32,32,0xffbcd7e8);
-    if(emblem != NULL) {
-        Graphics_RenderIcon(gfx,iconPack,emblem,(ic->w/2)-16,32-12,16,12,emblemColor);
+    dockWin.frontBuf = malloc(dockItems*(48*48*4));
+    dockWin.w = 48*dockItems;
+    dockWin.h = 48;
+    dockWin.x = (fbInfo.width/2)-(dockWin.w/2);
+    dockWin.y = fbInfo.height-48;
+    GraphicsContext* gfx = Graphics_NewContext(dockWin.frontBuf,dockWin.w,dockWin.h);
+    UIDrawRoundedBox(gfx,0,0,dockWin.w,dockWin.h+5,0x8018181b,0);
+    int i = 0;
+    DockItem* item = dockHead;
+    while(item != NULL) {
+        Graphics_RenderIcon(gfx,iconPack,item->icon,i+8,8,32,32,item->pressed ? 0xffa0a0a0 : 0xffffffff);
+        i += 48;
+        item = item->next;
     }
-    Graphics_RenderString(gfx,0,32,0xffffffff,unifont,1,name);
-    gfx->buf = ic->backBuf;
-    Graphics_RenderIcon(gfx,iconPack,icon,(ic->w/2)-16,0,32,32,0xff000000 | BlendPixel(0xbcd7e8,0x80000000));
-    if(emblem != NULL) {
-        Graphics_RenderIcon(gfx,iconPack,emblem,(ic->w/2)-16,32-12,16,12,0xff000000 | BlendPixel(emblemColor & 0xffffff,0x80000000));
-    }
-    Graphics_DrawRect(gfx,0,32,ic->w,16,0x80000000);
-    Graphics_RenderString(gfx,0,32,0xffffffff,unifont,1,name);
     free(gfx);
-    return icon;
+    Redraw(0,dockWin.y,fbInfo.width,dockWin.h);
+}
+
+void NewDockItem(const char* icon, const char* path) {
+    DockItem* entry = malloc(sizeof(DockItem));
+    entry->icon = icon;
+    entry->path = path;
+    entry->next = NULL;
+    entry->pressed = 0;
+    entry->prev = dockTail;
+    if(dockTail != NULL) {
+        dockTail->next = entry;
+    }
+    dockTail = entry;
+    if(dockHead == NULL) {
+        dockHead = entry;
+    }
+    dockItems += 1;
+    RedrawDock();
 }
 
 void LoadBackground(const char* name) {
@@ -304,8 +320,6 @@ int main(int argc, const char* argv[]) {
     msgQueue = MQueue_Bind("/dev/mqueue/Raven");
     iconPack = Graphics_LoadIconPack("/System/Icons/IconPack");
     unifont = Graphics_LoadFont("/System/Fonts/unifont.psf");
-    AddIcon(32,32,"Device/HardDrive","Emblem/zorroOS",0xff3a8cd1,"Root");
-    //AddIcon(72,32,"User/Trash",NULL,0,"Trash");
     OpenedFile fbFile;
     if(Open("/dev/fb0",O_RDWR,&fbFile) < 0) {
         RyuLog("Failed to open /dev/fb0!\n");
@@ -322,7 +336,10 @@ int main(int argc, const char* argv[]) {
     uintptr_t kbdThr = NewThread("Raven Keyboard Thread",&KeyboardThread,(void*)(((uintptr_t)kbdStack)+0x8000));
     void* mouseStack = MMap(NULL,0x8000,3,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
     uintptr_t mouseThr = NewThread("Raven Mouse Thread",&MouseThread,(void*)(((uintptr_t)mouseStack)+0x8000));
-    LoadBackground("/System/Wallpapers/Rain.qoi");
+    NewDockItem("User/Administrator","/bin/hunter");
+    NewDockItem("App/Settings","/bin/settings");
+    NewDockItem("File/Archive","/bin/welcome");
+    LoadBackground("/System/Wallpapers/Aurora.qoi");
     while(1) {
         int64_t teamID;
         RavenPacket* packet = MQueue_RecieveFromClient(msgQueue,&teamID,NULL);

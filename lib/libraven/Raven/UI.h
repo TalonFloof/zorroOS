@@ -5,7 +5,7 @@
 #define DEST_WIDGETS 0
 #define DEST_TOOLBAR 1
 
-void UIDrawRoundedBox(GraphicsContext* gfx, int x, int y, int w, int h, uint32_t color);
+void UIDrawRoundedBox(GraphicsContext* gfx, int x, int y, int w, int h, uint32_t color, uint32_t backColor);
 void UIAddWindow(RavenSession* session, ClientWindow* win, const char* title, const char* bg);
 void UIDrawBaseWindow(RavenSession* session, ClientWindow* win, GraphicsContext* gfx, const char* title, const char* bg);
 void UIRun(RavenSession* session);

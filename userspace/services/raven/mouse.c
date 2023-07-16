@@ -12,8 +12,6 @@ bool lButton = false;
 int winX = 0;
 int winY = 0;
 Window* winDrag = NULL;
-Window* iconSelect = NULL;
-Window* iconDrag = NULL;
 
 void MouseThread() {
     OpenedFile mouseFile;
@@ -44,37 +42,13 @@ void MouseThread() {
                 }
                 Redraw(oldX,oldY,cursorWin.w,cursorWin.h);
                 Redraw(cursorWin.x,cursorWin.y,cursorWin.w,cursorWin.h);
-                if(iconSelect != NULL && (buttons & 1) == 1) {
-                    if(cursorWin.x >= iconSelect->x && cursorWin.x <= iconSelect->x+iconSelect->w && cursorWin.y >= iconSelect->y && cursorWin.y <= iconSelect->y+iconSelect->h) {
-                        iconDrag = iconSelect;
-                        iconSelect = NULL;
-                        winX = cursorWin.x - iconDrag->x;
-                        winY = cursorWin.y - iconDrag->y;
-                        renderInvertOutline(cursorWin.x - winX, cursorWin.y - winY, 32, 32);
-                    }
-                } else if(iconDrag != NULL) {
-                    Redraw(oldX - winX, oldY - winY, 32, 32);
-                    renderInvertOutline(cursorWin.x - winX, cursorWin.y - winY, 32, 32);
-                }
                 if (winDrag != NULL) {
                     renderInvertOutline(oldX - winX, oldY - winY, winDrag->w, winDrag->h);
                     renderInvertOutline(cursorWin.x - winX, cursorWin.y - winY, winDrag->w, winDrag->h);
                 }
             }
             if ((buttons & 1) == 0 && lButton) {
-                if(iconDrag != NULL) {
-                    int oldX = iconDrag->x;
-                    int oldY = iconDrag->y;
-                    iconDrag->x = cursorWin.x - winX;
-                    iconDrag->y = cursorWin.y - winY;
-                    uint32_t* temp = iconDrag->frontBuf;
-                    iconDrag->frontBuf = iconDrag->backBuf;
-                    iconDrag->backBuf = temp;
-                    Redraw(oldX,oldY,iconDrag->w,iconDrag->h);
-                    Redraw(iconDrag->x,iconDrag->y,iconDrag->w,iconDrag->h);
-                    iconSelect = NULL;
-                    iconDrag = NULL;
-                } else  if(winDrag != NULL) {
+                if(winDrag != NULL) {
                     int oldX = winDrag->x;
                     int oldY = winDrag->y;
                     winDrag->x = cursorWin.x - winX;
@@ -97,90 +71,73 @@ void MouseThread() {
                         event.mouse.buttons = 0;
                         MQueue_SendToClient(msgQueue,winFocus->owner,&event,sizeof(RavenEvent));
                     }
+                } else if(cursorWin.x >= dockWin.x && cursorWin.x < dockWin.x+dockWin.w && cursorWin.y >= dockWin.y && cursorWin.y < dockWin.y+dockWin.h) {
+                    int i = 0;
+                    DockItem* item = dockHead;
+                    while(item != NULL) {
+                        if(cursorWin.x >= dockWin.x+i && cursorWin.x < dockWin.x+i+48) {
+                            item->pressed = 0;
+                            RedrawDock();
+                            TeamID team = NewTeam("Launched Application");
+                            LoadExecImage(team,(const char*[]){item->path,NULL},NULL);
+                            break;
+                        }
+                        item = item->next;
+                        i += 48;
+                    }
                 }
             } else if ((buttons & 1) != 0 && !lButton) {
-                SpinlockAcquire(&windowLock);
-                Window* win = winTail;
-                bool clicked = false;
-                while(win != NULL) {
-                    if(cursorWin.x >= win->x+32 && cursorWin.x < win->x+win->w && cursorWin.y >= win->y && cursorWin.y < win->y+32 && !(win->flags & FLAG_NOMOVE)) {
-                        winDrag = win;
-                        winX = cursorWin.x - win->x;
-                        winY = cursorWin.y - win->y;
-                        renderInvertOutline(cursorWin.x - winX,cursorWin.y - winY,win->w,win->h);
-                        clicked = true;
-                        break;
-                    } else if(cursorWin.x >= win->x && cursorWin.x <= win->x+win->w && cursorWin.y >= win->y && cursorWin.y <= win->y+win->h) {
-                        // Mouse Click Event
-                        if(win != winFocus) {
-                            if(win != winTail) {
-                                SpinlockRelease(&windowLock);
-                                MoveWinToFront(win);
-                                Redraw(win->x,win->y,win->w,win->h);
-                                SpinlockAcquire(&windowLock);
-                            }
-                            winFocus = win;
+                if(cursorWin.x >= dockWin.x && cursorWin.x < dockWin.x+dockWin.w && cursorWin.y >= dockWin.y && cursorWin.y < dockWin.y+dockWin.h) {
+                    int i = 0;
+                    DockItem* item = dockHead;
+                    while(item != NULL) {
+                        if(cursorWin.x >= dockWin.x+i && cursorWin.x < dockWin.x+i+48) {
+                            item->pressed = 1;
+                            RedrawDock();
+                            break;
                         }
-                        RavenEvent event;
-                        event.type = RAVEN_MOUSE_PRESSED;
-                        event.id = winFocus->id;
-                        event.mouse.x = cursorWin.x-win->x;
-                        event.mouse.y = cursorWin.y-win->y;
-                        event.mouse.buttons = 1;
-                        MQueue_SendToClient(msgQueue,win->owner,&event,sizeof(RavenEvent));
-                        clicked = true;
-                        break;
+                        item = item->next;
+                        i += 48;
                     }
-                    win = win->prev;
-                }
-                if(!clicked) {
-                    winFocus = NULL;
-                }
-                SpinlockRelease(&windowLock);
-                if(!clicked) {
-                    win = iconHead;
+                } else {
+                    SpinlockAcquire(&windowLock);
+                    Window* win = winTail;
+                    bool clicked = false;
                     while(win != NULL) {
-                        if(cursorWin.x >= win->x && cursorWin.x <= win->x+win->w && cursorWin.y >= win->y && cursorWin.y <= win->y+32) {
-                            if(iconSelect == win) {
-                                TeamID hunterTeam = NewTeam("Hunter");
-                                const char** args = malloc(3 * sizeof(uintptr_t));
-                                args[0] = "/bin/hunter";
-                                args[1] = "/";
-                                args[2] = NULL;
-                                LoadExecImage(hunterTeam, args, NULL);
-                                free(args);
-                                uint32_t* temp = iconSelect->frontBuf;
-                                iconSelect->frontBuf = iconSelect->backBuf;
-                                iconSelect->backBuf = temp;
-                                Redraw(iconSelect->x, iconSelect->y, iconSelect->w, iconSelect->h);
-                                iconSelect = NULL;
-                            } else {
-                                if(iconSelect != NULL) {
-                                    uint32_t* temp = iconSelect->frontBuf;
-                                    iconSelect->frontBuf = iconSelect->backBuf;
-                                    iconSelect->backBuf = temp;
-                                    Redraw(iconSelect->x,iconSelect->y,iconSelect->w,iconSelect->h);
+                        if(cursorWin.x >= win->x+32 && cursorWin.x < win->x+win->w && cursorWin.y >= win->y && cursorWin.y < win->y+32 && !(win->flags & FLAG_NOMOVE)) {
+                            winDrag = win;
+                            winX = cursorWin.x - win->x;
+                            winY = cursorWin.y - win->y;
+                            renderInvertOutline(cursorWin.x - winX,cursorWin.y - winY,win->w,win->h);
+                            clicked = true;
+                            break;
+                        } else if(cursorWin.x >= win->x && cursorWin.x <= win->x+win->w && cursorWin.y >= win->y && cursorWin.y <= win->y+win->h) {
+                            // Mouse Click Event
+                            if(win != winFocus) {
+                                if(win != winTail) {
+                                    SpinlockRelease(&windowLock);
+                                    MoveWinToFront(win);
+                                    Redraw(win->x,win->y,win->w,win->h);
+                                    SpinlockAcquire(&windowLock);
                                 }
-                                uint32_t* temp = win->frontBuf;
-                                win->frontBuf = win->backBuf;
-                                win->backBuf = temp;
-                                Redraw(win->x,win->y,win->w,win->h);
-                                iconSelect = win;
+                                winFocus = win;
                             }
+                            RavenEvent event;
+                            event.type = RAVEN_MOUSE_PRESSED;
+                            event.id = winFocus->id;
+                            event.mouse.x = cursorWin.x-win->x;
+                            event.mouse.y = cursorWin.y-win->y;
+                            event.mouse.buttons = 1;
+                            MQueue_SendToClient(msgQueue,win->owner,&event,sizeof(RavenEvent));
                             clicked = true;
                             break;
                         }
-                        win = win->next;
+                        win = win->prev;
                     }
-                }
-                if(!clicked) {
-                    if(iconSelect != NULL) {
-                        uint32_t* temp = iconSelect->frontBuf;
-                        iconSelect->frontBuf = iconSelect->backBuf;
-                        iconSelect->backBuf = temp;
-                        Redraw(iconSelect->x,iconSelect->y,iconSelect->w,iconSelect->h);
+                    if(!clicked) {
+                        winFocus = NULL;
                     }
-                    iconSelect = NULL;
+                    SpinlockRelease(&windowLock);
                 }
             }
             lButton = (buttons & 1) != 0;

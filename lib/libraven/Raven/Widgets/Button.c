@@ -34,9 +34,9 @@ static void ButtonRedraw(void* self, RavenSession* session, ClientWindow* win, G
     UIWidget* widget = (UIWidget*)self;
     UIButtonPrivateData* private = (UIButtonPrivateData*)widget->privateData;
     if(private->colorType == 1) {
-        UIDrawRoundedBox(gfx,widget->x,widget->y,widget->w,widget->h,private->pressed ? 0xff2563eb : 0xff1d4ed8);
+        UIDrawRoundedBox(gfx,widget->x,widget->y,widget->w,widget->h,private->pressed ? 0xff2563eb : 0xff1d4ed8,0xff09090b);
     } else if(private->colorType == 0) {
-        UIDrawRoundedBox(gfx,widget->x,widget->y,widget->w,widget->h,private->pressed ? 0xff27272a : 0xff18181b);
+        UIDrawRoundedBox(gfx,widget->x,widget->y,widget->w,widget->h,private->pressed ? 0xff27272a : 0xff18181b,0xff09090b);
     }
     int innerW = widget->w-(private->hMargin*2);
     int innerH = widget->h-(private->vMargin*2);

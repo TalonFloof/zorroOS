@@ -22,7 +22,7 @@ static void LabelRedraw(void* self, RavenSession* session, ClientWindow* win, Gr
         Graphics_RenderString(gfx,widget->x,widget->y,0xffe9e9ea,RavenKNXT,1,private->text);
     } else if(private->scale == LABEL_MORE_LARGE) {
         Graphics_RenderString(gfx,widget->x,widget->y,0xffe9e9ea,RavenUnifont,2,private->text);
-    } else if(private->scale == 3) {
+    } else if(private->scale == LABEL_EXTRA_LARGE) {
         Graphics_RenderString(gfx,widget->x,widget->y,0xffe9e9ea,RavenKNXT,2,private->text);
     }
 }

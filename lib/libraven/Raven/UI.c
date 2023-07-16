@@ -11,8 +11,8 @@ PSFHeader* RavenUnifont;
 PSFHeader* RavenTerminus;
 void* RavenIconPack;
 
-ClientWindow* winHead = NULL;
-ClientWindow* winTail = NULL;
+static ClientWindow* winHead = NULL;
+static ClientWindow* winTail = NULL;
 
 ClientWindow* UIGetWindow(int64_t id) {
     ClientWindow* win = winHead;
@@ -98,28 +98,28 @@ void UIDrawBaseWindow(RavenSession* session, ClientWindow* win, GraphicsContext*
     Graphics_RenderString(gfx,32+4,16-(RavenKNXT->height/2),0xffcbcbcf,RavenKNXT,1,title);
 }
 
-void UIDrawRoundedBox(GraphicsContext* gfx, int x, int y, int w, int h, uint32_t color) {
+void UIDrawRoundedBox(GraphicsContext* gfx, int x, int y, int w, int h, uint32_t color, uint32_t backColor) {
     Graphics_DrawRect(gfx,x,y,w,h,color);
-
+    // 0xff09090b
     // Top-Left
-    Graphics_DrawRect(gfx,x,y,5,1,0xff09090b);
-    Graphics_DrawRect(gfx,x,y,1,5,0xff09090b);
-    Graphics_DrawRect(gfx,x,y,3,3,0xff09090b);
+    Graphics_DrawRect(gfx,x,y,5,1,backColor);
+    Graphics_DrawRect(gfx,x,y,1,5,backColor);
+    Graphics_DrawRect(gfx,x,y,3,3,backColor);
     Graphics_DrawRect(gfx,x+2,y+2,1,1,color);
     // Top-Right
-    Graphics_DrawRect(gfx,x+w-5,y,5,1,0xff09090b);
-    Graphics_DrawRect(gfx,x+w-1,y,1,5,0xff09090b);
-    Graphics_DrawRect(gfx,x+w-3,y,3,3,0xff09090b);
+    Graphics_DrawRect(gfx,x+w-5,y,5,1,backColor);
+    Graphics_DrawRect(gfx,x+w-1,y,1,5,backColor);
+    Graphics_DrawRect(gfx,x+w-3,y,3,3,backColor);
     Graphics_DrawRect(gfx,x+w-3,y+2,1,1,color);
     // Bottom-Left
-    Graphics_DrawRect(gfx,x,y+h-1,5,1,0xff09090b);
-    Graphics_DrawRect(gfx,x,y+h-5,1,5,0xff09090b);
-    Graphics_DrawRect(gfx,x,y+h-3,3,3,0xff09090b);
+    Graphics_DrawRect(gfx,x,y+h-1,5,1,backColor);
+    Graphics_DrawRect(gfx,x,y+h-5,1,5,backColor);
+    Graphics_DrawRect(gfx,x,y+h-3,3,3,backColor);
     Graphics_DrawRect(gfx,x+2,y+h-3,1,1,color);
     // Bottom-Right
-    Graphics_DrawRect(gfx,x+w-5,y+h-1,5,1,0xff09090b);
-    Graphics_DrawRect(gfx,x+w-1,y+h-5,1,5,0xff09090b);
-    Graphics_DrawRect(gfx,x+w-3,y+h-3,3,3,0xff09090b);
+    Graphics_DrawRect(gfx,x+w-5,y+h-1,5,1,backColor);
+    Graphics_DrawRect(gfx,x+w-1,y+h-5,1,5,backColor);
+    Graphics_DrawRect(gfx,x+w-3,y+h-3,3,3,backColor);
     Graphics_DrawRect(gfx,x+w-3,y+h-3,1,1,color);
 }
 

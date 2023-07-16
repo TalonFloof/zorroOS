@@ -28,11 +28,20 @@ typedef struct {
     int64_t owner;
 } Window;
 
+typedef struct {
+    void* prev;
+    void* next;
+    const char* icon;
+    const char* path;
+    char pressed;
+} DockItem;
+
 void Redraw(int x, int y, int w, int h);
 void MoveWinToFront(Window* win);
 void invertPixel(int x, int y);
 void renderInvertOutline(int x, int y, int w, int h);
 void DoBoxAnimation(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2, char expand);
+void RedrawDock();
 
 #ifndef _RAVEN_IMPL
 extern MQueue* msgQueue;
@@ -42,8 +51,9 @@ extern Window cursorWin;
 extern Window* winFocus;
 extern Window* winHead;
 extern Window* winTail;
-extern Window* iconHead;
-extern Window* iconTail;
+extern Window dockWin;
+extern DockItem* dockHead;
+extern DockItem* dockTail;
 #endif
 
 #endif

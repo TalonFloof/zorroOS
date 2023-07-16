@@ -5,6 +5,3 @@ build:
 	cd raven; \
 	make; \
 	cd ..
-	cd desktop; \
-	make; \
-	cd ..
