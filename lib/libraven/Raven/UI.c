@@ -260,6 +260,7 @@ void UIRemoveWidgets(ClientWindow* win) {
 #include "Widgets/Button.h"
 #include "Widgets/Label.h"
 #include "Widgets/Badge.h"
+#include "Widgets/TextArea.h"
 
 void UIAbout(RavenSession* session, ClientWindow* parent, const char* name, const char* icon, const char* version, const char* copyright, const char* author) {
     ClientWindow* aboutWin = NewRavenWindow(session,320,320,FLAG_ACRYLIC,parent->id);
@@ -269,4 +270,11 @@ void UIAbout(RavenSession* session, ClientWindow* parent, const char* name, cons
     NewLabelWidget(aboutWin,DEST_WIDGETS,(320/2)-((strlen(copyright)*8)/2),114+65,copyright,LABEL_NORMAL);
     NewLabelWidget(aboutWin,DEST_WIDGETS,(320/2)-((strlen(author)*8)/2),114+65+16,author,LABEL_NORMAL);
     UIAddWindow(session,aboutWin,"About",NULL);
+}
+
+void UISave(RavenSession* session, ClientWindow* parent, const char* icon, const char* name) {
+    ClientWindow* saveWin = NewRavenWindow(session,150,128,FLAG_ACRYLIC,parent->id);
+    NewIconButtonWidget(saveWin,DEST_WIDGETS,(saveWin->w/2)-16,33,32,32,icon,NULL);
+    NewTextBoxWidget(saveWin,DEST_WIDGETS,1,65,saveWin->w-2,16,name);
+    UIAddWindow(session,saveWin,"Save",NULL);
 }

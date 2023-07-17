@@ -14,14 +14,18 @@ typedef enum {
     RAVEN_DESTROY_WINDOW,
     RAVEN_SET_BACKGROUND,
     RAVEN_FLIP_BUFFER,
+    RAVEN_SET_PATH,
+    RAVEN_BEGIN_ICON_DRAG,
 } RavenPacketType;
 
 typedef enum {
     RAVEN_INVALID_EVENT,
     RAVEN_KEY_PRESSED,
     RAVEN_KEY_RELEASED,
+    RAVEN_MOUSE_MOVE,
     RAVEN_MOUSE_PRESSED,
     RAVEN_MOUSE_RELEASED,
+    RAVEN_ICON_DROP,
 } RavenEventType;
 
 typedef struct {
@@ -44,6 +48,13 @@ typedef struct {
     int x;
     int y;
 } RavenMoveWindowData;
+
+typedef struct {
+    int64_t id;
+    int iconX;
+    int iconY;
+    char loadDrag;
+} RavenBeginDrag;
 
 typedef struct {
     int64_t id;
@@ -70,6 +81,7 @@ typedef struct {
     RavenEventType type;
     int64_t id;
     uint8_t padding; // To prevent it from having the same size as a CreateWindowResponse
+    // ^^^ 24 bytes
     union {
         RavenKeyEvent key;
         RavenMouseEvent mouse;

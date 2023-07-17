@@ -450,6 +450,7 @@ int main(int argc, const char* argv[]) {
                 win->w = packet->create.w;
                 win->h = packet->create.h;
                 win->flags = packet->create.flags;
+                win->path = NULL;
                 win->x = (fbInfo.width/2)-(packet->create.w/2);
                 win->y = (fbInfo.height/2)-(packet->create.h/2);
                 win->creator = packet->create.creator;
@@ -509,6 +510,9 @@ int main(int argc, const char* argv[]) {
                 free(win->frontBuf);
                 MUnMap(win->backBuf,(win->w*win->h)*4);
                 DestroySharedMemory(win->shmID);
+                if(win->path != NULL) {
+                    free(win->path);
+                }
                 free(win);
                 SpinlockRelease(&windowLock);
                 Redraw(x,y,w,h);
@@ -555,6 +559,15 @@ int main(int argc, const char* argv[]) {
             case RAVEN_SET_BACKGROUND: {
                 const char* path = (const char*)(((uintptr_t)packet)+4);
                 LoadBackground(path);
+                break;
+            }
+            case RAVEN_SET_PATH: {
+                SpinlockAcquire(&windowLock);
+                Window* win = GetWindowByID(*((int64_t*)(((uintptr_t)packet)+8)));
+                const char* path = (const char*)(((uintptr_t)packet)+16);
+                win->path = malloc(strlen(path)+1);
+                memcpy(win->path,path,strlen(path)+1);
+                SpinlockRelease(&windowLock);
                 break;
             }
             default: {

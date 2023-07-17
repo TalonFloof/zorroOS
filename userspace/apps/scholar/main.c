@@ -10,6 +10,10 @@
 #include <Raven/Widgets/Badge.h>
 #include <Raven/Widgets/TextArea.h>
 
+static void SaveDialog(RavenSession* session, ClientWindow* win, int64_t id) {
+    UISave(session,win,"File/Generic","TextFile");
+}
+
 int main(int argc, char* argv[]) {
     RavenSession* session = NewRavenSession();
     ClientWindow* win = NewRavenWindow(session,700,500,FLAG_ACRYLIC | FLAG_RESIZE,0);
@@ -17,8 +21,8 @@ int main(int argc, char* argv[]) {
         RyuLog("Unable to open window!\n");
         return 0;
     }
-    NewIconButtonWidget(win,DEST_TOOLBAR,0,0,16,16,"Action/About",NULL);
-    NewTextAreaWidget(win,DEST_WIDGETS,1,65,698,500-64-32);
+    NewIconButtonWidget(win,DEST_TOOLBAR,0,0,16,16,"Action/About",&SaveDialog);
+    NewTextAreaWidget(win,DEST_WIDGETS,1,65,698,((500-64-16)/16)*16);
     UIAddWindow(session,win,"Scholar",NULL);
     UIRun(session);
 }

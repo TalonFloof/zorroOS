@@ -14,8 +14,29 @@ typedef struct {
     int lineCount;
 } UITextAreaPrivateData;
 
-static void appendLine(UITextAreaPrivateData* private) {
+typedef struct {
+    char selected;
+    char line[256];
+} UITextBoxPrivateData;
 
+static void TextBoxRedraw(void* self, RavenSession* session, ClientWindow* win, GraphicsContext* gfx) {
+    UIWidget* widget = (UIWidget*)self;
+    UITextBoxPrivateData* private = (UITextBoxPrivateData*)widget->privateData;
+    Graphics_DrawRect(gfx,widget->x,widget->y,widget->w,widget->h,0xff18181b);
+    int len = strlen(&private->line);
+    for(int i=0; i < (widget->w/8); i++) {
+        int offset = (len < (widget->w/8)) ? i : ((len-(widget->w/8))+i);
+        if(offset >= len) {
+            Graphics_DrawRect(gfx,widget->x+(i*8),widget->y+((widget->h/2)-8),2,16,0xff1d4ed8);
+            break;
+        }
+        Graphics_RenderGlyph(gfx,widget->x+(i*8),widget->y+((widget->h/2)-8),0xffffffff,RavenUnifont,1,private->line[offset]);
+    }
+}
+
+static void TextBoxEvent(void* self, RavenSession* session, ClientWindow* win, GraphicsContext* gfx, RavenEvent* event) {
+    UIWidget* widget = (UIWidget*)self;
+    UITextBoxPrivateData* private = (UITextBoxPrivateData*)widget->privateData;
 }
 
 static void TextAreaRedraw(void* self, RavenSession* session, ClientWindow* win, GraphicsContext* gfx) {
@@ -153,5 +174,21 @@ int64_t NewTextAreaWidget(ClientWindow* win, int dest, int x, int y, int w, int 
     widget->h = h;
     widget->Redraw = &TextAreaRedraw;
     widget->Event = &TextAreaEvent;
+    return UIAddWidget(win,widget,dest);
+}
+
+int64_t NewTextBoxWidget(ClientWindow* win, int dest, int x, int y, int w, int h, const char* text) {
+    UIWidget* widget = malloc(sizeof(UIWidget));
+    UITextBoxPrivateData* private = malloc(sizeof(UITextBoxPrivateData));
+    private->selected = 0;
+    memset(&private->line,0,256);
+    memcpy(&private->line,text,strlen(text));
+    widget->privateData = private;
+    widget->x = x;
+    widget->y = y;
+    widget->w = w;
+    widget->h = h;
+    widget->Redraw = &TextBoxRedraw;
+    widget->Event = &TextBoxEvent;
     return UIAddWidget(win,widget,dest);
 }

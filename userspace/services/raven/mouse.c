@@ -45,6 +45,16 @@ void MouseThread() {
                 if (winDrag != NULL) {
                     renderInvertOutline(oldX - winX, oldY - winY, winDrag->w, winDrag->h);
                     renderInvertOutline(cursorWin.x - winX, cursorWin.y - winY, winDrag->w, winDrag->h);
+                } else if(winFocus != NULL) {
+                    if(cursorWin.x >= winFocus->x && cursorWin.x < winFocus->x+winFocus->w && cursorWin.y >= winFocus->y && cursorWin.y < winFocus->y+winFocus->h) {
+                        RavenEvent event;
+                        event.type = RAVEN_MOUSE_MOVE;
+                        event.id = winFocus->id;
+                        event.mouse.x = cursorWin.x-winFocus->x;
+                        event.mouse.y = cursorWin.y-winFocus->y;
+                        event.mouse.buttons = 0;
+                        MQueue_SendToClient(msgQueue,winFocus->owner,&event,sizeof(RavenEvent));
+                    }
                 }
             }
             if ((buttons & 1) == 0 && lButton) {

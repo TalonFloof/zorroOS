@@ -26,6 +26,7 @@ typedef struct {
     uint32_t* frontBuf;
     int64_t creator;
     int64_t owner;
+    char* path;
 } Window;
 
 typedef enum {

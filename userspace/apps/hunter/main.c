@@ -19,6 +19,14 @@ extern void* RavenTerminus;
 
 UIWidget* CreateFileBrowser(const char* path);
 
+static void SetPath(RavenSession* session, ClientWindow* win, const char* path) {
+    char packet[1024];
+    *((RavenPacketType*)&packet[0]) = RAVEN_SET_PATH;
+    *((int64_t*)&packet[8]) = win->id;
+    memcpy(&packet[16],path,strlen(path)+1);
+    MQueue_SendToServer(session->raven,&packet,strlen(path)+17);
+}
+
 static void AboutDialog(RavenSession* session, ClientWindow* win, int64_t id) {
     UIAbout(session,win,"Hunter","User/Administrator","0.1.0","Copyright (C) 2023","TalonFox and contributors");
 }
@@ -60,6 +68,7 @@ static void FileBrowserEvent(void* self, RavenSession* session, ClientWindow* wi
                     path[fullLen] = '/';
                     path[fullLen+1] = 0;
                     UIAddWidget(w,CreateFileBrowser(path),DEST_WIDGETS);
+                    SetPath(session,win,path);
                     free(path);
                     UIAddWindow(session,w,(const char*)&entry.name,NULL);
                 } else if((entry.mode & 07) == 07) {
@@ -106,6 +115,7 @@ int main(int argc, const char* argv[]) {
     NewIconButtonWidget(win,DEST_TOOLBAR,0,0,16,13,"Action/Right",NULL);
     NewIconButtonWidget(win,DEST_TOOLBAR,0,0,16,16,"Action/About",&AboutDialog);
     UIAddWidget(win,CreateFileBrowser(argc == 2 ? argv[1] : "/"),DEST_WIDGETS);
+    SetPath(session,win,argc == 2 ? argv[1] : "/");
     UIAddWindow(session,win,"Root",NULL);
     UIRun(session);
 }

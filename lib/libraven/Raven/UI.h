@@ -13,5 +13,6 @@ void UIRedrawWidgets(RavenSession* session, ClientWindow* win, GraphicsContext* 
 int64_t UIAddWidget(ClientWindow* win, void* widget, int dest);
 void UIRemoveWidgets(ClientWindow* win);
 void UIAbout(RavenSession* session, ClientWindow* parent, const char* name, const char* icon, const char* version, const char* copyright, const char* author);
+void UISave(RavenSession* session, ClientWindow* parent, const char* icon, const char* name);
 
 #endif
