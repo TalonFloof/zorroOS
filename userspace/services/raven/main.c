@@ -443,19 +443,31 @@ int main(int argc, const char* argv[]) {
                 }
                 win->prev = winTail;
                 win->next = NULL;
+                winTail = win;
+                if(winHead == NULL) {
+                    winHead = win;
+                }
                 win->w = packet->create.w;
                 win->h = packet->create.h;
                 win->flags = packet->create.flags;
                 win->x = (fbInfo.width/2)-(packet->create.w/2);
                 win->y = (fbInfo.height/2)-(packet->create.h/2);
+                win->creator = packet->create.creator;
+                if(win->creator != 0) {
+                    Window* creator = GetWindowByID(win->creator);
+                    if(creator != NULL) {
+                        if(win->w == creator->w && win->h == creator->h) {
+                            win->x = creator->x+32;
+                            win->y = creator->y+32;
+                        } else {
+                            win->x = (creator->x+(creator->w/2))-(win->w/2);
+                            win->y = (creator->y+(creator->h/2))-(win->h/2);
+                        }
+                    }
+                }
                 win->shmID = NewSharedMemory((win->w*win->h)*4);
                 win->backBuf = MapSharedMemory(win->shmID);
                 win->frontBuf = malloc((win->w*win->h)*4);
-                win->creator = packet->create.creator;
-                winTail = win;
-                if(winHead == NULL) {
-                    winHead = win;
-                }
                 RavenCreateWindowResponse response;
                 response.id = win->id;
                 response.backBuf = win->shmID;
