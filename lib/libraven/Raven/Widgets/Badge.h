@@ -1,4 +1,4 @@
-#ifndef _LIBRAVEN_WIDGETS_LABEL_H
+#ifndef _LIBRAVEN_WIDGETS_BADGE_H
 #include "../Widget.h"
 #include "../Raven.h"
 #include "../UI.h"

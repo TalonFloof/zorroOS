@@ -19,7 +19,7 @@ extern void* RavenTerminus;
 
 UIWidget* CreateFileBrowser(const char* path);
 
-static void AboutDialog(RavenSession* session, ClientWindow* win, uint64_t id) {
+static void AboutDialog(RavenSession* session, ClientWindow* win, int64_t id) {
     UIAbout(session,win,"Hunter","User/Administrator","0.1.0","Copyright (C) 2023","TalonFox and contributors");
 }
 

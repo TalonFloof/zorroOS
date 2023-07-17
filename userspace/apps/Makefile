@@ -11,3 +11,6 @@ build:
 	cd settings; \
 	make build; \
 	cd ..
+	cd scholar; \
+	make build; \
+	cd ..

@@ -53,6 +53,12 @@ static void ButtonRedraw(void* self, RavenSession* session, ClientWindow* win, G
 static void IconButtonEvent(void* self, RavenSession* session, ClientWindow* win, GraphicsContext* gfx, RavenEvent* event) {
     UIWidget* widget = (UIWidget*)self;
     UIIconButtonPrivateData* private = (UIIconButtonPrivateData*)widget->privateData;
+    if(event->type != RAVEN_MOUSE_PRESSED && event->type != RAVEN_MOUSE_RELEASED) {
+        return;
+    }
+    if(!(event->mouse.x >= widget->x && event->mouse.x < widget->x+widget->w && event->mouse.y >= widget->y && event->mouse.y < widget->y+widget->h)) {
+        return;
+    }
     if(event->type == RAVEN_MOUSE_PRESSED) {
         private->pressed = 1;
     } else if(event->type == RAVEN_MOUSE_RELEASED) {
@@ -69,6 +75,12 @@ static void IconButtonEvent(void* self, RavenSession* session, ClientWindow* win
 static void ButtonEvent(void* self, RavenSession* session, ClientWindow* win, GraphicsContext* gfx, RavenEvent* event) {
     UIWidget* widget = (UIWidget*)self;
     UIButtonPrivateData* private = (UIButtonPrivateData*)widget->privateData;
+    if(event->type != RAVEN_MOUSE_PRESSED && event->type != RAVEN_MOUSE_RELEASED) {
+        return;
+    }
+    if(!(event->mouse.x >= widget->x && event->mouse.x < widget->x+widget->w && event->mouse.y >= widget->y && event->mouse.y < widget->y+widget->h)) {
+        return;
+    }
     if(event->type == RAVEN_MOUSE_PRESSED) {
         private->pressed = 1;
         widget->Redraw(self,session,win,gfx);
@@ -86,7 +98,7 @@ static void ButtonEvent(void* self, RavenSession* session, ClientWindow* win, Gr
     }
 }
 
-int64_t NewButtonWidget(ClientWindow* win, int dest, int x, int y, int hMargin, int vMargin, int colorType, const char* text, const char* icon, ButtonEventHandler* onClick) {
+int64_t NewButtonWidget(ClientWindow* win, int dest, int x, int y, int hMargin, int vMargin, int colorType, const char* text, const char* icon, ButtonEventHandler onClick) {
     if(hMargin < 4)
         hMargin = 4;
     if(vMargin < 4)
@@ -112,7 +124,7 @@ int64_t NewButtonWidget(ClientWindow* win, int dest, int x, int y, int hMargin, 
     return UIAddWidget(win,widget,dest);
 }
 
-int64_t NewIconButtonWidget(ClientWindow* win, int dest, int x, int y, int w, int h, const char* icon, ButtonEventHandler* onClick) {
+int64_t NewIconButtonWidget(ClientWindow* win, int dest, int x, int y, int w, int h, const char* icon, ButtonEventHandler onClick) {
     UIWidget* widget = malloc(sizeof(UIWidget));
     UIIconButtonPrivateData* private = malloc(sizeof(UIIconButtonPrivateData));
     widget->privateData = private;

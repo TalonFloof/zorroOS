@@ -185,25 +185,19 @@ void UIRun(RavenSession* session) {
                 }
                 RavenDestroyWindow(session,win);
             }
-        } else if(event->type == RAVEN_MOUSE_PRESSED || event->type == RAVEN_MOUSE_RELEASED) {
+        } else if(event->type == RAVEN_MOUSE_PRESSED || event->type == RAVEN_MOUSE_RELEASED || event->type == RAVEN_KEY_PRESSED || event->type == RAVEN_KEY_RELEASED) {
             ClientWindow* win = UIGetWindow(event->id);
             UIWidget* widget = win->widgetHead;
             while(widget != NULL) {
                 if(widget->Event != NULL) {
-                    if(event->mouse.x >= widget->x && event->mouse.x < widget->x+widget->w && event->mouse.y >= widget->y && event->mouse.y < widget->y+widget->h) {
-                        widget->Event(widget,session,win,win->gfx,event);
-                        break;
-                    }
+                    widget->Event(widget,session,win,win->gfx,event);
                 }
                 widget = widget->next;
             }
             widget = win->toolbarHead;
             while(widget != NULL) {
                 if(widget->Event != NULL) {
-                    if(event->mouse.x >= widget->x && event->mouse.x < widget->x+widget->w && event->mouse.y >= widget->y && event->mouse.y < widget->y+widget->h) {
-                        widget->Event(widget,session,win,win->gfx,event);
-                        break;
-                    }
+                    widget->Event(widget,session,win,win->gfx,event);
                 }
                 widget = widget->next;
             }
