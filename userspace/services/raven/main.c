@@ -261,6 +261,12 @@ DockItem* dockHead = NULL;
 DockItem* dockTail = NULL;
 int dockItems = 0;
 
+static void DrawImage(GraphicsContext* gfx, int x, int y, int w, int h, uint32_t* data) {
+    for(int i=0; i < h; i++) {
+        memcpy(&gfx->buf[((y+i)*gfx->w)+x],&data[i*w],w*4);
+    }
+}
+
 void RedrawDock() {
     if(dockWin.frontBuf != NULL) {
         free(dockWin.frontBuf);
@@ -275,7 +281,14 @@ void RedrawDock() {
     int i = 0;
     DockItem* item = dockHead;
     while(item != NULL) {
-        Graphics_RenderIcon(gfx,iconPack,item->icon,i+8,8,32,32,item->pressed ? 0xffa0a0a0 : 0xffffffff);
+        if(item->type == DOCK_WINDOW) {
+            uint32_t* data = malloc(42*42*4);
+            Image_ScaleNearest(item->win->frontBuf,data,item->win->w,item->win->h,42,42);
+            DrawImage(gfx,i+3,3,42,42,data);
+            free(data);
+        } else {
+            Graphics_RenderIcon(gfx,iconPack,item->app.icon,i+8,8,32,32,item->pressed ? 0xffa0a0a0 : 0xffffffff);
+        }
         i += 48;
         item = item->next;
     }
@@ -283,10 +296,45 @@ void RedrawDock() {
     Redraw(0,dockWin.y,fbInfo.width,dockWin.h);
 }
 
-void NewDockItem(const char* icon, const char* path) {
+void NewDockApp(const char* icon, const char* path) {
     DockItem* entry = malloc(sizeof(DockItem));
-    entry->icon = icon;
-    entry->path = path;
+    entry->type = DOCK_APPLICATION;
+    entry->app.icon = icon;
+    entry->app.path = path;
+    entry->next = NULL;
+    entry->pressed = 0;
+    entry->prev = dockTail;
+    if(dockTail != NULL) {
+        dockTail->next = entry;
+    }
+    dockTail = entry;
+    if(dockHead == NULL) {
+        dockHead = entry;
+    }
+    dockItems += 1;
+    RedrawDock();
+}
+
+void NewDockWindow(Window* win) {
+    SpinlockAcquire(&windowLock);
+    if(win->prev != NULL) {
+        ((Window*)win->prev)->next = win->next;
+    } else {
+        winHead = win->next;
+    }
+    if(win->next != NULL) {
+        ((Window*)win->next)->prev = win->prev;
+    } else {
+        winTail = win->prev;
+    }
+    win->prev = NULL;
+    win->next = NULL;
+    SpinlockRelease(&windowLock);
+    Redraw(win->x,win->y,win->w,win->h);
+    DoBoxAnimation(win->x,win->y,win->w,win->h,dockWin.x,dockWin.y,dockWin.w,dockWin.h,0);
+    DockItem* entry = malloc(sizeof(DockItem));
+    entry->type = DOCK_WINDOW;
+    entry->win = win;
     entry->next = NULL;
     entry->pressed = 0;
     entry->prev = dockTail;
@@ -336,9 +384,9 @@ int main(int argc, const char* argv[]) {
     uintptr_t kbdThr = NewThread("Raven Keyboard Thread",&KeyboardThread,(void*)(((uintptr_t)kbdStack)+0x8000));
     void* mouseStack = MMap(NULL,0x8000,3,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
     uintptr_t mouseThr = NewThread("Raven Mouse Thread",&MouseThread,(void*)(((uintptr_t)mouseStack)+0x8000));
-    NewDockItem("User/Administrator","/bin/hunter");
-    NewDockItem("App/Settings","/bin/settings");
-    NewDockItem("File/Archive","/bin/welcome");
+    NewDockApp("User/Administrator","/bin/hunter");
+    NewDockApp("App/Settings","/bin/settings");
+    NewDockApp("File/Archive","/bin/welcome");
     LoadBackground("/System/Wallpapers/Aurora.qoi");
     while(1) {
         int64_t teamID;

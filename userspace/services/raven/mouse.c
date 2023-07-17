@@ -61,6 +61,49 @@ void MouseThread() {
                         renderInvertOutline(winDrag->x, winDrag->y, winDrag->w, winDrag->h);
                     }
                     winDrag = NULL;
+                } else if(cursorWin.x >= dockWin.x && cursorWin.x < dockWin.x+dockWin.w && cursorWin.y >= dockWin.y && cursorWin.y < dockWin.y+dockWin.h) {
+                    int i = 0;
+                    DockItem* item = dockHead;
+                    while(item != NULL) {
+                        if(cursorWin.x >= dockWin.x+i && cursorWin.x < dockWin.x+i+48) {
+                            item->pressed = 0;
+                            RedrawDock();
+                            if(item->type == DOCK_APPLICATION) {
+                                TeamID team = NewTeam("Launched Application");
+                                LoadExecImage(team,(const char*[]){item->app.path,NULL},NULL);
+                            } else if(item->type == DOCK_WINDOW) {
+                                DoBoxAnimation(dockWin.x,dockWin.y,dockWin.w,dockWin.h,item->win->x,item->win->y,item->win->w,item->win->h,1);
+                                if(item->prev != NULL) {
+                                    ((DockItem*)item->prev)->next = item->next;
+                                } else {
+                                    dockHead = item->next;
+                                }
+                                if(item->next != NULL) {
+                                    ((DockItem*)item->next)->prev = item->prev;
+                                } else {
+                                    dockTail = item->prev;
+                                }
+                                SpinlockAcquire(&windowLock);
+                                item->win->prev = winTail;
+                                item->win->next = NULL;
+                                if(winTail != NULL) {
+                                    winTail->next = item->win;
+                                }
+                                winTail = item->win;
+                                if(winHead == NULL) {
+                                    winHead = item->win;
+                                }
+                                SpinlockRelease(&windowLock);
+                                Redraw(item->win->x,item->win->y,item->win->w,item->win->h);
+                                free(item);
+                                dockItems -= 1;
+                                RedrawDock();
+                            }
+                            break;
+                        }
+                        item = item->next;
+                        i += 48;
+                    }
                 } else if (winFocus != NULL) {
                     if(cursorWin.x >= winFocus->x && cursorWin.x <= winFocus->x+winFocus->w && cursorWin.y >= winFocus->y && cursorWin.y <= winFocus->y+winFocus->h) {
                         RavenEvent event;
@@ -70,20 +113,6 @@ void MouseThread() {
                         event.mouse.y = cursorWin.y-winFocus->y;
                         event.mouse.buttons = 0;
                         MQueue_SendToClient(msgQueue,winFocus->owner,&event,sizeof(RavenEvent));
-                    }
-                } else if(cursorWin.x >= dockWin.x && cursorWin.x < dockWin.x+dockWin.w && cursorWin.y >= dockWin.y && cursorWin.y < dockWin.y+dockWin.h) {
-                    int i = 0;
-                    DockItem* item = dockHead;
-                    while(item != NULL) {
-                        if(cursorWin.x >= dockWin.x+i && cursorWin.x < dockWin.x+i+48) {
-                            item->pressed = 0;
-                            RedrawDock();
-                            TeamID team = NewTeam("Launched Application");
-                            LoadExecImage(team,(const char*[]){item->path,NULL},NULL);
-                            break;
-                        }
-                        item = item->next;
-                        i += 48;
                     }
                 }
             } else if ((buttons & 1) != 0 && !lButton) {
@@ -104,11 +133,20 @@ void MouseThread() {
                     Window* win = winTail;
                     bool clicked = false;
                     while(win != NULL) {
-                        if(cursorWin.x >= win->x+32 && cursorWin.x < win->x+win->w && cursorWin.y >= win->y && cursorWin.y < win->y+32 && !(win->flags & FLAG_NOMOVE)) {
+                        if(cursorWin.x >= win->x+32 && cursorWin.x < win->x+win->w-32 && cursorWin.y >= win->y && cursorWin.y < win->y+32 && !(win->flags & FLAG_NOMOVE)) {
                             winDrag = win;
                             winX = cursorWin.x - win->x;
                             winY = cursorWin.y - win->y;
                             renderInvertOutline(cursorWin.x - winX,cursorWin.y - winY,win->w,win->h);
+                            clicked = true;
+                            break;
+                        } else if(cursorWin.x >= win->x+win->w-32 && cursorWin.x < win->x+win->w && cursorWin.y >= win->y && cursorWin.y < win->y+32) {
+                            SpinlockRelease(&windowLock);
+                            NewDockWindow(win);
+                            if(winFocus == win) {
+                                winFocus = NULL;
+                            }
+                            SpinlockAcquire(&windowLock);
                             clicked = true;
                             break;
                         } else if(cursorWin.x >= win->x && cursorWin.x <= win->x+win->w && cursorWin.y >= win->y && cursorWin.y <= win->y+win->h) {

@@ -28,12 +28,25 @@ typedef struct {
     int64_t owner;
 } Window;
 
+typedef enum {
+    DOCK_APPLICATION,
+    DOCK_WINDOW,
+} DockItemType;
+
+typedef struct {
+    const char* icon;
+    const char* path;
+} DockItemApp;
+
 typedef struct {
     void* prev;
     void* next;
-    const char* icon;
-    const char* path;
     char pressed;
+    DockItemType type;
+    union {
+        DockItemApp app;
+        Window* win;
+    };
 } DockItem;
 
 void Redraw(int x, int y, int w, int h);
@@ -42,6 +55,7 @@ void invertPixel(int x, int y);
 void renderInvertOutline(int x, int y, int w, int h);
 void DoBoxAnimation(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2, char expand);
 void RedrawDock();
+void NewDockWindow(Window* win);
 
 #ifndef _RAVEN_IMPL
 extern MQueue* msgQueue;
@@ -54,6 +68,7 @@ extern Window* winTail;
 extern Window dockWin;
 extern DockItem* dockHead;
 extern DockItem* dockTail;
+extern int dockItems;
 #endif
 
 #endif

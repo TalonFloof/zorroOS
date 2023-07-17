@@ -95,6 +95,7 @@ void UIDrawBaseWindow(RavenSession* session, ClientWindow* win, GraphicsContext*
     Graphics_DrawRect(gfx,gfx->w-5,gfx->h-2,2,1,0xff27272a);
 
     Graphics_RenderIcon(gfx,RavenIconPack,"Window/Close",16-5,16-(9/2),16,9,0xffcbcbcf);
+    Graphics_DrawRect(gfx,gfx->w-21,15,10,2,0xffcbcbcf);
     Graphics_RenderString(gfx,32+4,16-(RavenKNXT->height/2),0xffcbcbcf,RavenKNXT,1,title);
 }
 
