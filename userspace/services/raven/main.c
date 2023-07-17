@@ -157,7 +157,7 @@ void Redraw(int x, int y, int w, int h) {
         } else if(i >= fbInfo.height) {
             break;
         }
-        memcpy(&fbInfo.addr[(i*(fbInfo.pitch/bytes))+x],&fbInfo.back[(i*(fbInfo.pitch/bytes))+x],w*4);
+        memcpy(&fbInfo.addr[(i*(fbInfo.pitch/bytes))+(x < 0 ? 0 : x)],&fbInfo.back[(i*(fbInfo.pitch/bytes))+(x < 0 ? 0 : x)],(w*4)-(x < 0 ? -x : ((x+w) > fbInfo.width ? (x+w-fbInfo.width) : 0)));
     }
     SpinlockRelease(&windowLock);
 }
@@ -387,7 +387,7 @@ int main(int argc, const char* argv[]) {
     NewDockApp("User/Administrator","/bin/hunter");
     NewDockApp("App/Settings","/bin/settings");
     NewDockApp("File/Archive","/bin/welcome");
-    LoadBackground("/System/Wallpapers/Aurora.qoi");
+    LoadBackground("/System/Wallpapers/Light.qoi");
     while(1) {
         int64_t teamID;
         RavenPacket* packet = MQueue_RecieveFromClient(msgQueue,&teamID,NULL);
