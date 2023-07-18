@@ -15,9 +15,9 @@ static void TextBoxRedraw(void* self, RavenSession* session, ClientWindow* win, 
     Graphics_DrawRect(gfx,widget->x,widget->y,widget->w,widget->h,0xff18181b);
     int len = strlen(&private->line);
     for(int i=0; i < (widget->w/8); i++) {
-        int offset = (len < (widget->w/8)) ? i : ((len-(widget->w/8))+i);
+        int offset = (len < ((widget->w/8))) ? i : (((len-(widget->w/8)))+1+i);
         if(offset >= len) {
-            Graphics_DrawRect(gfx,widget->x+(i*8),widget->y+((widget->h/2)-8),2,16,0xff1d4ed8);
+            Graphics_DrawRect(gfx,widget->x+(i*8),widget->y+((widget->h/2)-8),2,16,private->selected ? 0xff1d4ed8 : 0xff2a2a2a);
             break;
         }
         Graphics_RenderGlyph(gfx,widget->x+(i*8),widget->y+((widget->h/2)-8),0xffffffff,RavenUnifont,1,private->line[offset]);
@@ -27,6 +27,27 @@ static void TextBoxRedraw(void* self, RavenSession* session, ClientWindow* win, 
 static void TextBoxEvent(void* self, RavenSession* session, ClientWindow* win, GraphicsContext* gfx, RavenEvent* event) {
     UIWidget* widget = (UIWidget*)self;
     UITextBoxPrivateData* private = (UITextBoxPrivateData*)widget->privateData;
+    if(event->type == RAVEN_MOUSE_PRESSED) {
+        private->selected = (event->mouse.x >= widget->x && event->mouse.x < widget->x+widget->w && event->mouse.y >= widget->y && event->mouse.y < widget->y+widget->h) ? 1 : 0;
+        TextBoxRedraw(self,session,win,gfx);
+        RavenFlipArea(session,win,widget->x,widget->y,widget->w,widget->h);
+    }
+    if(event->type == RAVEN_KEY_PRESSED && private->selected) {
+        if(event->key.rune != '\n' && event->key.rune != 8 && event->key.rune != '\t' && event->key.rune != 0) {
+            int len = strlen((const char*)&private->line);
+            private->line[len] = (uint8_t)event->key.rune;
+            private->line[len+1] = 0;
+            TextBoxRedraw(self,session,win,gfx);
+            RavenFlipArea(session,win,widget->x,widget->y,widget->w,widget->h);
+        } else if(event->key.rune == 8) { // Backspace
+            int len = strlen((const char*)&private->line);
+            if(len > 0) {
+                private->line[len-1] = 0;
+                TextBoxRedraw(self,session,win,gfx);
+                RavenFlipArea(session,win,widget->x,widget->y,widget->w,widget->h);
+            }
+        }
+    }
 }
 
 static void TextAreaRedraw(void* self, RavenSession* session, ClientWindow* win, GraphicsContext* gfx) {

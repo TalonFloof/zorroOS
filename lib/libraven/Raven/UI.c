@@ -345,6 +345,6 @@ void UISave(RavenSession* session, ClientWindow* parent, const char* icon, const
     saveFn = save;
     saveWin = NewRavenWindow(session,150,128,FLAG_ACRYLIC,parent->id);
     NewIconButtonWidget(saveWin,DEST_WIDGETS,(saveWin->w/2)-16,33,32,32,icon,&BeginSaveDrag);
-    NewTextBoxWidget(saveWin,DEST_WIDGETS,1,65,saveWin->w-2,16,name);
+    NewTextBoxWidget(saveWin,DEST_WIDGETS,(saveWin->w/2)-((((saveWin->w-2)/8)*8)/2),65,(((saveWin->w-2)/8)*8),16,name);
     UIAddWindow(session,saveWin,"Save",NULL);
 }
