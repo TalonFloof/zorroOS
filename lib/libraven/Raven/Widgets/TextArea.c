@@ -6,16 +6,6 @@ extern PSFHeader* RavenUnifont;
 
 typedef struct {
     char selected;
-    int cursorX;
-    int cursorY;
-    int scrollX;
-    int scrollY;
-    char** lines;
-    int lineCount;
-} UITextAreaPrivateData;
-
-typedef struct {
-    char selected;
     char line[256];
 } UITextBoxPrivateData;
 

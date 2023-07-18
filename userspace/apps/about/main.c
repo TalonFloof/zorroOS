@@ -11,7 +11,7 @@
 #include <Media/QOI.h>
 #include <Media/Image.h>
 
-void ExitAbout(RavenSession* session, ClientWindow* win, int64_t id) {
+void ExitAbout(RavenSession* session, ClientWindow* win, void* button) {
     CloseRavenSession(session);
     Exit(0);
 }

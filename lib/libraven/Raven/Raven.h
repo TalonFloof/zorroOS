@@ -5,27 +5,29 @@
 #include <Media/Graphics.h>
 
 typedef enum {
-    RAVEN_INVALID_MESSAGE,
-    RAVEN_ACK,
-    RAVEN_OKEE_BYEEEE, // the furry version of a goodbye message :3
-    RAVEN_CREATE_WINDOW,
-    RAVEN_MOVE_WINDOW,
-    RAVEN_GET_RESOLUTION,
-    RAVEN_DESTROY_WINDOW,
-    RAVEN_SET_BACKGROUND,
-    RAVEN_FLIP_BUFFER,
-    RAVEN_SET_PATH,
-    RAVEN_BEGIN_ICON_DRAG,
+    RAVEN_INVALID_MESSAGE = 0,
+    RAVEN_ACK = 1,
+    RAVEN_OKEE_BYEEEE = 2, // the furry version of a goodbye message :3
+    RAVEN_CREATE_WINDOW = 3,
+    RAVEN_MOVE_WINDOW = 4,
+    RAVEN_GET_RESOLUTION = 5,
+    RAVEN_DESTROY_WINDOW = 7,
+    RAVEN_SET_BACKGROUND = 8,
+    RAVEN_FLIP_BUFFER = 9,
+    RAVEN_SET_PATH = 10,
+    RAVEN_BEGIN_ICON_DRAG = 11,
+    RAVEN_REDRAW = 12,
 } RavenPacketType;
 
 typedef enum {
-    RAVEN_INVALID_EVENT,
-    RAVEN_KEY_PRESSED,
-    RAVEN_KEY_RELEASED,
-    RAVEN_MOUSE_MOVE,
-    RAVEN_MOUSE_PRESSED,
-    RAVEN_MOUSE_RELEASED,
-    RAVEN_ICON_DROP,
+    RAVEN_INVALID_EVENT = 0,
+    RAVEN_KEY_PRESSED = 1,
+    RAVEN_KEY_RELEASED = 2,
+    RAVEN_MOUSE_MOVE = 3,
+    RAVEN_MOUSE_PRESSED = 4,
+    RAVEN_MOUSE_RELEASED = 5,
+    RAVEN_ICON_DROP = 6,
+    RAVEN_REDRAW_EVENT = 7,
 } RavenEventType;
 
 typedef struct {
@@ -94,6 +96,7 @@ typedef struct {
         RavenCreateWindow create;
         RavenMoveWindowData move;
         RavenFlipBuffer flipBuffer;
+        RavenBeginDrag drag;
     };
 } RavenPacket;
 
@@ -132,6 +135,6 @@ void RavenDestroyWindow(RavenSession* s, ClientWindow* win);
 void RavenGetResolution(RavenSession* s, int* w, int* h);
 void RavenFlipArea(RavenSession* s, ClientWindow* win, int x, int y, int w, int h);
 RavenEvent* RavenGetEvent(RavenSession* s);
-void RavenDrawWindowDecoration(ClientWindow* win, GraphicsContext* gfx);
+void RavenRequestRedraw(RavenSession* s, int64_t winID);
 
 #endif

@@ -14,6 +14,9 @@ void* RavenIconPack;
 static ClientWindow* winHead = NULL;
 static ClientWindow* winTail = NULL;
 
+static ClientWindow* saveWin = NULL;
+static SaveHandler saveFn = NULL;
+
 ClientWindow* UIGetWindow(int64_t id) {
     ClientWindow* win = winHead;
     while(win != NULL) {
@@ -21,6 +24,17 @@ ClientWindow* UIGetWindow(int64_t id) {
             return win;
         }
         win = win->next;
+    }
+    return NULL;
+}
+
+void* UIGetWidget(ClientWindow* win, int64_t id) {
+    UIWidget* widget = win->widgetHead;
+    while(widget != NULL) {
+        if(widget->id == id) {
+            return widget;
+        }
+        widget = widget->next;
     }
     return NULL;
 }
@@ -149,7 +163,52 @@ void UIAddWindow(RavenSession* session, ClientWindow* win, const char* title, co
 void UIRun(RavenSession* session) {
     while(1) {
         RavenEvent* event = RavenGetEvent(session);
-        if(event->type == RAVEN_MOUSE_PRESSED && event->mouse.x < 32 && event->mouse.y < 32) { // Temporary
+        if(event->type == RAVEN_REDRAW_EVENT) {
+            ClientWindow* win = UIGetWindow(event->id);
+            UIRedrawWidgets(session,win,win->gfx);
+        } else if(event->type == RAVEN_ICON_DROP && saveWin != NULL) {
+            if(saveFn != NULL) {
+                int len = strlen(((char*)event)+24);
+                char* name = (char*)(((UIWidget*)saveWin->widgetTail)->privateData+1);
+                char* finalPath = malloc(len+strlen(name)+1);
+                memcpy(finalPath,((char*)event)+24,len);
+                memcpy(finalPath+len,name,strlen(name)+1);
+                saveFn(finalPath);
+                free(finalPath);
+                RavenRequestRedraw(session,*((int64_t*)(((void*)event)+16)));
+            }
+            if(saveWin->prev != NULL) {
+                ((ClientWindow*)saveWin->prev)->next = saveWin->next;
+            } else {
+                winHead = saveWin->next;
+            }
+            if(saveWin->next != NULL) {
+                ((ClientWindow*)saveWin->next)->prev = saveWin->prev;
+            } else {
+                winTail = saveWin->prev;
+            }
+            UIWidget* widget = saveWin->widgetHead;
+            while(widget != NULL) {
+                if(widget->privateData) {
+                    free(widget->privateData);
+                }
+                void* next = widget->next;
+                free(widget);
+                widget = next;
+            }
+            widget = saveWin->toolbarHead;
+            while(widget != NULL) {
+                if(widget->privateData) {
+                    free(widget->privateData);
+                }
+                void* next = widget->next;
+                free(widget);
+                widget = next;
+            }
+            RavenDestroyWindow(session,saveWin);
+            saveWin = NULL;
+            saveFn = NULL;
+        } else if(event->type == RAVEN_MOUSE_PRESSED && event->mouse.x < 32 && event->mouse.y < 32) {
             ClientWindow* win = UIGetWindow(event->id);
             if(winHead == win && winTail == win) {
                 CloseRavenSession(session);
@@ -272,9 +331,20 @@ void UIAbout(RavenSession* session, ClientWindow* parent, const char* name, cons
     UIAddWindow(session,aboutWin,"About",NULL);
 }
 
-void UISave(RavenSession* session, ClientWindow* parent, const char* icon, const char* name) {
-    ClientWindow* saveWin = NewRavenWindow(session,150,128,FLAG_ACRYLIC,parent->id);
-    NewIconButtonWidget(saveWin,DEST_WIDGETS,(saveWin->w/2)-16,33,32,32,icon,NULL);
+static void BeginSaveDrag(RavenSession* session, ClientWindow* win, void* button) {
+    RavenPacket packet;
+    packet.type = RAVEN_BEGIN_ICON_DRAG;
+    packet.drag.id = win->id;
+    packet.drag.iconX = ((UIWidget*)button)->x;
+    packet.drag.iconY = ((UIWidget*)button)->y;
+    packet.drag.loadDrag = 0;
+    MQueue_SendToServer(session->raven,&packet,sizeof(RavenPacket));
+}
+
+void UISave(RavenSession* session, ClientWindow* parent, const char* icon, const char* name, SaveHandler save) {
+    saveFn = save;
+    saveWin = NewRavenWindow(session,150,128,FLAG_ACRYLIC,parent->id);
+    NewIconButtonWidget(saveWin,DEST_WIDGETS,(saveWin->w/2)-16,33,32,32,icon,&BeginSaveDrag);
     NewTextBoxWidget(saveWin,DEST_WIDGETS,1,65,saveWin->w-2,16,name);
     UIAddWindow(session,saveWin,"Save",NULL);
 }

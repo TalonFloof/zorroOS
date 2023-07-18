@@ -27,7 +27,7 @@ static void SetPath(RavenSession* session, ClientWindow* win, const char* path) 
     MQueue_SendToServer(session->raven,&packet,strlen(path)+17);
 }
 
-static void AboutDialog(RavenSession* session, ClientWindow* win, int64_t id) {
+static void AboutDialog(RavenSession* session, ClientWindow* win, void* button) {
     UIAbout(session,win,"Hunter","User/Administrator","0.1.0","Copyright (C) 2023","TalonFox and contributors");
 }
 
@@ -36,6 +36,7 @@ static void FileBrowserRedraw(void* self, RavenSession* session, ClientWindow* w
     FileBrowserPrivate* private = (FileBrowserPrivate*)widget->privateData;
     int i = 0;
     DirEntry entry;
+    Graphics_DrawRect(gfx,1,65,558,360-64-5,0xff09090b);
     while(private->dir.ReadDir(&private->dir,i,&entry)) {
         int x = (560 / 8)*(i % 8);
         int y = 65+(48*(i/8));
@@ -68,7 +69,7 @@ static void FileBrowserEvent(void* self, RavenSession* session, ClientWindow* wi
                     path[fullLen] = '/';
                     path[fullLen+1] = 0;
                     UIAddWidget(w,CreateFileBrowser(path),DEST_WIDGETS);
-                    SetPath(session,win,path);
+                    SetPath(session,w,path);
                     free(path);
                     UIAddWindow(session,w,(const char*)&entry.name,NULL);
                 } else if((entry.mode & 07) == 07) {

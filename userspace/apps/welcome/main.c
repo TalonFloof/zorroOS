@@ -6,7 +6,7 @@
 #include <System/Thread.h>
 #include <Raven/Widgets/Button.h>
 
-void TryZorroOS(RavenSession* session, ClientWindow* win, int64_t id) {
+void TryZorroOS(RavenSession* session, ClientWindow* win, void* button) {
     CloseRavenSession(session);
     Exit(0);
 }

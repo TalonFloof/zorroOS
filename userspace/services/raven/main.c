@@ -18,6 +18,12 @@
 #define MIN(__x, __y) ((__x) < (__y) ? (__x) : (__y))
 #define MAX(__x, __y) ((__x) > (__y) ? (__x) : (__y))
 
+extern Window* iconDrag;
+extern int winX;
+extern int winY;
+extern int iconStartX;
+extern int iconStartY;
+
 FBInfo fbInfo;
 MQueue* msgQueue = NULL;
 
@@ -421,6 +427,9 @@ int main(int argc, const char* argv[]) {
                         free(win->frontBuf);
                         MUnMap(win->backBuf,(win->w*win->h)*4);
                         DestroySharedMemory(win->shmID);
+                        if(win->path != NULL) {
+                            free(win->path);
+                        }
                         free(win);
                         SpinlockRelease(&windowLock);
                         Redraw(x,y,w,h);
@@ -567,6 +576,26 @@ int main(int argc, const char* argv[]) {
                 const char* path = (const char*)(((uintptr_t)packet)+16);
                 win->path = malloc(strlen(path)+1);
                 memcpy(win->path,path,strlen(path)+1);
+                SpinlockRelease(&windowLock);
+                break;
+            }
+            case RAVEN_BEGIN_ICON_DRAG: {
+                SpinlockAcquire(&windowLock);
+                iconDrag = GetWindowByID(packet->drag.id);
+                iconStartX = (iconDrag->x+packet->drag.iconX);
+                iconStartY = (iconDrag->y+packet->drag.iconY);
+                winX = cursorWin.x-iconStartX;
+                winY = cursorWin.y-iconStartY;
+                SpinlockRelease(&windowLock);
+                break;
+            }
+            case RAVEN_REDRAW: {
+                SpinlockAcquire(&windowLock);
+                Window* win = GetWindowByID(packet->move.id);
+                RavenEvent event;
+                event.type = RAVEN_REDRAW_EVENT;
+                event.id = win->id;
+                MQueue_SendToClient(msgQueue,win->owner,&event,sizeof(RavenEvent));
                 SpinlockRelease(&windowLock);
                 break;
             }

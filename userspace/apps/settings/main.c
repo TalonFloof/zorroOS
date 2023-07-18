@@ -8,7 +8,7 @@
 #include <Common/Alloc.h>
 #include <Common/String.h>
 
-void BackToMain(RavenSession* session, ClientWindow* win, int64_t id);
+void BackToMain(RavenSession* session, ClientWindow* win, void* button);
 
 typedef struct { // 128x72
     void* next;
@@ -73,7 +73,7 @@ UIWidget* CreateBackgroundPicker() {
     return widget;
 }
 
-void Backgrounds(RavenSession* session, ClientWindow* win, int64_t id) {
+void Backgrounds(RavenSession* session, ClientWindow* win, void* button) {
     if(backgrounds == NULL) {
         // Get the list of backgrounds
         OpenedFile dir;
@@ -111,7 +111,7 @@ void MainScreenDisplay(ClientWindow* win) {
     NewButtonWidget(win,DEST_WIDGETS,2,32+21,0,0,2,"Backgrounds","App/Settings",&Backgrounds);
 }
 
-void BackToMain(RavenSession* session, ClientWindow* win, int64_t id) {
+void BackToMain(RavenSession* session, ClientWindow* win, void* button) {
     MainScreenDisplay(win);
     UIDrawBaseWindow(session,win,win->gfx,"Settings","App/Settings");
     RavenFlipArea(session,win,0,0,win->w,win->h);

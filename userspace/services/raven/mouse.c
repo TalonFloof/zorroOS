@@ -7,11 +7,16 @@
 #include <Common/Alloc.h>
 #include "raven.h"
 #include <stdbool.h>
+#include <Common/String.h>
 
 bool lButton = false;
 int winX = 0;
 int winY = 0;
+int iconStartX = 0;
+int iconStartY = 0;
 Window* winDrag = NULL;
+
+Window* iconDrag = NULL;
 
 void MouseThread() {
     OpenedFile mouseFile;
@@ -42,7 +47,10 @@ void MouseThread() {
                 }
                 Redraw(oldX,oldY,cursorWin.w,cursorWin.h);
                 Redraw(cursorWin.x,cursorWin.y,cursorWin.w,cursorWin.h);
-                if (winDrag != NULL) {
+                if(iconDrag != NULL) {
+                    Redraw(oldX - winX, oldY - winY, 32, 32);
+                    renderInvertOutline(cursorWin.x - winX, cursorWin.y - winY, 32, 32);
+                } else if (winDrag != NULL) {
                     renderInvertOutline(oldX - winX, oldY - winY, winDrag->w, winDrag->h);
                     renderInvertOutline(cursorWin.x - winX, cursorWin.y - winY, winDrag->w, winDrag->h);
                 } else if(winFocus != NULL) {
@@ -58,7 +66,30 @@ void MouseThread() {
                 }
             }
             if ((buttons & 1) == 0 && lButton) {
-                if(winDrag != NULL) {
+                if(iconDrag != NULL) {
+                    Redraw(cursorWin.x-winX,cursorWin.y-winY,32,32);
+                    SpinlockAcquire(&windowLock);
+                    Window* win = winTail;
+                    bool clicked = false;
+                    while(win != NULL) {
+                        if(cursorWin.x >= win->x && cursorWin.x <= win->x+win->w && cursorWin.y >= win->y && cursorWin.y <= win->y+win->h && win->path != NULL) {
+                            void* response = malloc(strlen(win->path)+25);
+                            *((RavenEventType*)response) = RAVEN_ICON_DROP;
+                            *((int64_t*)(response+8)) = iconDrag->id;
+                            *((int64_t*)(response+16)) = win->id;
+                            memcpy(response+24,win->path,strlen(win->path)+1);
+                            MQueue_SendToClient(msgQueue,iconDrag->owner,response,strlen(win->path)+25);
+                            clicked = true;
+                            break;
+                        }
+                        win = win->prev;
+                    }
+                    SpinlockRelease(&windowLock);
+                    if(!clicked) {
+                        DoBoxAnimation(cursorWin.x-winX,cursorWin.y-winY,32,32,iconStartX,iconStartY,32,32,0);
+                    }
+                    iconDrag = NULL;
+                } else if(winDrag != NULL) {
                     int oldX = winDrag->x;
                     int oldY = winDrag->y;
                     winDrag->x = cursorWin.x - winX;

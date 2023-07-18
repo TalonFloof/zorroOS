@@ -53,22 +53,14 @@ static void ButtonRedraw(void* self, RavenSession* session, ClientWindow* win, G
 static void IconButtonEvent(void* self, RavenSession* session, ClientWindow* win, GraphicsContext* gfx, RavenEvent* event) {
     UIWidget* widget = (UIWidget*)self;
     UIIconButtonPrivateData* private = (UIIconButtonPrivateData*)widget->privateData;
-    if(event->type != RAVEN_MOUSE_PRESSED && event->type != RAVEN_MOUSE_RELEASED) {
+    if(event->type != RAVEN_MOUSE_PRESSED) {
         return;
     }
     if(!(event->mouse.x >= widget->x && event->mouse.x < widget->x+widget->w && event->mouse.y >= widget->y && event->mouse.y < widget->y+widget->h)) {
         return;
     }
-    if(event->type == RAVEN_MOUSE_PRESSED) {
-        private->pressed = 1;
-    } else if(event->type == RAVEN_MOUSE_RELEASED) {
-        int orig = private->pressed;
-        private->pressed = 0;
-        if(orig) {
-            if(private->onClick != NULL) {
-                private->onClick(session,win,widget->id);
-            }
-        }
+    if(private->onClick != NULL) {
+        private->onClick(session,win,widget);
     }
 }
 
@@ -92,7 +84,7 @@ static void ButtonEvent(void* self, RavenSession* session, ClientWindow* win, Gr
         RavenFlipArea(session,win,widget->x,widget->y,widget->w,widget->h);
         if(orig) {
             if(private->onClick != NULL) {
-                private->onClick(session,win,widget->id);
+                private->onClick(session,win,widget);
             }
         }
     }
