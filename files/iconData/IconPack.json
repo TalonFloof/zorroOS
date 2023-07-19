@@ -11,10 +11,22 @@
 		"height": 13,
 		"bpp": 1
 	},
+	"Action/NewFolder": {
+		"file": "Action/NewFolder.data",
+		"width": 16,
+		"height": 16,
+		"bpp": 1
+	},
 	"Action/Right": {
 		"file": "Action/Right.data",
 		"width": 16,
 		"height": 13,
+		"bpp": 1
+	},
+	"Action/Save": {
+		"file": "Action/Save.data",
+		"width": 16,
+		"height": 16,
 		"bpp": 1
 	},
 	"App/Settings": {

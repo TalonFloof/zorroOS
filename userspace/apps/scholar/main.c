@@ -83,7 +83,7 @@ int main(int argc, char* argv[]) {
         RyuLog("Unable to open window!\n");
         return 0;
     }
-    NewIconButtonWidget(win,DEST_TOOLBAR,0,0,16,16,"Action/About",&SaveDialog);
+    NewIconButtonWidget(win,DEST_TOOLBAR,0,0,16,16,"Action/Save",&SaveDialog);
     textArea = NewTextAreaWidget(win,DEST_WIDGETS,1,65,698,((500-64-16)/16)*16);
     UIRunOnLoad(&Load);
     UIAddWindow(session,win,"Scholar",NULL);
