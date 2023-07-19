@@ -23,6 +23,7 @@ extern int winX;
 extern int winY;
 extern int iconStartX;
 extern int iconStartY;
+extern bool loadDrag;
 
 FBInfo fbInfo;
 MQueue* msgQueue = NULL;
@@ -586,6 +587,7 @@ int main(int argc, const char* argv[]) {
                 iconStartY = (iconDrag->y+packet->drag.iconY);
                 winX = cursorWin.x-iconStartX;
                 winY = cursorWin.y-iconStartY;
+                loadDrag = packet->drag.loadDrag;
                 SpinlockRelease(&windowLock);
                 break;
             }

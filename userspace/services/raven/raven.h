@@ -70,6 +70,7 @@ extern Window dockWin;
 extern DockItem* dockHead;
 extern DockItem* dockTail;
 extern int dockItems;
+extern bool loadDrag;
 #endif
 
 #endif

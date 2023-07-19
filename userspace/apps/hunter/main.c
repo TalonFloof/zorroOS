@@ -82,6 +82,14 @@ static void FileBrowserEvent(void* self, RavenSession* session, ClientWindow* wi
                     const char* args[] = {path,NULL};
                     LoadExecImage(team,args,NULL);
                     free(path);
+                } else {
+                    RavenPacket packet;
+                    packet.type = RAVEN_BEGIN_ICON_DRAG;
+                    packet.drag.id = win->id;
+                    packet.drag.iconX = x+(((560/8)/2)-16);
+                    packet.drag.iconY = y;
+                    packet.drag.loadDrag = 1;
+                    MQueue_SendToServer(session->raven,&packet,sizeof(RavenPacket));
                 }
                 break;
             }

@@ -14,6 +14,7 @@ int winX = 0;
 int winY = 0;
 int iconStartX = 0;
 int iconStartY = 0;
+bool loadDrag = false;
 Window* winDrag = NULL;
 
 Window* iconDrag = NULL;
@@ -72,14 +73,18 @@ void MouseThread() {
                     Window* win = winTail;
                     bool clicked = false;
                     while(win != NULL) {
-                        if(cursorWin.x >= win->x && cursorWin.x <= win->x+win->w && cursorWin.y >= win->y && cursorWin.y <= win->y+win->h && win->path != NULL) {
-                            void* response = malloc(strlen(win->path)+25);
-                            *((RavenEventType*)response) = RAVEN_ICON_DROP;
-                            *((int64_t*)(response+8)) = iconDrag->id;
-                            *((int64_t*)(response+16)) = win->id;
-                            memcpy(response+24,win->path,strlen(win->path)+1);
-                            MQueue_SendToClient(msgQueue,iconDrag->owner,response,strlen(win->path)+25);
-                            clicked = true;
+                        if(cursorWin.x >= win->x && cursorWin.x <= win->x+win->w && cursorWin.y >= win->y && cursorWin.y <= win->y+win->h) {
+                            if(win->path != NULL && !loadDrag) {
+                                void* response = malloc(strlen(win->path)+25);
+                                *((RavenEventType*)response) = RAVEN_ICON_DROP;
+                                *((int64_t*)(response+8)) = iconDrag->id;
+                                *((int64_t*)(response+16)) = win->id;
+                                memcpy(response+24,win->path,strlen(win->path)+1);
+                                MQueue_SendToClient(msgQueue,iconDrag->owner,response,strlen(win->path)+25);
+                                clicked = true;
+                            } else if(loadDrag && win->path == NULL) {
+                                clicked = true;
+                            }
                             break;
                         }
                         win = win->prev;
