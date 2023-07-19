@@ -16,6 +16,7 @@ int iconStartX = 0;
 int iconStartY = 0;
 bool loadDrag = false;
 Window* winDrag = NULL;
+char* iconDragPath = NULL;
 
 Window* iconDrag = NULL;
 
@@ -81,8 +82,15 @@ void MouseThread() {
                                 *((int64_t*)(response+16)) = win->id;
                                 memcpy(response+24,win->path,strlen(win->path)+1);
                                 MQueue_SendToClient(msgQueue,iconDrag->owner,response,strlen(win->path)+25);
+                                free(response);
                                 clicked = true;
                             } else if(loadDrag && win->path == NULL) {
+                                void* response = malloc(strlen(iconDragPath)+25);
+                                *((RavenEventType*)response) = RAVEN_ICON_DRAG;
+                                *((int64_t*)(response+8)) = win->id;
+                                memcpy(response+24,iconDragPath,strlen(iconDragPath)+1);
+                                MQueue_SendToClient(msgQueue,win->owner,response,strlen(iconDragPath)+25);
+                                free(response);
                                 clicked = true;
                             }
                             break;
@@ -94,6 +102,10 @@ void MouseThread() {
                         DoBoxAnimation(cursorWin.x-winX,cursorWin.y-winY,32,32,iconStartX,iconStartY,32,32,0);
                     }
                     iconDrag = NULL;
+                    if(iconDragPath != NULL) {
+                        free(iconDragPath);
+                        iconDragPath = NULL;
+                    }
                 } else if(winDrag != NULL) {
                     int oldX = winDrag->x;
                     int oldY = winDrag->y;

@@ -43,6 +43,8 @@ const ThreadTreeType = AATree(i64, *Thread);
 pub var threads: ThreadTreeType = ThreadTreeType{};
 var threadLock: Spinlock = .unaquired;
 pub var nextThreadID: i64 = 1;
+pub var debugThread: usize = 0;
+pub var debugQueue: EventQueue = EventQueue{};
 
 pub var startScheduler: bool = false;
 
@@ -304,6 +306,12 @@ pub fn GetNextThread() *Thread {
             @panic("No Available Threads in any of the Run Queues!");
         }
     }
+}
+
+pub fn TriggerDebug() void {
+    const hcb = HAL.Arch.GetHCB();
+    _ = hcb;
+    //hcb.activeThread.?.
 }
 
 pub fn Tick(con: *HAL.Arch.Context, tickType: u8) void {

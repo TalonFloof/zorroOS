@@ -11,12 +11,12 @@ typedef enum {
     RAVEN_CREATE_WINDOW = 3,
     RAVEN_MOVE_WINDOW = 4,
     RAVEN_GET_RESOLUTION = 5,
-    RAVEN_DESTROY_WINDOW = 7,
-    RAVEN_SET_BACKGROUND = 8,
-    RAVEN_FLIP_BUFFER = 9,
-    RAVEN_SET_PATH = 10,
-    RAVEN_BEGIN_ICON_DRAG = 11,
-    RAVEN_REDRAW = 12,
+    RAVEN_DESTROY_WINDOW = 8,
+    RAVEN_SET_BACKGROUND = 9,
+    RAVEN_FLIP_BUFFER = 10,
+    RAVEN_SET_PATH = 11,
+    RAVEN_BEGIN_ICON_DRAG = 12,
+    RAVEN_REDRAW = 13,
 } RavenPacketType;
 
 typedef enum {
@@ -26,8 +26,9 @@ typedef enum {
     RAVEN_MOUSE_MOVE = 3,
     RAVEN_MOUSE_PRESSED = 4,
     RAVEN_MOUSE_RELEASED = 5,
-    RAVEN_ICON_DROP = 6,
-    RAVEN_REDRAW_EVENT = 7,
+    RAVEN_ICON_DROP = 6, // Save Icon Drag-And-Drop
+    RAVEN_ICON_DRAG = 7, // Load Icon Drag-And-Drop
+    RAVEN_REDRAW_EVENT = 8,
 } RavenEventType;
 
 typedef struct {

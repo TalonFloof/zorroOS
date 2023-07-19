@@ -16,6 +16,7 @@ static ClientWindow* winTail = NULL;
 
 static ClientWindow* saveWin = NULL;
 static SaveHandler saveFn = NULL;
+static LoadHandler loadFn = NULL;
 
 ClientWindow* UIGetWindow(int64_t id) {
     ClientWindow* win = winHead;
@@ -160,12 +161,23 @@ void UIAddWindow(RavenSession* session, ClientWindow* win, const char* title, co
     RavenFlipArea(session,win,0,0,win->w,win->h);
 }
 
+void UIRunOnLoad(LoadHandler load) {
+    loadFn = load;
+}
+
 void UIRun(RavenSession* session) {
     while(1) {
         RavenEvent* event = RavenGetEvent(session);
+        if(event == NULL) {
+            continue;
+        }
         if(event->type == RAVEN_REDRAW_EVENT) {
             ClientWindow* win = UIGetWindow(event->id);
             UIRedrawWidgets(session,win,win->gfx);
+        } else if(event->type == RAVEN_ICON_DRAG) {
+            if(loadFn != NULL) {
+                loadFn(((char*)event)+24);
+            }
         } else if(event->type == RAVEN_ICON_DROP && saveWin != NULL) {
             if(saveFn != NULL) {
                 int len = strlen(((char*)event)+24);

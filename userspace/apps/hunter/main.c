@@ -83,13 +83,18 @@ static void FileBrowserEvent(void* self, RavenSession* session, ClientWindow* wi
                     LoadExecImage(team,args,NULL);
                     free(path);
                 } else {
-                    RavenPacket packet;
-                    packet.type = RAVEN_BEGIN_ICON_DRAG;
-                    packet.drag.id = win->id;
-                    packet.drag.iconX = x+(((560/8)/2)-16);
-                    packet.drag.iconY = y;
-                    packet.drag.loadDrag = 1;
-                    MQueue_SendToServer(session->raven,&packet,sizeof(RavenPacket));
+                    int len = strlen((const char*)private->path);
+                    int fullLen = len+strlen((const char*)&entry.name);
+                    RavenPacket* packet = malloc(sizeof(RavenPacket)+fullLen+1);
+                    memcpy((((void*)packet)+sizeof(RavenPacket)),(const char*)private->path,len);
+                    memcpy((((void*)packet)+sizeof(RavenPacket))+len,(const char*)&entry.name,entry.nameLen+1);
+                    packet->type = RAVEN_BEGIN_ICON_DRAG;
+                    packet->drag.id = win->id;
+                    packet->drag.iconX = x+(((560/8)/2)-16);
+                    packet->drag.iconY = y;
+                    packet->drag.loadDrag = 1;
+                    MQueue_SendToServer(session->raven,packet,sizeof(RavenPacket)+fullLen+1);
+                    free(packet);
                 }
                 break;
             }

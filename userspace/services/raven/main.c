@@ -24,6 +24,7 @@ extern int winY;
 extern int iconStartX;
 extern int iconStartY;
 extern bool loadDrag;
+extern char* iconDragPath;
 
 FBInfo fbInfo;
 MQueue* msgQueue = NULL;
@@ -588,6 +589,10 @@ int main(int argc, const char* argv[]) {
                 winX = cursorWin.x-iconStartX;
                 winY = cursorWin.y-iconStartY;
                 loadDrag = packet->drag.loadDrag;
+                if(loadDrag) {
+                    iconDragPath = malloc(strlen(((const char*)packet)+sizeof(RavenPacket))+1);
+                    memcpy(iconDragPath,((const char*)packet)+sizeof(RavenPacket),strlen(((const char*)packet)+sizeof(RavenPacket))+1);
+                }
                 SpinlockRelease(&windowLock);
                 break;
             }

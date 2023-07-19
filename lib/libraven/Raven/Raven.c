@@ -94,7 +94,7 @@ void RavenGetResolution(RavenSession* s, int* w, int* h) {
 RavenEvent* RavenGetEvent(RavenSession* s) {
     size_t size;
     RavenEvent* packet = MQueue_RecieveFromServer(s->raven,&size);
-    if(size != sizeof(RavenEvent) && packet->type != RAVEN_ICON_DROP) {
+    if(size != sizeof(RavenEvent) && packet->type != RAVEN_ICON_DROP && packet->type != RAVEN_ICON_DRAG) {
         free(packet);
         return NULL;
     }

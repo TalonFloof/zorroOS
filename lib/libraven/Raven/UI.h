@@ -6,10 +6,12 @@
 #define DEST_TOOLBAR 1
 
 typedef void (*SaveHandler)(char*);
+typedef void (*LoadHandler)(char*);
 void* UIGetWidget(ClientWindow* win, int64_t id);
 void UIDrawRoundedBox(GraphicsContext* gfx, int x, int y, int w, int h, uint32_t color, uint32_t backColor);
 void UIAddWindow(RavenSession* session, ClientWindow* win, const char* title, const char* bg);
 void UIDrawBaseWindow(RavenSession* session, ClientWindow* win, GraphicsContext* gfx, const char* title, const char* bg);
+void UIRunOnLoad(LoadHandler load);
 void UIRun(RavenSession* session);
 void UIRedrawWidgets(RavenSession* session, ClientWindow* win, GraphicsContext* gfx);
 int64_t UIAddWidget(ClientWindow* win, void* widget, int dest);
