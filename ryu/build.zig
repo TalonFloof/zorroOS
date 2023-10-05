@@ -1,5 +1,7 @@
 const std = @import("std");
 const Builder = std.build.Builder;
+const LazyPath = std.build.LazyPath;
+const GeneratedFile = std.build.GeneratedFile;
 
 const str = []const u8;
 
@@ -53,9 +55,10 @@ pub fn build(b: *Builder) !void {
     kernel.addModule("executive", executiveMod);
     kernel.addModule("fs", fsMod);
     kernel.addModule("devlib", devlib);
-    kernel.addObjectFile("_lowlevel.o");
+    kernel.addObjectFile(LazyPath.relative("_lowlevel.o"));
     kernel.code_model = .kernel;
     kernel.setLinkerScriptPath(.{ .path = "hal/link_scripts/x86_64-Limine.ld" });
-    kernel.override_dest_dir = .{ .custom = "../" };
-    b.installArtifact(kernel);
+    b.getInstallStep().dependOn(&b.addInstallArtifact(kernel, .{
+        .dest_dir = .{ .override = .{ .custom = "../" } },
+    }).step);
 }

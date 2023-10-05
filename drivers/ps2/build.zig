@@ -30,6 +30,7 @@ pub fn build(b: *Builder) !void {
     });
     driver.code_model = std.builtin.CodeModel.large;
     driver.addModule("devlib", devlib);
-    driver.override_dest_dir = .{ .custom = "../../out/" };
-    b.installArtifact(driver);
+    b.default_step.dependOn(&b.addInstallArtifact(driver, .{
+        .dest_dir = .{ .override = .{ .custom = "../../out/" } },
+    }).step);
 }

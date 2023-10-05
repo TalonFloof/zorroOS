@@ -29,7 +29,6 @@ pub export fn _archstart() callconv(.Naked) noreturn {
         \\mov %rsp, %rdi
         \\jmp HALPreformStartup
     );
-    unreachable;
 }
 
 pub export fn _hartstart() callconv(.Naked) noreturn {
@@ -38,7 +37,6 @@ pub export fn _hartstart() callconv(.Naked) noreturn {
         \\mov %rsp, %rdi
         \\jmp HartStart
     );
-    unreachable;
 }
 
 extern fn ContextEnter(context: *allowzero void) callconv(.C) noreturn;
