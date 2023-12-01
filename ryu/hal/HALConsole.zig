@@ -54,10 +54,10 @@ pub fn DrawScaledBitmap(x: isize, y: isize, w: usize, h: usize, scW: usize, scH:
     while (i < scH) : (i += 1) {
         var j: usize = 0;
         while (j < scW) : (j += 1) {
-            var finalX: usize = (j * x_ratio) >> 16;
-            var finalY: usize = (i * y_ratio) >> 16;
-            var index = (finalY * w) + finalX;
-            var dat = bitmap[index / 8];
+            const finalX: usize = (j * x_ratio) >> 16;
+            const finalY: usize = (i * y_ratio) >> 16;
+            const index = (finalY * w) + finalX;
+            const dat = bitmap[index / 8];
             if ((dat >> @as(u3, @intCast(7 - (index % 8)))) & 1 != 0) {
                 info.set(info, @as(isize, @intCast(j)) + x, @as(isize, @intCast(i)) + y, 1, 1, color);
             }

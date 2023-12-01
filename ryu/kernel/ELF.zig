@@ -182,7 +182,7 @@ const ELFLoadType = enum {
 };
 
 pub fn LoadELF(ptr: *void, loadType: ELFLoadType, pd: ?Memory.Paging.PageDirectory) ELFLoadError!?usize {
-    var header: *ELFHeader = @as(*ELFHeader, @ptrCast(@alignCast(ptr)));
+    const header: *ELFHeader = @as(*ELFHeader, @ptrCast(@alignCast(ptr)));
     if (header.magic != 0x464C457F) {
         return ELFLoadError.BadMagic;
     }
@@ -197,13 +197,13 @@ pub fn LoadELF(ptr: *void, loadType: ELFLoadType, pd: ?Memory.Paging.PageDirecto
     if (loadType == .Normal) {
         var i: usize = 0;
         while (i < header.phtEntryCount) : (i += 1) {
-            var entry: *ELFProgramHeader = @as(*ELFProgramHeader, @ptrFromInt(@intFromPtr(ptr) + header.phtPos + (i * @as(usize, @intCast(header.phtEntrySize)))));
+            const entry: *ELFProgramHeader = @as(*ELFProgramHeader, @ptrFromInt(@intFromPtr(ptr) + header.phtPos + (i * @as(usize, @intCast(header.phtEntrySize)))));
             if (entry.type == 1) {
                 const trueSize: usize = @as(usize, @intCast(if (entry.memSize % 4096 > 0) (entry.memSize & (~@as(u64, @intCast(0xFFF)))) + 4096 else entry.memSize));
                 var addr = @as(usize, @intCast(entry.vaddr));
                 var off: usize = 0;
                 while (addr < @as(usize, @intCast(entry.vaddr)) + trueSize) : (addr += 4096) {
-                    var page = Memory.PFN.AllocatePage(.Active, true, 0).?;
+                    const page = Memory.PFN.AllocatePage(.Active, true, 0).?;
                     _ = Memory.Paging.MapPage(
                         pd.?,
                         addr,
@@ -223,7 +223,7 @@ pub fn LoadELF(ptr: *void, loadType: ELFLoadType, pd: ?Memory.Paging.PageDirecto
         while (i < header.shtEntryCount) : (i += 1) {
             var entry: *ELFSectionHeader = @as(*ELFSectionHeader, @ptrFromInt(@intFromPtr(ptr) + header.shtPos + (i * @as(usize, @intCast(header.shtEntrySize)))));
             if (entry.type == 8) {
-                var size = if (entry.size & 0xFFF != 0) (entry.size & 0xFFFFFFFFFFFFF000) + 4096 else entry.size;
+                const size = if (entry.size & 0xFFF != 0) (entry.size & 0xFFFFFFFFFFFFF000) + 4096 else entry.size;
                 entry.addr = @intFromPtr(Memory.Pool.PagedPool.AllocAnonPages(size).?.ptr);
             } else {
                 entry.addr = @intFromPtr(ptr) + entry.offset;
@@ -232,21 +232,21 @@ pub fn LoadELF(ptr: *void, loadType: ELFLoadType, pd: ?Memory.Paging.PageDirecto
         var drvrInfo: ?*devlib.RyuDriverInfo = null;
         i = 0;
         while (i < header.shtEntryCount) : (i += 1) {
-            var entry: *ELFSectionHeader = @as(*ELFSectionHeader, @ptrFromInt(@intFromPtr(ptr) + header.shtPos + (i * @as(usize, @intCast(header.shtEntrySize)))));
+            const entry: *ELFSectionHeader = @as(*ELFSectionHeader, @ptrFromInt(@intFromPtr(ptr) + header.shtPos + (i * @as(usize, @intCast(header.shtEntrySize)))));
             if (entry.type != 2) {
                 continue;
             }
-            var strTableHeader = @as(*ELFSectionHeader, @ptrFromInt(@intFromPtr(ptr) + header.shtPos + (@as(usize, @intCast(header.shtEntrySize)) * entry.link)));
+            const strTableHeader = @as(*ELFSectionHeader, @ptrFromInt(@intFromPtr(ptr) + header.shtPos + (@as(usize, @intCast(header.shtEntrySize)) * entry.link)));
             var sym: usize = 0;
             while (sym < (entry.size / @sizeOf(ELFSymbol))) : (sym += 1) {
                 var symEntry = @as(*ELFSymbol, @ptrFromInt(entry.addr + (sym * @sizeOf(ELFSymbol))));
                 if (symEntry.shndx > 0 and symEntry.shndx < 0xFF00) {
-                    var e = @as(*ELFSectionHeader, @ptrFromInt(@intFromPtr(ptr) + header.shtPos + (symEntry.shndx * header.shtEntrySize)));
+                    const e = @as(*ELFSectionHeader, @ptrFromInt(@intFromPtr(ptr) + header.shtPos + (symEntry.shndx * header.shtEntrySize)));
                     symEntry.value += e.addr;
                 }
                 if (symEntry.name != 0) {
                     var symbolCName = @as([*:0]u8, @ptrFromInt(strTableHeader.addr + symEntry.name));
-                    var symbolName: []u8 = symbolCName[0..std.mem.len(symbolCName)];
+                    const symbolName: []u8 = symbolCName[0..std.mem.len(symbolCName)];
                     if (std.mem.eql(u8, symbolName, "DriverInfo")) {
                         drvrInfo = @as(*devlib.RyuDriverInfo, @ptrFromInt(symEntry.value));
                     }
@@ -268,17 +268,17 @@ pub fn LoadELF(ptr: *void, loadType: ELFLoadType, pd: ?Memory.Paging.PageDirecto
         }
         i = 0;
         while (i < header.shtEntryCount) : (i += 1) {
-            var entry: *ELFSectionHeader = @as(*ELFSectionHeader, @ptrFromInt(@intFromPtr(ptr) + header.shtPos + (i * @as(usize, @intCast(header.shtEntrySize)))));
+            const entry: *ELFSectionHeader = @as(*ELFSectionHeader, @ptrFromInt(@intFromPtr(ptr) + header.shtPos + (i * @as(usize, @intCast(header.shtEntrySize)))));
             if (entry.type != 4) {
                 continue;
             }
-            var relTable = @as([*]ELFRela, @ptrFromInt(entry.addr))[0..(entry.size / @sizeOf(ELFRela))];
-            var targetSection: *ELFSectionHeader = @as(*ELFSectionHeader, @ptrFromInt(@intFromPtr(ptr) + header.shtPos + (entry.info * @as(usize, @intCast(header.shtEntrySize)))));
-            var symbolSection: *ELFSectionHeader = @as(*ELFSectionHeader, @ptrFromInt(@intFromPtr(ptr) + header.shtPos + (entry.link * @as(usize, @intCast(header.shtEntrySize)))));
-            var symTable = @as([*]ELFSymbol, @ptrFromInt(symbolSection.addr))[0 .. symbolSection.size / @sizeOf(ELFSymbol)];
+            const relTable = @as([*]ELFRela, @ptrFromInt(entry.addr))[0..(entry.size / @sizeOf(ELFRela))];
+            const targetSection: *ELFSectionHeader = @as(*ELFSectionHeader, @ptrFromInt(@intFromPtr(ptr) + header.shtPos + (entry.info * @as(usize, @intCast(header.shtEntrySize)))));
+            const symbolSection: *ELFSectionHeader = @as(*ELFSectionHeader, @ptrFromInt(@intFromPtr(ptr) + header.shtPos + (entry.link * @as(usize, @intCast(header.shtEntrySize)))));
+            const symTable = @as([*]ELFSymbol, @ptrFromInt(symbolSection.addr))[0 .. symbolSection.size / @sizeOf(ELFSymbol)];
             for (0..relTable.len) |rela| {
-                var target: usize = relTable[rela].offset +% targetSection.addr;
-                var sym: usize = relTable[rela].info >> 32;
+                const target: usize = relTable[rela].offset +% targetSection.addr;
+                const sym: usize = relTable[rela].info >> 32;
                 switch (@as(ELFRelocType, @enumFromInt(@as(u32, @intCast(relTable[rela].info & 0xFFFFFFFF))))) {
                     .X86_64_64 => {
                         @as(*align(1) u64, @ptrFromInt(target)).* = @as(u64, @bitCast(relTable[rela].addend)) +% symTable[sym].value;

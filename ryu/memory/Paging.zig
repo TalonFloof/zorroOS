@@ -88,7 +88,7 @@ pub fn MapPage(root: PageDirectory, vaddr: usize, flags: usize, paddr: usize) us
         } else {
             if (entry.r == 0) {
                 // Allocate Page
-                var page = Memory.PFN.AllocatePage(.PageTable, vaddr < 0x800000000000, @intFromPtr(entries) + (index * @sizeOf(usize))).?;
+                const page = Memory.PFN.AllocatePage(.PageTable, vaddr < 0x800000000000, @intFromPtr(entries) + (index * @sizeOf(usize))).?;
                 entry.r = 1;
                 entry.w = 1;
                 entry.x = 1;
@@ -113,7 +113,7 @@ pub fn GetPage(root: PageDirectory, vaddr: usize) HAL.PTEEntry {
     var entries: *void = @as(*void, @ptrCast(root.ptr));
     while (i < HAL.Arch.GetPTELevels()) : (i += 1) {
         const index: u64 = (vaddr >> (39 - @as(u6, @intCast(i * 9)))) & 0x1ff;
-        var entry = HAL.Arch.GetPTE(entries, index);
+        const entry = HAL.Arch.GetPTE(entries, index);
         if (i + 1 >= HAL.Arch.GetPTELevels()) {
             return entry;
         } else {

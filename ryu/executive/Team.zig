@@ -105,7 +105,7 @@ pub fn LoadELFImage(path: []const u8, team: *Team) ?usize {
     if (FS.GetInode(path, FS.rootInode.?)) |inode| {
         FS.RefInode(inode);
         @as(*Spinlock, @ptrCast(&inode.lock)).acquire();
-        var buf: []u8 = Memory.Pool.PagedPool.Alloc(@as(usize, @intCast(inode.stat.size))).?;
+        const buf: []u8 = Memory.Pool.PagedPool.Alloc(@as(usize, @intCast(inode.stat.size))).?;
         _ = inode.read.?(inode, 0, @as(*void, @ptrFromInt(@intFromPtr(buf.ptr))), @as(isize, @intCast(buf.len)));
         @as(*Spinlock, @ptrCast(&inode.lock)).release();
         FS.DerefInode(inode);
@@ -115,7 +115,7 @@ pub fn LoadELFImage(path: []const u8, team: *Team) ?usize {
         Memory.Pool.PagedPool.Free(buf);
         var i: usize = 0x1000;
         while (i < 0x10000) : (i += 4096) {
-            var page = Memory.PFN.AllocatePage(.Active, true, 0).?;
+            const page = Memory.PFN.AllocatePage(.Active, true, 0).?;
             _ = Memory.Paging.MapPage(
                 team.addressSpace,
                 i,

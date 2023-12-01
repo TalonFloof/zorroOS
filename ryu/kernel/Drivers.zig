@@ -23,7 +23,7 @@ pub fn InitDrivers() void {
     HAL.Console.Put("Starting up drivers...\n", .{});
     var index = drvrHead;
     while (index) |drvr| {
-        var ret = drvr.loadFn();
+        const ret = drvr.loadFn();
         if (ret == .Failure) {
             HAL.Console.Put("Warning: Driver \"{s}\" reported failure while loading!", .{drvr.drvName});
         }

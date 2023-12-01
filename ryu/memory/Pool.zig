@@ -62,7 +62,7 @@ pub const Bucket = struct {
                     self.SetBit(j, true);
                 }
                 self.usedEntries += entries;
-                var addr = (@intFromPtr(self) + 4096) + (i * 16);
+                const addr = (@intFromPtr(self) + 4096) + (i * 16);
                 return @as([*]u8, @ptrFromInt(addr))[0..size];
             }
         }
@@ -105,7 +105,7 @@ pub const Pool = struct {
         while (index != null) : (index = index.?.next) {
             std.debug.assert(index != null);
             const oldEntryCount = index.?.usedEntries;
-            var ret = index.?.Alloc(size);
+            const ret = index.?.Alloc(size);
             if (ret != null) {
                 if (index.?.usedEntries == 32512) {
                     // Relocate to Full Bucket List
@@ -133,7 +133,7 @@ pub const Pool = struct {
         }
         // Allocate a new bucket
         self.lockHartID = HAL.Arch.GetHCB().hartID;
-        var newBucket = self.AllocAnonPages(512 * 1024);
+        const newBucket = self.AllocAnonPages(512 * 1024);
         std.debug.assert(newBucket != null);
         var bucketHeader = @as(*Bucket, @ptrCast(newBucket.?.ptr));
         self.anonymousPages -= (512 * 1024) / 4096;
@@ -144,7 +144,7 @@ pub const Pool = struct {
             head.prev = bucketHeader;
         }
         self.partialBucketHead = bucketHeader;
-        var ret = bucketHeader.Alloc(size);
+        const ret = bucketHeader.Alloc(size);
         @memset(ret.?, 0);
         self.usedBlocks += bucketHeader.usedEntries;
         self.lock.release();
@@ -162,7 +162,7 @@ pub const Pool = struct {
             self.searchStart = addr + trueSize;
             var i = addr;
             while (i < addr + trueSize) : (i += 4096) {
-                var page = Memory.PFN.AllocatePage(.Active, self.allowSwapping, 0);
+                const page = Memory.PFN.AllocatePage(.Active, self.allowSwapping, 0);
                 _ = Memory.Paging.MapPage(
                     Memory.Paging.initialPageDir.?,
                     i,
@@ -215,7 +215,7 @@ pub const Pool = struct {
             }
         }
         if (bucket) |b| {
-            var oldSize: u64 = b.usedEntries;
+            const oldSize: u64 = b.usedEntries;
             b.Free(data);
             self.usedBlocks -= (oldSize - b.usedEntries);
             if (oldSize == 32512) {
@@ -271,7 +271,7 @@ pub const Pool = struct {
         }
         var i = addr;
         while (i < addr + size) : (i += 4096) {
-            var entry = Memory.Paging.GetPage(Memory.Paging.initialPageDir.?, i);
+            const entry = Memory.Paging.GetPage(Memory.Paging.initialPageDir.?, i);
             if (entry.r == 1) {
                 Memory.PFN.DereferencePage(@as(usize, @intCast(entry.phys)) << 12);
             }

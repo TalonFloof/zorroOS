@@ -387,7 +387,7 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                     const offset = @as(isize, @bitCast(@as(usize, @intCast(regs.GetReg(6)))));
                     if (flags & 0x8 != 0) { // Anonymous Mapping
                         const old = HAL.Arch.IRQEnableDisable(false);
-                        var addrSpace = HAL.Arch.GetHCB().activeThread.?.team.addressSpace;
+                        const addrSpace = HAL.Arch.GetHCB().activeThread.?.team.addressSpace;
                         var a: usize = @intFromPtr(addr);
                         if (a == 0) {
                             const space = Memory.Paging.FindFreeSpace(addrSpace, 0x1000, length);
@@ -403,7 +403,7 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                         const addrEnd: usize = a + length;
                         HAL.Arch.GetHCB().activeThread.?.team.addrLock.acquire();
                         while (a < addrEnd) : (a += 4096) {
-                            var page: usize = @intFromPtr(Memory.PFN.AllocatePage(.Active, true, 0).?.ptr) - 0xffff800000000000;
+                            const page: usize = @intFromPtr(Memory.PFN.AllocatePage(.Active, true, 0).?.ptr) - 0xffff800000000000;
                             _ = Memory.Paging.MapPage(
                                 addrSpace,
                                 a,
@@ -529,8 +529,8 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                                 if (Executive.Team.LoadELFImage(args[0].?[0..std.mem.len(args[0].?)], destTeam)) |entry| {
                                     // Now load the arguments
                                     var argStrPage = Memory.PFN.AllocatePage(.Active, true, 0).?.ptr;
-                                    var argPtrPage = Memory.PFN.AllocatePage(.Active, true, 0).?.ptr;
-                                    var addr: usize = Memory.Paging.FindFreeSpace(destTeam.addressSpace, 0x1000, 0x2000).?;
+                                    const argPtrPage = Memory.PFN.AllocatePage(.Active, true, 0).?.ptr;
+                                    const addr: usize = Memory.Paging.FindFreeSpace(destTeam.addressSpace, 0x1000, 0x2000).?;
                                     var i: usize = 0;
                                     var offset: usize = 0;
                                     while (i < args.len) : (i += 1) {
@@ -591,7 +591,7 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
         .Ryu => {
             switch (@as(RyuFuncs, @enumFromInt(func))) {
                 .KernelLog => { // void KernelLog(*const char text)
-                    var s: [*c]const u8 = @as([*c]const u8, @ptrFromInt(regs.GetReg(1)));
+                    const s: [*c]const u8 = @as([*c]const u8, @ptrFromInt(regs.GetReg(1)));
                     HAL.Console.Put("{s}", .{@as([*]const u8, @ptrCast(s))[0..std.mem.len(s)]});
                     regs.SetReg(0, 0);
                 },

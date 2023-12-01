@@ -112,13 +112,13 @@ pub fn initialize() void {
         var entry = &madt.firstEntry;
         while (@intFromPtr(entry) < @intFromPtr(madt) + madt.acpiHeader.length) : (entry = @as(*MADTRecordHeader, @ptrFromInt(@intFromPtr(entry) + entry.recordLength))) {
             if (entry.recordType == 1) { // I/O APIC Record
-                var data = @as(*MADTIOApicRecord, @ptrCast(&entry.recordData));
+                const data = @as(*MADTIOApicRecord, @ptrCast(&entry.recordData));
                 if (data.gsiBase == 0) {
                     apic.ioapic_regSelect = @as(*allowzero u32, @ptrFromInt(@as(usize, @intCast(data.addr))));
                     apic.ioapic_ioWindow = @as(*allowzero u32, @ptrFromInt(@as(usize, @intCast(data.addr)) + 0x10));
                 }
             } else if (entry.recordType == 2) { // I/O APIC IRQ Redirect
-                var data = @as(*MADTIRQRedirectRecord, @ptrCast(&entry.recordData));
+                const data = @as(*MADTIRQRedirectRecord, @ptrCast(&entry.recordData));
                 apic.ioapic_redirect[data.gsi] = @as(u8, @intCast(data.irqSource));
                 if (data.irqSource != data.gsi) {
                     apic.ioapic_redirect[data.irqSource] = 0xff;

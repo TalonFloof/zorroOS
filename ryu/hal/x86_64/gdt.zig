@@ -40,7 +40,7 @@ pub fn initialize() void {
         .limit = (16 * 8) - 1,
         .base = @as(*const u64, @ptrCast(&gdtEntries)),
     };
-    var tss: usize = @intFromPtr(&HAL.Arch.GetHCB().archData.tss);
+    const tss: usize = @intFromPtr(&HAL.Arch.GetHCB().archData.tss);
     gdtEntries[9] = 0x0000E90000000067 | ((tss & 0xFFFFFF) << 16) | (((tss & 0xFF000000) >> 24) << 56);
     gdtEntries[10] = tss >> 32;
     asm volatile (

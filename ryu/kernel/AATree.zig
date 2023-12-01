@@ -104,12 +104,12 @@ pub fn AATree(comptime K: type, comptime V: type) type {
                     return null;
                 }
                 if (t.?.link[0] == null) {
-                    var l = t.?.link[1].?;
+                    const l = t.?.link[1].?;
                     t.?.key = l.key;
                     t.?.value = l.value;
                     t.?.link[1] = deleteInternal(t.?.link[1], l.key);
                 } else {
-                    var l = t.?.link[0].?;
+                    const l = t.?.link[0].?;
                     t.?.key = l.key;
                     t.?.value = l.value;
                     t.?.link[0] = deleteInternal(t.?.link[0], l.key);
@@ -117,7 +117,7 @@ pub fn AATree(comptime K: type, comptime V: type) type {
             }
             t = decreaseLevel(t);
             t = skew(t);
-            var m = t.?.link[1];
+            const m = t.?.link[1];
             t.?.link[1] = skew(m);
             if (m != null) {
                 if (m.?.link[1] != null) {

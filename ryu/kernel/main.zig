@@ -59,7 +59,7 @@ pub export fn RyuInit() void {
     HAL.Splash.UpdateStatus("Load /bin/init...");
     var team = Executive.Team.GetTeamByID(2).?;
     team.cwd = FS.rootInode;
-    var entry = Executive.Team.LoadELFImage("/bin/init", team).?;
+    const entry = Executive.Team.LoadELFImage("/bin/init", team).?;
     _ = Executive.Thread.NewThread(team, @as([*]u8, @ptrCast(@constCast("Main Thread")))[0..11], entry, 0x9ff8, 10);
 }
 

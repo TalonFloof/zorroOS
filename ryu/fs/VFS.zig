@@ -118,7 +118,7 @@ pub fn ReadDir(i: *Inode, off: usize) ?DirEntry {
         return ent;
     } else {
         if (i.readdir) |readdir| {
-            var result: isize = readdir(i, off, &ent);
+            const result: isize = readdir(i, off, &ent);
             @as(*Spinlock, @ptrCast(&i.lock)).release();
             if (result > 0) {
                 return ent;
@@ -201,7 +201,7 @@ pub fn GetInode(path: []const u8, base: *Inode) ?*Inode {
     var iter = std.mem.split(u8, path, "/");
     while (iter.next()) |name| {
         if (std.mem.eql(u8, name, "..")) {
-            var old = curNode.?;
+            const old = curNode.?;
             curNode = curNode.?.parent;
             DerefInode(old);
         } else if (name.len == 0 or std.mem.eql(u8, name, ".")) {
@@ -258,7 +258,7 @@ pub fn Mount(inode: *Inode, dev: ?*Inode, fs: []const u8) bool {
     newFS.mount = index.?.mount;
     newFS.umount = index.?.umount;
     fsLock.release();
-    var result = newFS.mount(newFS);
+    const result = newFS.mount(newFS);
     if (!result) {
         Memory.Pool.PagedPool.Free(@as([*]u8, @ptrFromInt(@intFromPtr(newFS)))[0..@sizeOf(Filesystem)]);
     } else {

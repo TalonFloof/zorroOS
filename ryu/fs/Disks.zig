@@ -44,12 +44,12 @@ const Disk = struct {
         self.firstPartition = null;
         var buf: [512]u8 = [_]u8{0} ** 512;
         self.read(self.private, 1, @ptrCast(&buf), 512);
-        var header: *GPTHeader = @alignCast(@ptrCast(&buf));
+        const header: *GPTHeader = @alignCast(@ptrCast(&buf));
         if (header.signature == 0x5452415020494645) {
             if (header.partNum == 0) {
                 return;
             }
-            var partData = Memory.Pool.StaticPool.Alloc(if ((header.partNum * @sizeOf(GPTEntry)) % 512 != 0) ((header.partNum * @sizeOf(GPTEntry) / 512) + 1) * 512 else (header.partNum * @sizeOf(GPTEntry))).?;
+            const partData = Memory.Pool.StaticPool.Alloc(if ((header.partNum * @sizeOf(GPTEntry)) % 512 != 0) ((header.partNum * @sizeOf(GPTEntry) / 512) + 1) * 512 else (header.partNum * @sizeOf(GPTEntry))).?;
             self.read(self.private, @intCast(header.partitionTableLBA), @ptrCast(partData.ptr), partData.len);
             var partitions: []GPTEntry = @as([*]GPTEntry, @alignCast(@ptrCast(partData.ptr)))[0..header.partNum];
             var i: usize = 0;

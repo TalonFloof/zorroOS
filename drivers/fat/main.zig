@@ -112,8 +112,8 @@ const FileEntry = struct {
 
 pub fn NextCluster(vol: *Volume, cluster: u32) u32 {
     if (vol.fatType == 12) {
-        var byte1 = vol.fileAllocationTable[cluster * 3 / 2 + 0];
-        var byte2 = vol.fileAllocationTable[cluster * 3 / 2 + 1];
+        const byte1 = vol.fileAllocationTable[cluster * 3 / 2 + 0];
+        const byte2 = vol.fileAllocationTable[cluster * 3 / 2 + 1];
         var ret: u32 = 0;
         if ((cluster & 1) != 0) {
             ret = (@as(u32, @intCast(byte2)) << 4) + (@as(u32, @intCast(byte1)) >> 4);
@@ -292,8 +292,8 @@ pub fn Mount(fs: *devlib.fs.Filesystem) callconv(.C) bool {
     vol.fs = fs;
     vol.fileAllocationTable = @as([*]u8, @alignCast(@ptrCast(DriverInfo.krnlDispatch.?.pagedAllocAnon(sectorsPerFAT * 512))))[0 .. sectorsPerFAT * 512];
     _ = fs.dev.?.read.?(fs.dev.?, vol.superblock.superBlk16.reservedSectors, @ptrCast(vol.fileAllocationTable.ptr), @intCast(sectorsPerFAT));
-    var rootDirectoryOffset: usize = @as(usize, vol.superblock.superBlk16.reservedSectors) + vol.superblock.superBlk16.fatCount * sectorsPerFAT;
-    var rootDirectorySectors: usize = (@as(usize, vol.superblock.superBlk16.rootDirectoryEntries) * @sizeOf(FATDirectoryEntry) + (512 - 1)) / 512;
+    const rootDirectoryOffset: usize = @as(usize, vol.superblock.superBlk16.reservedSectors) + vol.superblock.superBlk16.fatCount * sectorsPerFAT;
+    const rootDirectorySectors: usize = (@as(usize, vol.superblock.superBlk16.rootDirectoryEntries) * @sizeOf(FATDirectoryEntry) + (512 - 1)) / 512;
     vol.sectorOffset = rootDirectoryOffset + rootDirectorySectors - (2 * vol.superblock.superBlk16.sectorsPerCluster);
     var entry = @as(*FileEntry, @ptrCast(@alignCast(DriverInfo.krnlDispatch.?.pagedAlloc(@sizeOf(FileEntry)))));
     entry.vol = vol;

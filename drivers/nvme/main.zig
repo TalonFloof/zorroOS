@@ -169,7 +169,7 @@ const NVMeNamespace = struct {
         var blocksToRead = buf.len / self.blockSize;
         var curLBA = lba;
         var curBase: [*]u8 = buf.ptr;
-        var page = DriverInfo.krnlDispatch.?.pfnAlloc(false);
+        const page = DriverInfo.krnlDispatch.?.pfnAlloc(false);
         while (blocksToRead > 0) {
             var command = NVMeSubmitEntry{};
             command.d0.opcode = 0x2; // READ
@@ -198,7 +198,7 @@ const NVMeNamespace = struct {
         var blocksToWrite = buf.len / self.blockSize;
         var curLBA = lba;
         var curBase: [*]u8 = buf.ptr;
-        var page = DriverInfo.krnlDispatch.?.pfnAlloc(false);
+        const page = DriverInfo.krnlDispatch.?.pfnAlloc(false);
         while (blocksToWrite > 0) {
             var command = NVMeSubmitEntry{};
             command.d0.opcode = 0x1; // WRITE

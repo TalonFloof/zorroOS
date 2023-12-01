@@ -26,12 +26,12 @@ pub fn MapSHM(id: i64) ?usize {
     const old = HAL.Arch.IRQEnableDisable(false);
     shmLock.acquire();
     if (shm.search(id)) |data| {
-        var addrSpace = HAL.Arch.GetHCB().activeThread.?.team.addressSpace;
+        const addrSpace = HAL.Arch.GetHCB().activeThread.?.team.addressSpace;
         const space: usize = Memory.Paging.FindFreeSpace(addrSpace, 0x1000, data.len).?;
         var addr: usize = space;
         const addrEnd = space + data.len;
         while (addr < addrEnd) : (addr += 4096) {
-            var phys = @as(usize, @intCast(Memory.Paging.GetPage(addrSpace, (addr - space) + @intFromPtr(data.ptr)).phys)) << 12;
+            const phys = @as(usize, @intCast(Memory.Paging.GetPage(addrSpace, (addr - space) + @intFromPtr(data.ptr)).phys)) << 12;
             _ = Memory.Paging.MapPage(
                 addrSpace,
                 addr,

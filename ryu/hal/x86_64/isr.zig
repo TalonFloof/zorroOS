@@ -16,7 +16,7 @@ pub export fn ExceptionHandler(entry: u8, con: *HAL.Arch.Context) callconv(.C) v
     } else if (entry == 0xd and con.rip >= 0xffff800000000000) {
         HAL.Crash.Crash(.RyuProtectionFault, .{ con.rip, con.errcode, con.rsp, 0 }, con);
     } else if (entry == 0xe) {
-        var addr = asm volatile ("mov %%cr2, %[ret]"
+        const addr = asm volatile ("mov %%cr2, %[ret]"
             : [ret] "={rax}" (-> usize),
         );
         const val1: usize = if (con.errcode & 2 == 0) Memory.Paging.AccessRead else Memory.Paging.AccessWrite;

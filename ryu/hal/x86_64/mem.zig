@@ -22,7 +22,7 @@ pub fn init(kfStart: usize, kfEnd: usize) void {
     }
     ranges[i].start = kfStart;
     ranges[i].end = kfEnd;
-    var initial: usize = asm volatile ("mov %%cr3, %[ret]"
+    const initial: usize = asm volatile ("mov %%cr3, %[ret]"
         : [ret] "={rax}" (-> usize),
     ) + 0xffff800000000000;
     Memory.Initialize(&ranges, @as([*]usize, @ptrFromInt(initial))[0..512]);

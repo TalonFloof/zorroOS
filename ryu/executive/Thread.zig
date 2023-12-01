@@ -107,7 +107,7 @@ pub fn NewThread(
     nextThreadID += 1;
     thread.state = .Runnable;
     thread.priority = prior;
-    var stack = Memory.Pool.PagedPool.AllocAnonPages(32768).?;
+    const stack = Memory.Pool.PagedPool.AllocAnonPages(32768).?;
     thread.kstack = stack;
     if (sp == null) {
         thread.context.SetMode(true);
@@ -228,7 +228,7 @@ pub fn GetThreadByID(id: i64) ?*Thread {
 pub fn Init() void {
     HAL.Debug.NewDebugCommand("threads", "Lists all of the avaiable threads", &threadsCommand);
     HAL.Debug.NewDebugCommand("thread", "Shows info about a specific thread", &threadCommand);
-    var kteam = Team.GetTeamByID(1).?;
+    const kteam = Team.GetTeamByID(1).?;
     var i: i32 = 0;
     var buf: [32]u8 = [_]u8{0} ** 32;
     while (i < HAL.hcbList.?.len) : (i += 1) {
@@ -293,7 +293,7 @@ pub fn GetNextThread() *Thread {
         if (queues[i].head != null) {
             queues[i].lock.acquire();
             if (queues[i].head != null) {
-                var t = queues[i].head.?;
+                const t = queues[i].head.?;
                 queues[i].Remove(t);
                 queues[i].lock.release();
                 return t;
@@ -381,7 +381,7 @@ fn IdleThread() callconv(.C) void {
             Memory.PFN.pfnSpinlock.acquire();
             if (Memory.PFN.pfnFreeHead != null) {
                 var page = Memory.PFN.pfnFreeHead.?;
-                var index: usize = (@intFromPtr(page) - @intFromPtr(Memory.PFN.pfnDatabase.ptr)) / @sizeOf(Memory.PFN.PFNEntry);
+                const index: usize = (@intFromPtr(page) - @intFromPtr(Memory.PFN.pfnDatabase.ptr)) / @sizeOf(Memory.PFN.PFNEntry);
                 if (page.state != .Free) {
                     HAL.Crash.Crash(.RyuPFNCorruption, .{
                         (index << 12) + 0xffff800000000000,

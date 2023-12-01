@@ -104,8 +104,8 @@ pub fn SearchCapability(bus: u8, slot: u8, func: u8, cap: u8) callconv(.C) u16 {
 }
 
 pub fn AcquireIRQ(bus: u8, slot: u8, func: u8, f: *const fn (u16) callconv(.C) void) callconv(.C) u16 {
-    var msix = SearchCapability(bus, slot, func, 0x11);
-    var msi = SearchCapability(bus, slot, func, 0x5);
+    const msix = SearchCapability(bus, slot, func, 0x11);
+    const msi = SearchCapability(bus, slot, func, 0x5);
     if (msix != 0) {
         const msgCtl = ReadU16(bus, slot, func, msix + 2) | 0x8000;
         const irq = DriverInfo.krnlDispatch.?.attachDetatchIRQ(65535, f) + 0x20;

@@ -61,7 +61,7 @@ pub fn AllocatePage(tag: PFNType, swappable: bool, pte: usize) ?[]u8 {
         entry.state = tag;
         entry.swappable = if (swappable) 1 else 0;
         entry.pte = pte;
-        var ret = @as([*]u8, @ptrFromInt(phys + 0xFFFF800000000000))[0..4096];
+        const ret = @as([*]u8, @ptrFromInt(phys + 0xFFFF800000000000))[0..4096];
         pfnUsedPages += 1;
         pfnSpinlock.release();
         _ = HAL.Arch.IRQEnableDisable(old);
@@ -77,7 +77,7 @@ pub fn AllocatePage(tag: PFNType, swappable: bool, pte: usize) ?[]u8 {
         entry.state = tag;
         entry.swappable = if (swappable) 1 else 0;
         entry.pte = pte;
-        var ret = @as([*]u8, @ptrFromInt(phys + 0xFFFF800000000000))[0..4096];
+        const ret = @as([*]u8, @ptrFromInt(phys + 0xFFFF800000000000))[0..4096];
         @memset(ret, 0); // Freed Pages haven't been zeroed yet so we'll manually do it.
         pfnUsedPages += 1;
         pfnSpinlock.release();

@@ -8,7 +8,7 @@ const Memory = @import("root").Memory;
 pub fn FBMap(inode: *FS.Inode, offset: isize, a: *allowzero void, size: usize) callconv(.C) isize {
     _ = offset;
     _ = inode;
-    var addrSpace = HAL.Arch.GetHCB().activeThread.?.team.addressSpace;
+    const addrSpace = HAL.Arch.GetHCB().activeThread.?.team.addressSpace;
     const old = HAL.Arch.IRQEnableDisable(false);
     var addr: usize = @intFromPtr(a);
     if (addr == 0) {

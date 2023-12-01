@@ -291,7 +291,7 @@ const NativePTEEntry = packed struct {
 };
 
 pub fn GetPTE(root: *void, index: usize) HAL.PTEEntry {
-    var entries: []align(1) NativePTEEntry = @as([*]align(1) NativePTEEntry, @ptrCast(@alignCast(root)))[0..512];
+    const entries: []align(1) NativePTEEntry = @as([*]align(1) NativePTEEntry, @ptrCast(@alignCast(root)))[0..512];
     var entry: HAL.PTEEntry = HAL.PTEEntry{};
     entry.r = entries[index].valid;
     entry.w = entries[index].write;
@@ -361,8 +361,8 @@ pub fn rdmsr(index: u32) u64 {
 }
 
 pub fn wrmsr(index: u32, val: u64) void {
-    var low: u32 = @as(u32, @intCast(val & 0xFFFFFFFF));
-    var high: u32 = @as(u32, @intCast(val >> 32));
+    const low: u32 = @as(u32, @intCast(val & 0xFFFFFFFF));
+    const high: u32 = @as(u32, @intCast(val >> 32));
     asm volatile ("wrmsr"
         :
         : [lo] "{rax}" (low),
@@ -417,7 +417,7 @@ pub fn DebugGet() u8 {
     while (true) {
         var status = io.inb(0x64);
         while ((status & 1) != 0) {
-            var key = io.inb(0x60);
+            const key = io.inb(0x60);
             if ((status & 0x20) != 0) {
                 status = io.inb(0x64);
                 continue;
@@ -444,7 +444,7 @@ pub fn GetStartupTimestamp() i64 {
 
 pub fn GetCurrentTimestamp() [2]i64 { // Returns a Nanosecond Precision Timestamp (in reality the precision is actually ~100 ns precision due to limitations with the HPET)
     var ret: [2]i64 = .{ 0, 0 };
-    var addr: usize = acpi.HPETAddr.?.address + 0xffff800000000000;
+    const addr: usize = acpi.HPETAddr.?.address + 0xffff800000000000;
     const hpetAddr: [*]align(1) volatile u64 = @as([*]align(1) volatile u64, @ptrFromInt(addr));
     const us: u64 = (hpetAddr[30] / @as(u64, @intCast(apic.hpetTicksPer100NS)));
     ret[0] = initialUNIXTime + @as(i64, @intCast(us / 10000000));

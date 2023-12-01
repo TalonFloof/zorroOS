@@ -42,9 +42,9 @@ pub fn setup() void {
     //        to closely hit 10 ms, though it does fall ~1 second behind/ahead per day (I think???))
     write(0x3e0, 0x3); // Set the timer to use divider 16
     // Prepare the HPET timer to wait for 10 ms
-    var addr: usize = acpi.HPETAddr.?.address;
+    const addr: usize = acpi.HPETAddr.?.address;
     const hpetAddr: [*]align(1) volatile u64 = @as([*]align(1) volatile u64, @ptrFromInt(addr));
-    var clock = hpetAddr[0] >> 32;
+    const clock = hpetAddr[0] >> 32;
     if (HAL.Arch.GetHCB().hartID == 0) {
         hpetPeriod = clock;
         hpetNSPeriod = hpetPeriod / 1000000;
@@ -54,7 +54,7 @@ pub fn setup() void {
         hpetAddr[2] = 1;
     }
     const hz = @as(u64, @intCast(1000000000000000)) / clock;
-    var interval = hpetTicksPer100NS * 10000;
+    const interval = hpetTicksPer100NS * 10000;
     const val = (((hz << 16) / (1000000000000 / clock)));
     if (HAL.Arch.GetHCB().hartID == 0) {
         HAL.Console.Put("HPET @ {d} Hz (~{d}.{d} Hz scheduler tick interval) for Local APIC Timer calibration\n", .{ hz, val >> 16, (10000 * (val & 0xFFFF)) >> 16 });
@@ -66,7 +66,7 @@ pub fn setup() void {
         std.atomic.spinLoopHint();
     }
     write(0x320, 0x10000); // Stop the Local APIC Timer
-    var ticks: u32 = 0xffffffff - @as(u32, @intCast(read(0x390))); // We now have the number of ticks that elapses in 10 ms (with divider 16 of course)
+    const ticks: u32 = 0xffffffff - @as(u32, @intCast(read(0x390))); // We now have the number of ticks that elapses in 10 ms (with divider 16 of course)
     // Set the Local APIC timer to Periodic Mode, Divider 16, and to trigger every millisecond.
     write(0x3e0, 0x3);
     write(0x380, ticks);

@@ -49,7 +49,7 @@ pub fn Crash(code: CrashCode, args: [4]usize, con: ?*HAL.Arch.Context) void {
         var i: usize = 0;
         while (driver != null) {
             i = (i + 1) % 2;
-            var str = driver.?.drvName[0..std.mem.len(driver.?.drvName)];
+            const str = driver.?.drvName[0..std.mem.len(driver.?.drvName)];
             HAL.Console.Put("{s: <16} {x:0>16}", .{ str, driver.?.baseAddr });
             if (i == 0) {
                 HAL.Console.Put("\n", .{});
