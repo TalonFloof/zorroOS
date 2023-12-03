@@ -6,6 +6,7 @@ const ELF = @import("root").ELF;
 const FS = @import("root").FS;
 const HAL = @import("root").HAL;
 const Spinlock = @import("root").Spinlock;
+const UserSession = @import("root").Executive.UserSession;
 const std = @import("std");
 
 pub const FileDescriptor = struct {
@@ -17,6 +18,7 @@ pub const FDTree = AATree(i64, *FileDescriptor);
 
 pub const Team = struct {
     teamID: i64,
+    session: ?*UserSession.UserSession = null,
     name: [32]u8 = [_]u8{0} ** 32,
     parent: ?*Team = null,
     children: ?*Team = null,

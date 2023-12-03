@@ -27,8 +27,16 @@ static void SetPath(RavenSession* session, ClientWindow* win, const char* path) 
     MQueue_SendToServer(session->raven,&packet,strlen(path)+17);
 }
 
+static void Save(char* path) {
+    Create(path,0x41ed);
+}
+
 static void AboutDialog(RavenSession* session, ClientWindow* win, void* button) {
-    UIAbout(session,win,"Hunter","User/Administrator","0.1.0","Copyright (C) 2023","TalonFox and contributors");
+    UIAbout(session,win,"Hunter","User/Administrator","0.1.0","Copyright (C) 2023","TalonFloof and contributors");
+}
+
+static void NewFolder(RavenSession* session, ClientWindow* win, void* button) {
+    UISave(session,win,"File/Directory","Folder",&Save);
 }
 
 static void FileBrowserRedraw(void* self, RavenSession* session, ClientWindow* win, GraphicsContext* gfx) {
@@ -60,7 +68,7 @@ static void FileBrowserEvent(void* self, RavenSession* session, ClientWindow* wi
                     ClientWindow* w = NewRavenWindow(session,560,360,FLAG_ACRYLIC,win->id);
                     NewIconButtonWidget(w,DEST_TOOLBAR,0,0,16,13,"Action/Left",NULL);
                     NewIconButtonWidget(w,DEST_TOOLBAR,0,0,16,13,"Action/Right",NULL);
-                    NewIconButtonWidget(w,DEST_TOOLBAR,0,0,16,16,"Action/NewFolder",NULL);
+                    NewIconButtonWidget(w,DEST_TOOLBAR,0,0,16,16,"Action/NewFolder",&NewFolder);
                     NewIconButtonWidget(w,DEST_TOOLBAR,0,0,16,16,"Action/About",&AboutDialog);
                     int len = strlen((const char*)private->path);
                     int fullLen = len+strlen((const char*)&entry.name);
@@ -128,7 +136,7 @@ int main(int argc, const char* argv[]) {
     }
     NewIconButtonWidget(win,DEST_TOOLBAR,0,0,16,13,"Action/Left",NULL);
     NewIconButtonWidget(win,DEST_TOOLBAR,0,0,16,13,"Action/Right",NULL);
-    NewIconButtonWidget(win,DEST_TOOLBAR,0,0,16,16,"Action/NewFolder",NULL);
+    NewIconButtonWidget(win,DEST_TOOLBAR,0,0,16,16,"Action/NewFolder",&NewFolder);
     NewIconButtonWidget(win,DEST_TOOLBAR,0,0,16,16,"Action/About",&AboutDialog);
     UIAddWidget(win,CreateFileBrowser(argc == 2 ? argv[1] : "/"),DEST_WIDGETS);
     SetPath(session,win,argc == 2 ? argv[1] : "/");

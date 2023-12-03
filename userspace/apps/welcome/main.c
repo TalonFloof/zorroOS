@@ -4,6 +4,7 @@
 #include <Common/Alloc.h>
 #include <Media/Graphics.h>
 #include <System/Thread.h>
+#include <Raven/Widgets/Label.h>
 #include <Raven/Widgets/Button.h>
 
 void TryZorroOS(RavenSession* session, ClientWindow* win, void* button) {
@@ -20,6 +21,7 @@ int main() {
     }
     NewButtonWidget(win,DEST_WIDGETS,(320-64),480-149,16,50,0,"Try","Device/CD",&TryZorroOS);
     NewButtonWidget(win,DEST_WIDGETS,(320-64)+64,480-149,0,50,0,"Install","File/Archive",NULL);
+    NewLabelWidget(win,DEST_WIDGETS,64,64,"Welcome to zorroOS",LABEL_MORE_LARGE);
     UIAddWindow(session,win,"zorroOS Installer","File/Archive");
     UIRun(session);
 }

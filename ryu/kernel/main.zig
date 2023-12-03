@@ -54,7 +54,7 @@ pub export fn RyuInit() void {
                     HAL.Arch.WaitForIRQ();
                 }
             }
-        }
+        } else {}
     }
     HAL.Splash.UpdateStatus("Load /bin/init...");
     var team = Executive.Team.GetTeamByID(2).?;

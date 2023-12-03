@@ -294,7 +294,7 @@ pub export fn RyuSyscallDispatch(regs: *HAL.Arch.Context) callconv(.C) void {
                         const old = HAL.Arch.IRQEnableDisable(false);
                         FS.RefInode(parent.?);
                         @as(*Spinlock, @ptrCast(&parent.?.lock)).acquire();
-                        regs.SetReg(0, @as(u64, @bitCast(@as(i64, @intCast(create(parent.?, @as([*c]const u8, @ptrCast(name.ptr)), @as(usize, @intCast(regs.GetReg(3)))))))));
+                        regs.SetReg(0, @as(u64, @bitCast(@as(i64, @intCast(create(parent.?, @as([*c]const u8, @ptrCast(name.ptr)), @as(usize, @intCast(regs.GetReg(2)))))))));
                         @as(*Spinlock, @ptrCast(&parent.?.lock)).release();
                         FS.DerefInode(parent.?);
                         _ = HAL.Arch.IRQEnableDisable(old);
