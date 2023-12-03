@@ -56,6 +56,7 @@ const ProcessFuncs = enum(u16) {
     GetNextThreadInfo = 15,
     Eep = 16,
     DebugWaitForCrash = 17,
+    NewUserSession = 18,
 };
 
 const RyuFuncs = enum(u16) {
