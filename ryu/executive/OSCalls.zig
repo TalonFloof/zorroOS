@@ -57,6 +57,7 @@ const ProcessFuncs = enum(u16) {
     Eep = 16,
     DebugWaitForCrash = 17,
     NewUserSession = 18,
+    PromoteUserSession = 19,
 };
 
 const RyuFuncs = enum(u16) {
