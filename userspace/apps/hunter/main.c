@@ -69,6 +69,7 @@ static void FileBrowserEvent(void* self, RavenSession* session, ClientWindow* wi
                     NewIconButtonWidget(w,DEST_TOOLBAR,0,0,16,13,"Action/Left",NULL);
                     NewIconButtonWidget(w,DEST_TOOLBAR,0,0,16,13,"Action/Right",NULL);
                     NewIconButtonWidget(w,DEST_TOOLBAR,0,0,16,16,"Action/NewFolder",&NewFolder);
+                    NewIconButtonWidget(w,DEST_TOOLBAR,0,0,16,13,"Action/Rename",NULL);
                     NewIconButtonWidget(w,DEST_TOOLBAR,0,0,16,16,"Action/About",&AboutDialog);
                     int len = strlen((const char*)private->path);
                     int fullLen = len+strlen((const char*)&entry.name);
@@ -137,6 +138,7 @@ int main(int argc, const char* argv[]) {
     NewIconButtonWidget(win,DEST_TOOLBAR,0,0,16,13,"Action/Left",NULL);
     NewIconButtonWidget(win,DEST_TOOLBAR,0,0,16,13,"Action/Right",NULL);
     NewIconButtonWidget(win,DEST_TOOLBAR,0,0,16,16,"Action/NewFolder",&NewFolder);
+    NewIconButtonWidget(win,DEST_TOOLBAR,0,0,16,13,"Action/Rename",NULL);
     NewIconButtonWidget(win,DEST_TOOLBAR,0,0,16,16,"Action/About",&AboutDialog);
     UIAddWidget(win,CreateFileBrowser(argc == 2 ? argv[1] : "/"),DEST_WIDGETS);
     SetPath(session,win,argc == 2 ? argv[1] : "/");
