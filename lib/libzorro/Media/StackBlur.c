@@ -7,7 +7,7 @@ http://vitiy.info/stackblur-algorithm-multi-threaded-blur-for-cpp
 This file is derived from Jones Chi (duguschi@gmail.com) port of the C++ multi-threaded version to C
 
 Copyright (C) 2018-2022 SMNX & contributors (implemented StackBlur for skift and made the clamp macro)
-Copyright (C) 2023 TalonFox (ported the skift version to zorroOS) 
+Copyright (C) 2023 TalonFloof (ported the skift version to zorroOS) 
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in

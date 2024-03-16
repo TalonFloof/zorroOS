@@ -109,6 +109,8 @@ void MainScreenDisplay(ClientWindow* win) {
     UIRemoveWidgets(win);
     NewLabelWidget(win,DEST_WIDGETS,2,32,"General",LABEL_LARGE);
     NewButtonWidget(win,DEST_WIDGETS,2,32+21,0,0,2,"Backgrounds","App/Settings",&Backgrounds);
+    NewLabelWidget(win,DEST_WIDGETS,2,32+21+52,"Administration",LABEL_LARGE);
+    NewButtonWidget(win,DEST_WIDGETS,2,32+21+21+52,0,0,2,"Users and Groups","User/Group",&Backgrounds);
 }
 
 void BackToMain(RavenSession* session, ClientWindow* win, void* button) {

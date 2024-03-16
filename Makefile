@@ -36,7 +36,7 @@ ramdks: build
 	cd root; (((find . -type f | cut -c 3-) | cpio -o -v --block-size=1) > ../ramdks.cpio); cd ..
 
 iso: build ramdks
-	git clone --branch v5.x-branch-binary --depth 1 https://github.com/limine-bootloader/limine /tmp/limine
+	git clone --branch v7.x-binary --depth 1 https://github.com/limine-bootloader/limine /tmp/limine
 	mkdir -p /tmp/zorro_iso/EFI/BOOT
 	mkdir /tmp/zorro_iso/Drivers/
 	cp --force /tmp/limine/BOOTX64.EFI /tmp/limine/limine-uefi-cd.bin /tmp/limine/limine-bios-cd.bin /tmp/limine/limine-bios.sys boot/x86_64/* ramdks.cpio ryu/Ryu /tmp/zorro_iso
@@ -47,4 +47,7 @@ iso: build ramdks
 	/tmp/limine/limine bios-install zorroOS.iso
 	rm -r --force /tmp/limine
 	rm -r --force /tmp/zorro_iso
-.PHONY: build iso
+run: iso
+	qemu-system-x86_64 -cdrom zorroOS.iso -smp 2 -cpu host -enable-kvm
+
+.PHONY: build iso run ramdks

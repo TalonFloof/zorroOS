@@ -1,7 +1,7 @@
 /*
 
 Copyright (c) 2021, Dominic Szablewski - https://phoboslab.org
-          (c) 2023, TalonFox - https://talonfox.github.io
+          (c) 2023, TalonFloof - https://talonfloof.github.io
 SPDX-License-Identifier: MIT
 
 

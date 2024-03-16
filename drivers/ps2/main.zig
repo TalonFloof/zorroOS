@@ -22,6 +22,7 @@ var mouseBuffer: [256]u8 = [_]u8{0} ** 256;
 var mouseRead: usize = 0;
 var mouseWrite: usize = 0;
 var mouseEventQueue: devlib.EventQueue = devlib.EventQueue{};
+var mouseFirstRead: bool = true;
 
 fn PS2MouseWait(typ: usize) void {
     if (typ == 0) {
@@ -90,10 +91,14 @@ pub fn PS2MouseIRQ(irq: u16) callconv(.C) void {
     packetData[packetID] = devlib.io.inb(0x60);
     if (packetID == 2) {
         if ((mouseWrite + 3) % 256 != mouseRead) {
-            mouseBuffer[mouseWrite] = packetData[0];
-            mouseBuffer[(mouseWrite + 1) % 256] = packetData[1];
-            mouseBuffer[(mouseWrite + 2) % 256] = packetData[2];
-            mouseWrite = (mouseWrite + 3) % 256;
+            if (mouseFirstRead) {
+                mouseFirstRead = false;
+            } else {
+                mouseBuffer[mouseWrite] = packetData[0];
+                mouseBuffer[(mouseWrite + 1) % 256] = packetData[1];
+                mouseBuffer[(mouseWrite + 2) % 256] = packetData[2];
+                mouseWrite = (mouseWrite + 3) % 256;
+            }
         }
         if (mouseEventQueue.threadHead != null) {
             DriverInfo.krnlDispatch.?.wakeupEvent(&mouseEventQueue, 0);
@@ -153,7 +158,7 @@ pub fn PS2DevRead(inode: *devlib.fs.Inode, offset: isize, addr: *void, len: isiz
 
 pub fn LoadDriver() callconv(.C) devlib.Status {
     if (DriverInfo.krnlDispatch) |dispatch| {
-        dispatch.put("PS/2 Driver for zorroOS (C) 2023 TalonFox\n");
+        dispatch.put("PS/2 Driver for zorroOS (C) 2023 TalonFloof\n");
         // Disable Ports 1 and 2
         PS2MouseWait(1);
         devlib.io.outb(0x64, 0xad);
