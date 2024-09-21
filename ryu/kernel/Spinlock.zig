@@ -9,7 +9,7 @@ pub const Spinlock = enum(u8) {
     pub fn acquire(spinlock: *volatile Spinlock) void {
         var cycles: usize = 0;
         while (cycles < 0x10000000) : (cycles += 1) {
-            if (@cmpxchgWeak(Spinlock, spinlock, .unaquired, .aquired, .Acquire, .Monotonic) == null) {
+            if (@cmpxchgWeak(Spinlock, spinlock, .unaquired, .aquired, .acquire, .monotonic) == null) {
                 return;
             }
             std.atomic.spinLoopHint();
@@ -18,6 +18,6 @@ pub const Spinlock = enum(u8) {
     }
 
     pub inline fn release(spinlock: *volatile Spinlock) void {
-        @atomicStore(Spinlock, spinlock, .unaquired, .Release);
+        @atomicStore(Spinlock, spinlock, .unaquired, .release);
     }
 };

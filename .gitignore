@@ -16,6 +16,7 @@ zig-cache/
 zig-out/
 root/bin/
 root/System/Icons/IconPack
+.zig-cache/
 
 # Ignore common editor/system specific metadata
 .DS_Store

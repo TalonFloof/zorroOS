@@ -89,7 +89,7 @@ pub fn Truncate(inode: *FS.Inode, size: isize) callconv(.C) isize {
 }
 
 pub fn Create(inode: *FS.Inode, name: [*c]const u8, mode: usize) callconv(.C) isize {
-    const id = @atomicRmw(i64, &nextInodeID, .Add, 1, .Monotonic);
+    const id = @atomicRmw(i64, &nextInodeID, .Add, 1, .monotonic);
     const len: usize = std.mem.len(name);
     var in: *FS.Inode = @as(*FS.Inode, @ptrCast(@alignCast(Memory.Pool.PagedPool.Alloc(@sizeOf(FS.Inode)).?.ptr)));
     @memset(@as([*]u8, @ptrFromInt(@intFromPtr(&in.name)))[0..256], 0);

@@ -11,7 +11,7 @@ pub fn RegisterDevice(name: []const u8, inode: *FS.Inode) void {
     inode.parent = devNode;
     inode.mountOwner = devNode.mountPoint;
     inode.isVirtual = true;
-    inode.stat.ID = @atomicRmw(i64, &nextDevID, .Add, 1, .Monotonic);
+    inode.stat.ID = @atomicRmw(i64, &nextDevID, .Add, 1, .monotonic);
     @memset(inode.name[0..256], 0);
     @memcpy(inode.name[0..name.len], name);
     @as(*Spinlock, @ptrCast(&devNode.lock)).acquire();
