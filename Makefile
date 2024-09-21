@@ -1,32 +1,31 @@
 build: limine-zig
-	rm -f -r ryu/.zig-cache
 	nasm -f elf64 ryu/hal/x86_64/_lowlevel.s -o ryu/_lowlevel.o; \
 	cd ryu; \
 	zig build -Doptimize=ReleaseSafe; \
 	rm -f -r _lowlevel.o; \
 	cd ..
 	mkdir -p drivers/out
-	# cd drivers/ps2; \
-	# zig build -Doptimize=ReleaseSafe; \
-	# cd ../..
-	# cd drivers/pci; \
-	# zig build -Doptimize=ReleaseSafe; \
-	# cd ../..
-	# cd drivers/nvme; \
-	# zig build -Doptimize=ReleaseSafe; \
-	# cd ../..
-	# cd drivers/fat; \
-	# zig build -Doptimize=Debug; \
-	# cd ../..
-	# cd lib; \
-	# make; \
-	# cd ..
-	# cd userspace; \
-	# make; \
-	# cd ..
-	# cd files/iconData; \
-	# python3 genIconPack.py; \
-	# cd ../..
+	cd drivers/ps2; \
+	zig build -Doptimize=ReleaseSafe; \
+	cd ../..
+	cd drivers/pci; \
+	zig build -Doptimize=ReleaseSafe; \
+	cd ../..
+	cd drivers/nvme; \
+	zig build -Doptimize=ReleaseSafe; \
+	cd ../..
+	cd drivers/fat; \
+	zig build -Doptimize=Debug; \
+	cd ../..
+	cd lib; \
+	make; \
+	cd ..
+	cd userspace; \
+	make; \
+	cd ..
+	cd files/iconData; \
+	python3 genIconPack.py; \
+	cd ../..
 
 limine-zig:
 	git clone https://github.com/limine-bootloader/limine-zig.git --depth=1
