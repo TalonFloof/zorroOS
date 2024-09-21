@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
     NewImageWidget(win,DEST_WIDGETS,1,32,240,328,aboutImage);
     NewLabelWidget(win,DEST_WIDGETS,248,48,"zorroOS",LABEL_EXTRA_LARGE);
     NewBadgeWidget(win,DEST_WIDGETS,382,57,"Aurora",0);
-    NewLabelWidget(win,DEST_WIDGETS,248,90,"Copyright (C) 2020-2023",LABEL_NORMAL);
+    NewLabelWidget(win,DEST_WIDGETS,248,90,"Copyright (C) 2020-2024",LABEL_NORMAL);
     NewLabelWidget(win,DEST_WIDGETS,248,90+24,"TalonFloof and contributers",LABEL_NORMAL);
     NewButtonWidget(win,DEST_WIDGETS,490,320,8,8,1,"Got it",NULL,&ExitAbout);
     UIAddWindow(session,win,"About zorroOS",NULL);

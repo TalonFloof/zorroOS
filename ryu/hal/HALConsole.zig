@@ -71,7 +71,7 @@ pub fn Init(i: *FBInfo) void {
     cursorY = 0;
     conHeight = (info.height / 12) * 12;
     EnableDisable(!KernelSettings.isQuiet);
-    Put("Ryu Kernel (c) 2020-2023 TalonFox\n", .{});
+    Put("Ryu Kernel (c) 2020-2024 TalonFloof\n", .{});
     Splash.Init();
 }
 

@@ -32,7 +32,7 @@ static void Save(char* path) {
 }
 
 static void AboutDialog(RavenSession* session, ClientWindow* win, void* button) {
-    UIAbout(session,win,"Hunter","User/Administrator","0.1.0","Copyright (C) 2023","TalonFloof and contributors");
+    UIAbout(session,win,"Hunter","User/Administrator","0.1.0","Copyright (C) 2023-2024","TalonFloof and contributors");
 }
 
 static void NewFolder(RavenSession* session, ClientWindow* win, void* button) {

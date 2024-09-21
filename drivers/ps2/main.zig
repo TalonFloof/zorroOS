@@ -158,7 +158,7 @@ pub fn PS2DevRead(inode: *devlib.fs.Inode, offset: isize, addr: *void, len: isiz
 
 pub fn LoadDriver() callconv(.C) devlib.Status {
     if (DriverInfo.krnlDispatch) |dispatch| {
-        dispatch.put("PS/2 Driver for zorroOS (C) 2023 TalonFloof\n");
+        dispatch.put("PS/2 Driver for zorroOS (C) 2023-2024 TalonFloof\n");
         // Disable Ports 1 and 2
         PS2MouseWait(1);
         devlib.io.outb(0x64, 0xad);
