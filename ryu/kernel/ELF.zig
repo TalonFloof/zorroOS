@@ -13,7 +13,7 @@ const ELFObjType = enum(u16) {
 
 const ELFArch = enum(u16) {
     NoSpecific = 0x00,
-    AttWE32100 = 0x01
+    AttWE32100 = 0x01,
     Sparc = 0x02,
     Intelx86 = 0x03,
     Motorola68000 = 0x04,

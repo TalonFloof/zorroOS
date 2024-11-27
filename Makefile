@@ -39,14 +39,14 @@ iso: build ramdks
 	git clone --branch v7.x-binary --depth 1 https://github.com/limine-bootloader/limine /tmp/limine
 	mkdir -p /tmp/zorro_iso/EFI/BOOT
 	mkdir /tmp/zorro_iso/Drivers/
-	cp --force /tmp/limine/BOOTX64.EFI /tmp/limine/limine-uefi-cd.bin /tmp/limine/limine-bios-cd.bin /tmp/limine/limine-bios.sys boot/x86_64/* ramdks.cpio ryu/Ryu /tmp/zorro_iso
-	cp --force drivers/out/* /tmp/zorro_iso/Drivers
+	cp -f /tmp/limine/BOOTX64.EFI /tmp/limine/limine-uefi-cd.bin /tmp/limine/limine-bios-cd.bin /tmp/limine/limine-bios.sys boot/x86_64/* ramdks.cpio ryu/Ryu /tmp/zorro_iso
+	cp -f drivers/out/* /tmp/zorro_iso/Drivers
 	mv /tmp/zorro_iso/BOOTX64.EFI /tmp/zorro_iso/EFI/BOOT/BOOTX64.EFI
 	xorriso -as mkisofs -b limine-bios-cd.bin -no-emul-boot -boot-load-size 4 -boot-info-table --efi-boot limine-uefi-cd.bin -efi-boot-part --efi-boot-image --protective-msdos-label /tmp/zorro_iso -o zorroOS.iso
 	zig cc /tmp/limine/limine.c -o /tmp/limine/limine
 	/tmp/limine/limine bios-install zorroOS.iso
-	rm -r --force /tmp/limine
-	rm -r --force /tmp/zorro_iso
+	rm -Rf /tmp/limine
+	rm -Rf /tmp/zorro_iso	
 run: iso
 	qemu-system-x86_64 -cdrom zorroOS.iso -smp 2 -cpu host -enable-kvm
 
