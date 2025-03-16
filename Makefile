@@ -29,6 +29,7 @@ build: limine-zig
 
 limine-zig:
 	git clone https://github.com/limine-bootloader/limine-zig.git --depth=1
+	cd limine-zig; git fetch origin 7b29b6e6f6d35052f01ed3831085a39aae131705; git reset --hard FETCH_HEAD; cd ..
 	rm -f -r limine-zig/.git
 
 ramdks: build
